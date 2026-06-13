@@ -5,6 +5,7 @@ import {
   BarChart3,
   Eye,
   GripVertical,
+  Home,
   Maximize2,
   LineChart,
   Search,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import { compareBaselines } from "./control/baselines";
 import { evaluateStockbotMomentum } from "./strategy/stockbotStrategy";
-import type { AlgorithmTrade, Asset, Candle, Portfolio, StrategyScore } from "./types";
+import type { AlgorithmDiagnostic, AlgorithmTrade, Asset, Candle, Portfolio, StrategyScore } from "./types";
 import "./styles.css";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -39,7 +40,86 @@ type MethodMetricKey = (typeof methodMetrics)[number]["key"];
 type ChartOverlay = "trades" | "ma" | "vwap" | "bands" | "wicks";
 type ChartRange = "1H" | "1D" | "1W" | "1M" | "3M" | "1Y" | "ALL";
 type AnalysisTab = "trace" | "calculations";
+type ChartStyle = "candles" | "line";
+type AppView = "stocks" | "home";
 type PanelId = "chart" | "analysis" | "multiCharts" | "portfolio" | "signal" | "methods";
+type CompareMetrics = {
+  returnPercent: number;
+  finalEquity: number;
+  tradeCount: number;
+  winRate: number | null;
+  maxDrawdown: number;
+  sharpe: number;
+  profitFactor: number;
+  exposurePercent: number;
+  avgTradePercent: number;
+  openPosition: boolean;
+};
+type CompareStrategy = {
+  id: string;
+  name: string;
+  type: "primary" | "control";
+  description?: string;
+  source?: string;
+  error?: string;
+  equityCurve: Array<{ time: string; equity: number }>;
+  trades: AlgorithmTrade[];
+  lastSignal?: "buy" | "sell" | null;
+  metrics: CompareMetrics | null;
+};
+type ScanSymbolResult = {
+  symbol: string;
+  error?: string;
+  returnPercent?: number;
+  pnl?: number;
+  winRate?: number | null;
+  maxDrawdown?: number;
+  sharpe?: number;
+  profitFactor?: number;
+  exposurePercent?: number;
+  avgTradePercent?: number;
+  tradeCount?: number;
+  openPosition?: boolean;
+  recommendation?: "buy" | "sell" | "hold" | "stand by";
+  lastAction?: { side: "buy" | "sell"; time: string; price: number } | null;
+};
+type ScanStrategy = {
+  id: string;
+  name: string;
+  description?: string;
+  totals: { pnl: number; avgReturnPercent: number; profitableSymbols: number; scoredSymbols: number };
+  perSymbol: ScanSymbolResult[];
+};
+type ScanResult = {
+  range: ChartRange;
+  symbols: string[];
+  strategies: ScanStrategy[];
+  algorithmErrors: AlgorithmLoadError[];
+};
+type HomeTab = "profits" | "stats";
+type AlgorithmLoadError = { file: string; error: string };
+type CompareResult = {
+  symbol: string;
+  range: ChartRange;
+  source: string;
+  startingCash: number;
+  algorithmErrors?: AlgorithmLoadError[];
+  strategies: CompareStrategy[];
+};
+type AlgorithmInfo = {
+  id: string;
+  name: string;
+  author?: string;
+  description?: string;
+  params?: Record<string, number | string>;
+  defaultParams?: Record<string, number | string>;
+  file: string;
+  uploaded: boolean;
+};
+type AlgorithmsPayload = {
+  algorithms: AlgorithmInfo[];
+  errors: AlgorithmLoadError[];
+};
 type SavedCandle = {
   id: string;
   symbol: string;
@@ -73,21 +153,6 @@ type SettingsPayload = {
   envFilePresent: boolean;
   groups: SettingGroup[];
 };
-type BacktestResult = {
-  symbol: string;
-  range: ChartRange;
-  source: string;
-  bars: Candle[];
-  trades: AlgorithmTrade[];
-  equityCurve: Array<{ time: string; equity: number; cash: number; positionValue: number }>;
-  metrics: {
-    startingCash: number;
-    finalEquity: number;
-    returnPercent: number;
-    tradeCount: number;
-    openPosition: boolean;
-  } | null;
-};
 type CacheEntry<T> = {
   at: number;
   data: T;
@@ -102,13 +167,22 @@ const panelLabels: Record<PanelId, string> = {
   methods: "Methods"
 };
 const defaultPanelOrder: PanelId[] = ["chart", "analysis", "multiCharts", "portfolio", "signal", "methods"];
+const strategyPalette = ["#4d9fff", "#2ebd85", "#f0b90b", "#f6465d", "#a78bfa", "#8b95a8"];
 const cacheTtl = {
   market: 1800,
   portfolio: 5000,
   strategies: 60000,
   search: 15000,
   backtest: 120000,
+  bars: 60000,
+  compare: 60000,
   settings: 30000
+};
+
+type BarsEntry = {
+  source: string;
+  bars: Candle[];
+  error?: string;
 };
 
 const chartRanges: Array<{ key: ChartRange; label: string; points: number; days: number; resolution: string }> = [
@@ -202,140 +276,30 @@ function movingAverage(candles: Candle[], windowSize = 8) {
   });
 }
 
-function formatRangeTime(range: ChartRange, index: number, points: number, days: number) {
-  const now = new Date();
-  const date = new Date(now);
-  const offsetDays = days * (1 - index / Math.max(points - 1, 1));
-  date.setDate(now.getDate() - offsetDays);
-
-  if (range === "1W") {
-    return date.toLocaleDateString("en-US", { weekday: "short" });
+function displayTime(time: string, range: ChartRange) {
+  const date = new Date(time);
+  if (Number.isNaN(date.getTime())) {
+    return time;
   }
-  if (range === "1M" || range === "3M") {
+  if (range === "1H" || range === "1D") {
+    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
+  if (range === "1W") {
+    return date.toLocaleString("en-US", { weekday: "short", hour: "numeric" });
+  }
+  if (range === "1M" || range === "3M" || range === "1Y") {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
-  if (range === "1Y") {
-    return date.toLocaleDateString("en-US", { month: "short" });
-  }
-  return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
-function clampPercent(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function buildRangeCandles(asset: Asset, range: ChartRange) {
-  const config = chartRanges.find((item) => item.key === range) ?? chartRanges[1];
-  if (range === "1H") {
-    return asset.candles.slice(-config.points).map((candle) => normalizeCandle(candle, asset.price));
-  }
-  if (range === "1D") {
-    return asset.candles.map((candle) => normalizeCandle(candle, asset.price));
-  }
-
-  const seed = symbolSeed(asset.symbol);
-  const totalMove = clampPercent(asset.changePercent / 100 + (((seed % 31) - 14) / 100) * Math.log10(config.days + 3), -0.42, 0.68);
-  const startClose = asset.price / (1 + totalMove);
-  const volatility = Math.max(0.003, Math.min(0.045, Math.abs(asset.changePercent) / 950 + config.days / 90000));
-  const candles: Candle[] = [];
-  let lastClose = startClose;
-
-  for (let point = 0; point < config.points; point += 1) {
-    const progress = point / Math.max(config.points - 1, 1);
-    const trend = startClose + (asset.price - startClose) * progress;
-    const wave = Math.sin(progress * Math.PI * 6 + seed * 0.07) * volatility;
-    const cycle = Math.cos(point * 0.73 + seed * 0.11) * volatility * 0.54;
-    const close = point === config.points - 1 ? asset.price : roundPrice(trend * (1 + wave + cycle), asset.price);
-    const open = lastClose;
-    const spread = Math.max(Math.abs(close) * (volatility * 0.85 + 0.0012), 0.0001);
-    const high = Math.max(open, close) + spread;
-    const low = Math.min(open, close) - spread;
-    candles.push(normalizeCandle({
-      time: formatRangeTime(range, point, config.points, config.days),
-      open,
-      high,
-      low,
-      close,
-      volume: Math.round((asset.volume / config.points) * (0.72 + Math.abs(wave + cycle) * 28 + progress * 0.34))
-    }, asset.price));
-    lastClose = close;
-  }
-
-  return candles;
-}
-
-function getVisibleCandles(asset: Asset, range: ChartRange, zoom: number, overrideCandles?: Candle[]) {
-  const candles = overrideCandles?.length ? overrideCandles.map((candle) => normalizeCandle(candle, asset.price)) : buildRangeCandles(asset, range);
+function getVisibleCandles(asset: Asset, zoom: number, sourceCandles: Candle[]) {
+  const candles = sourceCandles.map((candle) => normalizeCandle(candle, asset.price));
   return candles.slice(-Math.min(zoom, candles.length));
 }
 
-function strategySeed(value: string) {
-  return Array.from(value).reduce((sum, character, index) => sum + character.charCodeAt(0) * (index + 3), 0);
-}
-
-function buildStrategyTrades(asset: Asset, strategyName: string) {
-  if (strategyName === "Stockbot Momentum") {
-    return [];
-  }
-  if (strategyName === "Cash") {
-    return [];
-  }
-
-  const candles = asset.candles.map((candle) => normalizeCandle(candle, asset.price));
-  const seed = strategySeed(`${asset.symbol}-${strategyName}`);
-  const profiles: Record<string, Array<{ at: number; side: "buy" | "sell"; rule: string }>> = {
-    "Mean Reversion": [
-      { at: 0.2, side: "buy", rule: "RSI deviation below lower band" },
-      { at: 0.44, side: "sell", rule: "Price reverted to VWAP mean" },
-      { at: 0.58, side: "buy", rule: "Second pullback held support" },
-      { at: 0.78, side: "sell", rule: "Mean target reached" }
-    ],
-    "Breakout Reversal": [
-      { at: 0.28, side: "buy", rule: "Breakout candle cleared resistance" },
-      { at: 0.39, side: "sell", rule: "Failed continuation reversed signal" },
-      { at: 0.66, side: "buy", rule: "Retest reclaimed breakout level" },
-      { at: 0.88, side: "sell", rule: "ATR extension exit" }
-    ],
-    "Buy and Hold SPY": [{ at: 0.08, side: "buy", rule: "Benchmark entry held through window" }],
-    "Equal Weight Movers": [
-      { at: 0.18, side: "buy", rule: "Entered volatility basket" },
-      { at: 0.52, side: "sell", rule: "Rebalanced equal-weight basket" },
-      { at: 0.74, side: "buy", rule: "Re-entered top mover basket" }
-    ],
-    "RSI 30/70 Control": [
-      { at: 0.16, side: "buy", rule: "RSI crossed up through 30" },
-      { at: 0.47, side: "sell", rule: "RSI tagged upper control band" },
-      { at: 0.72, side: "buy", rule: "RSI reset below lower control band" }
-    ]
-  };
-  const profile = profiles[strategyName] ?? profiles["Mean Reversion"];
-  let entryPrice: number | null = null;
-
-  return profile.map((point, tradeIndex) => {
-    const offset = ((seed + tradeIndex * 7) % 9) - 4;
-    const candleIndex = Math.min(candles.length - 1, Math.max(0, Math.round(point.at * (candles.length - 1)) + offset));
-    const candle = candles[candleIndex];
-    const price = point.side === "buy" ? candle.close : candle.open;
-    const pnlPercent = point.side === "sell" && entryPrice ? ((price - entryPrice) / entryPrice) * 100 : 0;
-    if (point.side === "buy") {
-      entryPrice = price;
-    }
-
-    return {
-      id: `${asset.symbol}-${strategyName.replace(/[^a-z0-9]/gi, "-")}-${tradeIndex + 1}`,
-      time: candle.time,
-      side: point.side,
-      price: roundPrice(price, asset.price),
-      quantity: 4 + ((seed + tradeIndex) % 5) * 2,
-      rule: point.rule,
-      confidence: Number((52 + Math.abs(Math.sin(seed + tradeIndex)) * 36).toFixed(1)),
-      pnlPercent: Number(pnlPercent.toFixed(2))
-    };
-  });
-}
-
-function rangeStats(asset: Asset, range: ChartRange, zoom: number, overrideCandles?: Candle[]) {
-  const candles = getVisibleCandles(asset, range, zoom, overrideCandles);
+function rangeStats(asset: Asset, zoom: number, sourceCandles: Candle[]) {
+  const candles = getVisibleCandles(asset, zoom, sourceCandles);
   const first = candles[0];
   const last = candles[candles.length - 1];
   const high = Math.max(...candles.map((candle) => candle.high));
@@ -378,8 +342,8 @@ function buildSavedCandle(asset: Asset, strategyName: string, range: ChartRange,
   };
 }
 
-function calculationRows(asset: Asset, range: ChartRange, zoom: number, trades: AlgorithmTrade[], overrideCandles?: Candle[]) {
-  const candles = getVisibleCandles(asset, range, zoom, overrideCandles);
+function calculationRows(asset: Asset, zoom: number, trades: AlgorithmTrade[], sourceCandles: Candle[]) {
+  const candles = getVisibleCandles(asset, zoom, sourceCandles);
   const averages = movingAverage(candles);
   let vwapNumerator = 0;
   let vwapDenominator = 0;
@@ -401,21 +365,16 @@ function calculationRows(asset: Asset, range: ChartRange, zoom: number, trades: 
   });
 }
 
-function getTradePoints(trades: AlgorithmTrade[], candles: Candle[], range: ChartRange) {
-  if (range === "1H" || range === "1D") {
-    return trades
-      .map((trade) => {
-        const candleIndex = candles.findIndex((candle) => candle.time === trade.time);
-        return candleIndex >= 0 ? { trade, candleIndex, price: trade.price } : null;
-      })
-      .filter(Boolean) as Array<{ trade: AlgorithmTrade; candleIndex: number; price: number }>;
-  }
-
-  return trades.map((trade, index) => {
-    const position = 0.18 + index * (0.68 / Math.max(trades.length - 1, 1));
-    const candleIndex = Math.min(candles.length - 1, Math.max(0, Math.round(position * (candles.length - 1))));
-    return { trade, candleIndex, price: candles[candleIndex]?.close ?? trade.price };
-  });
+function getTradePoints(trades: AlgorithmTrade[], candles: Candle[]) {
+  return trades
+    .map((trade) => {
+      let candleIndex = candles.findIndex((candle) => candle.time === trade.time);
+      if (candleIndex === -1) {
+        candleIndex = candles.findIndex((candle) => String(candle.time) >= String(trade.time));
+      }
+      return candleIndex >= 0 ? { trade, candleIndex, price: trade.price } : null;
+    })
+    .filter(Boolean) as Array<{ trade: AlgorithmTrade; candleIndex: number; price: number }>;
 }
 
 function CandlestickChart({
@@ -424,22 +383,25 @@ function CandlestickChart({
   overlays,
   range,
   trades = [],
-  historicalCandles,
+  sourceCandles,
   onSaveCandle,
-  expanded = false
+  expanded = false,
+  chartStyle = "candles"
 }: {
   asset: Asset;
   zoom: number;
   overlays: Record<ChartOverlay, boolean>;
   range: ChartRange;
   trades: AlgorithmTrade[];
-  historicalCandles?: Candle[];
+  sourceCandles: Candle[];
   onSaveCandle?: (candle: Candle, candleIndex: number) => void;
   expanded?: boolean;
+  chartStyle?: ChartStyle;
 }) {
   const [hoveredCandle, setHoveredCandle] = React.useState<{ candle: Candle; index: number; x: number; y: number } | null>(null);
-  const candles = getVisibleCandles(asset, range, zoom, historicalCandles);
-  const visibleTrades = getTradePoints(trades, candles, range);
+  const candles = getVisibleCandles(asset, zoom, sourceCandles);
+  const visibleTrades = getTradePoints(trades, candles);
+  const maxVolume = Math.max(...candles.map((candle) => candle.volume), 1);
   const high = Math.max(...candles.map((candle) => candle.high));
   const low = Math.min(...candles.map((candle) => candle.low));
   const span = high - low || 1;
@@ -464,6 +426,15 @@ function CandlestickChart({
       return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
     })
     .join(" ");
+  const lineUp = (candles[candles.length - 1]?.close ?? 0) >= (candles[0]?.close ?? 0);
+  const linePath = candles
+    .map((candle, index) => {
+      const x = chart.left + index * step + step / 2;
+      const y = candleY(candle.close, low, span, chart.top, chart.height);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+  const areaPath = `${linePath} L ${(chart.left + (candles.length - 1) * step + step / 2).toFixed(2)} ${chart.top + chart.height} L ${(chart.left + step / 2).toFixed(2)} ${chart.top + chart.height} Z`;
 
   return (
     <svg className={`candle-chart ${expanded ? "expanded" : ""}`} viewBox={viewBox} preserveAspectRatio="xMidYMin meet" role="img" aria-label={`${asset.symbol} ${range} candlestick chart`}>
@@ -490,12 +461,14 @@ function CandlestickChart({
         const positive = candle.close >= candle.open;
         const bodyTop = Math.min(open, close);
         const bodyHeight = Math.max(1.5, Math.abs(open - close));
-        const volumeHeight = Math.max(3, Math.min(expanded ? 48 : 38, (candle.volume / asset.volume) * (range === "1H" || range === "1D" ? 1200 : 4200)));
+        const volumeHeight = Math.max(2, (candle.volume / maxVolume) * (expanded ? 48 : 38));
 
         return (
           <g key={`${candle.time}-${index}`} className={positive ? "candle-up" : "candle-down"}>
-            {overlays.wicks && <line className="wick" x1={x} x2={x} y1={highY} y2={lowY} />}
-            <rect className="candle-body" x={x - bodyWidth / 2} y={bodyTop} width={bodyWidth} height={bodyHeight} rx="1" />
+            {chartStyle === "candles" && overlays.wicks && <line className="wick" x1={x} x2={x} y1={highY} y2={lowY} />}
+            {chartStyle === "candles" && (
+              <rect className="candle-body" x={x - bodyWidth / 2} y={bodyTop} width={bodyWidth} height={bodyHeight} rx="1" />
+            )}
             <rect className="volume-bar" x={x - bodyWidth / 2} y={volumeBase - volumeHeight} width={bodyWidth} height={volumeHeight} rx="1" />
             <rect
               aria-label={`${asset.symbol} candle ${candle.time}`}
@@ -514,6 +487,12 @@ function CandlestickChart({
         );
       })}
 
+      {chartStyle === "line" && (
+        <g className={lineUp ? "price-line gain-line" : "price-line loss-line"}>
+          <path className="line-area" d={areaPath} />
+          <path className="line-path" d={linePath} />
+        </g>
+      )}
       {overlays.bands && (
         <>
           <line className="band-line" x1={chart.left} x2={chart.left + chart.width} y1={upperBandY} y2={upperBandY} />
@@ -529,7 +508,7 @@ function CandlestickChart({
           <circle cx={hoveredCandle.x} cy={candleY(hoveredCandle.candle.close, low, span, chart.top, chart.height)} r="4" />
           <g transform={`translate(${Math.min(Math.max(hoveredCandle.x + 12, chart.left + 8), chart.left + chart.width - 176)} ${Math.max(hoveredCandle.y - 94, chart.top + 8)})`}>
             <rect width="168" height="104" rx="4" />
-            <text x="8" y="17">Date / Time: {hoveredCandle.candle.time}</text>
+            <text x="8" y="17">Date / Time: {displayTime(hoveredCandle.candle.time, range)}</text>
             <text x="8" y="34">O {priceMoney(hoveredCandle.candle.open, asset.price)}</text>
             <text x="84" y="34">H {priceMoney(hoveredCandle.candle.high, asset.price)}</text>
             <text x="8" y="51">L {priceMoney(hoveredCandle.candle.low, asset.price)}</text>
@@ -545,12 +524,14 @@ function CandlestickChart({
           const x = chart.left + candleIndex * step + step / 2;
           const y = candleY(price, low, span, chart.top, chart.height);
           const isBuy = trade.side === "buy";
+          const colorStyle = trade.color ? { stroke: trade.color } : undefined;
+          const fillStyle = trade.color ? { fill: trade.color } : undefined;
 
           return (
             <g className={isBuy ? "trade-marker buy-marker" : "trade-marker sell-marker"} key={trade.id}>
-              <line x1={x} x2={x} y1={chart.top} y2={chart.top + chart.height} />
-              <path d={isBuy ? `M ${x} ${y - 13} L ${x - 7} ${y} L ${x + 7} ${y} Z` : `M ${x} ${y + 13} L ${x - 7} ${y} L ${x + 7} ${y} Z`} />
-              <rect x={x - 20} y={isBuy ? y - 38 : y + 16} width="40" height="18" rx="2" />
+              <line style={colorStyle} x1={x} x2={x} y1={chart.top} y2={chart.top + chart.height} />
+              <path style={fillStyle} d={isBuy ? `M ${x} ${y - 13} L ${x - 7} ${y} L ${x + 7} ${y} Z` : `M ${x} ${y + 13} L ${x - 7} ${y} L ${x + 7} ${y} Z`} />
+              <rect style={fillStyle} x={x - 20} y={isBuy ? y - 38 : y + 16} width="40" height="18" rx="2" />
               <text x={x} y={isBuy ? y - 25 : y + 29} textAnchor="middle">
                 {isBuy ? "BUY" : "SELL"}
               </text>
@@ -564,10 +545,10 @@ function CandlestickChart({
         </text>
       </g>
       <text className="axis-label" x={chart.left} y={axisY}>
-        {candles[0]?.time}
+        {candles[0] ? displayTime(candles[0].time, range) : ""}
       </text>
       <text className="axis-label" x={chart.left + chart.width} y={axisY} textAnchor="end">
-        {candles[candles.length - 1]?.time}
+        {candles[candles.length - 1] ? displayTime(candles[candles.length - 1].time, range) : ""}
       </text>
     </svg>
   );
@@ -576,15 +557,19 @@ function CandlestickChart({
 function RangeControls({
   range,
   zoom,
+  chartStyle,
   onRangeChange,
   onZoomChange,
+  onChartStyleChange,
   onExpand,
   showExpand = true
 }: {
   range: ChartRange;
   zoom: number;
+  chartStyle: ChartStyle;
   onRangeChange: (range: ChartRange) => void;
   onZoomChange: (zoom: number) => void;
+  onChartStyleChange: (style: ChartStyle) => void;
   onExpand: () => void;
   showExpand?: boolean;
 }) {
@@ -598,6 +583,14 @@ function RangeControls({
 
   return (
     <div className="chart-control-strip">
+      <div className="range-tabs" aria-label="Chart style">
+        <button className={chartStyle === "line" ? "selected" : ""} onClick={() => onChartStyleChange("line")} type="button">
+          Line
+        </button>
+        <button className={chartStyle === "candles" ? "selected" : ""} onClick={() => onChartStyleChange("candles")} type="button">
+          Candles
+        </button>
+      </div>
       <div className="range-tabs" aria-label="Chart time range">
         {chartRanges.map((option) => (
           <button className={option.key === range ? "selected" : ""} key={option.key} onClick={() => onRangeChange(option.key)} type="button">
@@ -631,8 +624,11 @@ function RangeControls({
   );
 }
 
-function RangeReadout({ asset, range, zoom, historicalCandles }: { asset: Asset; range: ChartRange; zoom: number; historicalCandles?: Candle[] }) {
-  const snapshot = rangeStats(asset, range, zoom, historicalCandles);
+function RangeReadout({ asset, range, zoom, sourceCandles }: { asset: Asset; range: ChartRange; zoom: number; sourceCandles: Candle[] }) {
+  if (sourceCandles.length === 0) {
+    return null;
+  }
+  const snapshot = rangeStats(asset, zoom, sourceCandles);
   const config = chartRanges.find((item) => item.key === range);
   const rows = [
     ["Open", priceMoney(snapshot.first.open, asset.price)],
@@ -693,14 +689,39 @@ function OverlayControls({ overlays, setOverlays }: { overlays: Record<ChartOver
   );
 }
 
-function DiagnosticSheet({ asset }: { asset: Asset }) {
+function computeDiagnostics(candles: Candle[]): AlgorithmDiagnostic {
+  const last = candles[candles.length - 1];
+  const fastSample = candles.slice(-9);
+  const slowSample = candles.slice(-21);
+  const emaFast = fastSample.reduce((sum, candle) => sum + candle.close, 0) / Math.max(fastSample.length, 1);
+  const emaSlow = slowSample.reduce((sum, candle) => sum + candle.close, 0) / Math.max(slowSample.length, 1);
+  const vwapNumerator = candles.reduce((sum, candle) => sum + candle.close * candle.volume, 0);
+  const vwapDenominator = candles.reduce((sum, candle) => sum + candle.volume, 0) || 1;
+  const ranges = candles.slice(-14).map((candle) => candle.high - candle.low);
+  const atr = Math.max(ranges.reduce((sum, value) => sum + value, 0) / Math.max(ranges.length, 1), 0.0001);
+  const gains = candles.slice(-14).filter((candle) => candle.close >= candle.open).length;
+  const rsi = 38 + (gains / 14) * 38 + Math.min(Math.max((last.close - emaSlow) / atr, -4), 4) * 2.2;
+  const signalScore = 50 + ((emaFast - emaSlow) / atr) * 12 + (last.close > vwapNumerator / vwapDenominator ? 8 : -8);
+
+  return {
+    rsi: Number(Math.max(0, Math.min(100, rsi)).toFixed(1)),
+    emaFast: Number(emaFast.toFixed(2)),
+    emaSlow: Number(emaSlow.toFixed(2)),
+    vwap: Number((vwapNumerator / vwapDenominator).toFixed(2)),
+    atr: Number(atr.toFixed(2)),
+    signalScore: Number(Math.max(0, Math.min(100, signalScore)).toFixed(1))
+  };
+}
+
+function DiagnosticSheet({ asset, sourceCandles }: { asset: Asset; sourceCandles: Candle[] }) {
+  const diagnostics = sourceCandles.length >= 14 ? computeDiagnostics(sourceCandles) : asset.diagnostics;
   const rows = [
-    ["RSI(14)", asset.diagnostics.rsi.toFixed(1), asset.diagnostics.rsi >= 58 ? "Momentum OK" : "Neutral"],
-    ["EMA(9)", priceMoney(asset.diagnostics.emaFast, asset.price), asset.diagnostics.emaFast > asset.diagnostics.emaSlow ? "Above EMA21" : "Below EMA21"],
-    ["EMA(21)", priceMoney(asset.diagnostics.emaSlow, asset.price), "Trend baseline"],
-    ["VWAP", priceMoney(asset.diagnostics.vwap, asset.price), asset.price > asset.diagnostics.vwap ? "Price above VWAP" : "Price below VWAP"],
-    ["ATR(14)", priceMoney(asset.diagnostics.atr, asset.price), "Volatility guard"],
-    ["Signal Score", asset.diagnostics.signalScore.toFixed(1), asset.diagnostics.signalScore >= 60 ? "Trade allowed" : "Wait"]
+    ["RSI(14)", diagnostics.rsi.toFixed(1), diagnostics.rsi >= 58 ? "Momentum OK" : "Neutral"],
+    ["EMA(9)", priceMoney(diagnostics.emaFast, asset.price), diagnostics.emaFast > diagnostics.emaSlow ? "Above EMA21" : "Below EMA21"],
+    ["EMA(21)", priceMoney(diagnostics.emaSlow, asset.price), "Trend baseline"],
+    ["VWAP", priceMoney(diagnostics.vwap, asset.price), asset.price > diagnostics.vwap ? "Price above VWAP" : "Price below VWAP"],
+    ["ATR(14)", priceMoney(diagnostics.atr, asset.price), "Volatility guard"],
+    ["Signal Score", diagnostics.signalScore.toFixed(1), diagnostics.signalScore >= 60 ? "Trade allowed" : "Wait"]
   ];
 
   return (
@@ -725,11 +746,11 @@ function DiagnosticSheet({ asset }: { asset: Asset }) {
   );
 }
 
-function TradeTraceSheet({ trades, strategyName }: { trades: AlgorithmTrade[]; strategyName: string }) {
+function TradeTraceSheet({ trades, range }: { trades: AlgorithmTrade[]; range: ChartRange }) {
   return (
     <section className="trade-trace">
       <div className="section-title">
-        <span>{strategyName} Trade Trace</span>
+        <span>Trade Trace — checked algorithms</span>
         <Table2 size={16} />
       </div>
       <div className="trade-grid">
@@ -737,24 +758,27 @@ function TradeTraceSheet({ trades, strategyName }: { trades: AlgorithmTrade[]; s
         <strong>Side</strong>
         <strong>Price</strong>
         <strong>Qty</strong>
-        <strong>Confidence</strong>
+        <strong>Algorithm</strong>
         <strong>P/L</strong>
         <strong>Rule Trigger</strong>
         {trades.length === 0 ? (
-          <span className="empty-row">No trades for this strategy window.</span>
+          <span className="empty-row">No trades in this window. Check an algorithm to overlay its trades.</span>
         ) : (
           trades.map((trade) => (
             <React.Fragment key={trade.id}>
-              <span>{trade.time}</span>
+              <span>{displayTime(trade.time, range)}</span>
               <span className={trade.side === "buy" ? "gain" : "loss"}>{trade.side.toUpperCase()}</span>
               <span>{priceMoney(trade.price)}</span>
               <span>{trade.quantity}</span>
-              <span>{trade.confidence}%</span>
+              <span>
+                {trade.color && <i className="perf-dot" style={{ background: trade.color }} />}
+                {trade.strategyName ?? "--"}
+              </span>
               <span className={trade.pnlPercent >= 0 ? "gain" : "loss"}>
                 {trade.pnlPercent >= 0 ? "+" : ""}
                 {trade.pnlPercent}%
               </span>
-              <span>{trade.rule}</span>
+              <span>{trade.rule ?? "--"}</span>
             </React.Fragment>
           ))
         )}
@@ -763,27 +787,50 @@ function TradeTraceSheet({ trades, strategyName }: { trades: AlgorithmTrade[]; s
   );
 }
 
-function StrategySelector({
+function AlgorithmChecklist({
   strategies,
-  selectedStrategyName,
-  onSelect
+  checked,
+  onToggle,
+  range
 }: {
-  strategies: StrategyScore[];
-  selectedStrategyName: string;
-  onSelect: (name: string) => void;
+  strategies: CompareStrategy[];
+  checked: string[];
+  onToggle: (name: string) => void;
+  range: ChartRange;
 }) {
+  const markable = strategies.filter((strategy) => strategy.type === "primary");
+
   return (
-    <div className="strategy-selector" aria-label="Algorithm strategy">
-      {strategies.map((strategy) => (
-        <button className={strategy.name === selectedStrategyName ? "selected" : ""} key={strategy.name} onClick={() => onSelect(strategy.name)} type="button">
-          <span>{strategy.type}</span>
-          <strong>{strategy.name}</strong>
-          <i className={strategy.returnPercent >= 0 ? "gain" : "loss"}>
-            {strategy.returnPercent >= 0 ? "+" : ""}
-            {strategy.returnPercent}%
-          </i>
-        </button>
-      ))}
+    <div className="algo-checklist" aria-label="Algorithm trade overlays">
+      {markable.length === 0 && <p className="empty-state">No algorithms loaded yet. Add files to the algorithms folder.</p>}
+      {markable.map((strategy) => {
+        const colorIndex = strategies.findIndex((item) => item.name === strategy.name);
+        const color = strategyPalette[colorIndex % strategyPalette.length];
+        const lastTrade = strategy.trades[strategy.trades.length - 1];
+        return (
+          <label className={checked.includes(strategy.name) ? "checked" : ""} key={strategy.name} style={{ borderLeftColor: color }}>
+            <input checked={checked.includes(strategy.name)} onChange={() => onToggle(strategy.name)} type="checkbox" />
+            <i style={{ background: color }} />
+            <div>
+              <strong>{strategy.name}</strong>
+              <span>
+                {strategy.error
+                  ? "Backtest error"
+                  : strategy.metrics
+                    ? `${strategy.metrics.returnPercent >= 0 ? "+" : ""}${strategy.metrics.returnPercent}% · ${strategy.trades.length} trades${
+                        lastTrade ? ` · last ${lastTrade.side.toUpperCase()} ${displayTime(lastTrade.time, range)}` : ""
+                      }`
+                    : "No data"}
+              </span>
+            </div>
+            {strategy.metrics && (
+              <em className={strategy.metrics.returnPercent >= 0 ? "gain" : "loss"}>
+                {strategy.metrics.openPosition ? "HOLDING" : "FLAT"}
+              </em>
+            )}
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -793,7 +840,7 @@ function CandleCalculationSheet({
   range,
   zoom,
   trades,
-  historicalCandles,
+  sourceCandles,
   savedCandles,
   onClearSaved
 }: {
@@ -801,11 +848,11 @@ function CandleCalculationSheet({
   range: ChartRange;
   zoom: number;
   trades: AlgorithmTrade[];
-  historicalCandles?: Candle[];
+  sourceCandles: Candle[];
   savedCandles: SavedCandle[];
   onClearSaved: () => void;
 }) {
-  const rows = calculationRows(asset, range, zoom, trades, historicalCandles).slice(-48);
+  const rows = calculationRows(asset, zoom, trades, sourceCandles).slice(-48);
 
   return (
     <section className="calculation-sheet">
@@ -833,7 +880,7 @@ function CandleCalculationSheet({
               <span>{saved.symbol}</span>
               <span>{saved.strategyName}</span>
               <span>{saved.range}</span>
-              <span>{saved.time}</span>
+              <span>{displayTime(saved.time, saved.range)}</span>
               <span>{priceMoney(saved.close, saved.close)}</span>
               <span className={saved.bodyPercent >= 0 ? "gain" : "loss"}>
                 {saved.bodyPercent >= 0 ? "+" : ""}
@@ -861,7 +908,7 @@ function CandleCalculationSheet({
         {rows.map((row) => (
           <React.Fragment key={`${row.candle.time}-${row.index}`}>
             <span>{row.index + 1}</span>
-            <span>{row.candle.time}</span>
+            <span>{displayTime(row.candle.time, range)}</span>
             <span>{priceMoney(row.candle.open, asset.price)}</span>
             <span>{priceMoney(row.candle.high, asset.price)}</span>
             <span>{priceMoney(row.candle.low, asset.price)}</span>
@@ -879,59 +926,6 @@ function CandleCalculationSheet({
           </React.Fragment>
         ))}
       </div>
-    </section>
-  );
-}
-
-function BacktestProgress({ backtest, status }: { backtest: BacktestResult | null; status: string }) {
-  const curve = backtest?.equityCurve.slice(-8) ?? [];
-
-  return (
-    <section className="backtest-progress">
-      <div className="section-title">
-        <span>Historical Backtest Progress</span>
-        <Activity size={16} />
-      </div>
-      <div className="backtest-status">{status}</div>
-      {backtest?.metrics && (
-        <>
-          <div className="backtest-metrics">
-            <div>
-              <span>Return</span>
-              <strong className={backtest.metrics.returnPercent >= 0 ? "gain" : "loss"}>
-                {backtest.metrics.returnPercent >= 0 ? "+" : ""}
-                {backtest.metrics.returnPercent}%
-              </strong>
-            </div>
-            <div>
-              <span>Final equity</span>
-              <strong>{money.format(backtest.metrics.finalEquity)}</strong>
-            </div>
-            <div>
-              <span>Trades</span>
-              <strong>{backtest.metrics.tradeCount}</strong>
-            </div>
-            <div>
-              <span>Position</span>
-              <strong>{backtest.metrics.openPosition ? "Open" : "Flat"}</strong>
-            </div>
-          </div>
-          <div className="equity-grid">
-            <strong>Time</strong>
-            <strong>Equity</strong>
-            <strong>Cash</strong>
-            <strong>Position</strong>
-            {curve.map((point, index) => (
-              <React.Fragment key={`${point.time}-${index}`}>
-                <span>{point.time}</span>
-                <span>{money.format(point.equity)}</span>
-                <span>{money.format(point.cash)}</span>
-                <span>{money.format(point.positionValue)}</span>
-              </React.Fragment>
-            ))}
-          </div>
-        </>
-      )}
     </section>
   );
 }
@@ -1007,8 +1001,11 @@ function SettingsModal({
   );
 }
 
-function MiniCandles({ asset }: { asset: Asset }) {
-  const candles = asset.candles.slice(-28);
+function MiniCandles({ asset, sourceCandles }: { asset: Asset; sourceCandles: Candle[] }) {
+  const candles = sourceCandles.slice(-28);
+  if (candles.length === 0) {
+    return <span className="mini-loading">Loading bars...</span>;
+  }
   const high = Math.max(...candles.map((candle) => candle.high));
   const low = Math.min(...candles.map((candle) => candle.low));
   const span = high - low || 1;
@@ -1094,6 +1091,284 @@ function MethodBoard({ strategies }: { strategies: StrategyScore[] }) {
   );
 }
 
+function PerformancePanel({
+  symbol,
+  range,
+  compare,
+  status
+}: {
+  symbol: string;
+  range: ChartRange;
+  compare: CompareResult | null;
+  status: string;
+}) {
+  const [hiddenStrategies, setHiddenStrategies] = React.useState<string[]>(["Cash"]);
+  const strategies = compare?.strategies ?? [];
+  const visibleStrategies = strategies.filter((strategy) => !hiddenStrategies.includes(strategy.name));
+  const startingCash = compare?.startingCash ?? 100000;
+  const chart = { left: 58, top: 18, width: 788, height: 240 };
+  const axisY = chart.top + chart.height + 26;
+
+  function toggleStrategy(name: string) {
+    setHiddenStrategies((current) => (current.includes(name) ? current.filter((item) => item !== name) : [...current, name]));
+  }
+
+  const gainOf = (equity: number) => ((equity - startingCash) / startingCash) * 100;
+  const allGains = visibleStrategies.flatMap((strategy) => strategy.equityCurve.map((point) => gainOf(point.equity)));
+  const maxGain = Math.max(...(allGains.length ? allGains : [0]), 0.4);
+  const minGain = Math.min(...(allGains.length ? allGains : [0]), -0.4);
+  const gainSpan = maxGain - minGain || 1;
+  const gainY = (gain: number) => chart.top + chart.height - ((gain - minGain) / gainSpan) * chart.height;
+  const firstCurve = strategies[0]?.equityCurve ?? [];
+
+  return (
+    <section className="performance-panel">
+      <div className="section-title">
+        <span>
+          Auto-Trading Performance — {symbol} · {range} window
+        </span>
+        <Activity size={16} />
+      </div>
+      <div className="perf-status">{status}</div>
+      {strategies.length > 0 && (
+        <>
+          <div className="perf-legend" aria-label="Toggle strategies">
+            {strategies.map((strategy, index) => {
+              const active = !hiddenStrategies.includes(strategy.name);
+              return (
+                <button
+                  className={active ? "active" : ""}
+                  key={strategy.name}
+                  onClick={() => toggleStrategy(strategy.name)}
+                  type="button"
+                >
+                  <i style={{ background: strategyPalette[index % strategyPalette.length] }} />
+                  <span>{strategy.name}</span>
+                  {strategy.metrics ? (
+                    <strong className={strategy.metrics.returnPercent >= 0 ? "gain" : "loss"}>
+                      {strategy.metrics.returnPercent >= 0 ? "+" : ""}
+                      {strategy.metrics.returnPercent}%
+                    </strong>
+                  ) : (
+                    <strong className="loss">error</strong>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <svg className="perf-chart" viewBox="0 0 880 312" preserveAspectRatio="xMidYMin meet" role="img" aria-label={`${symbol} strategy gains comparison`}>
+            <rect className="plot-bg" x={chart.left} y={chart.top} width={chart.width} height={chart.height} rx="3" />
+            {[0, 1, 2, 3, 4].map((line) => {
+              const value = maxGain - (gainSpan / 4) * line;
+              const yPos = chart.top + (chart.height / 4) * line;
+              return (
+                <g key={line}>
+                  <line className="grid-line" x1={chart.left} x2={chart.left + chart.width} y1={yPos} y2={yPos} />
+                  <text className="axis-label" x={chart.left - 10} y={yPos + 4} textAnchor="end">
+                    {value >= 0 ? "+" : ""}
+                    {value.toFixed(1)}%
+                  </text>
+                </g>
+              );
+            })}
+            {minGain < 0 && maxGain > 0 && (
+              <line className="zero-line" x1={chart.left} x2={chart.left + chart.width} y1={gainY(0)} y2={gainY(0)} />
+            )}
+            {strategies.map((strategy, index) => {
+              if (hiddenStrategies.includes(strategy.name)) {
+                return null;
+              }
+              const points = strategy.equityCurve;
+              const stepX = chart.width / Math.max(points.length - 1, 1);
+              const path = points
+                .map((point, pointIndex) => `${pointIndex === 0 ? "M" : "L"} ${(chart.left + pointIndex * stepX).toFixed(2)} ${gainY(gainOf(point.equity)).toFixed(2)}`)
+                .join(" ");
+              return <path className="perf-line" d={path} key={strategy.name} style={{ stroke: strategyPalette[index % strategyPalette.length] }} />;
+            })}
+            <text className="axis-label" x={chart.left} y={axisY}>
+              {firstCurve[0] ? displayTime(firstCurve[0].time, range) : ""}
+            </text>
+            <text className="axis-label" x={chart.left + chart.width} y={axisY} textAnchor="end">
+              {firstCurve[firstCurve.length - 1] ? displayTime(firstCurve[firstCurve.length - 1].time, range) : ""}
+            </text>
+          </svg>
+          <div className="perf-grid">
+            <strong>Strategy</strong>
+            <strong>Class</strong>
+            <strong>Return</strong>
+            <strong>Win Rate</strong>
+            <strong>Max DD</strong>
+            <strong>Trades</strong>
+            <strong>Final Equity</strong>
+            {strategies.map((strategy, index) => (
+              <React.Fragment key={strategy.name}>
+                <span>
+                  <i className="perf-dot" style={{ background: strategyPalette[index % strategyPalette.length] }} />
+                  {strategy.name}
+                </span>
+                <span>{strategy.type}</span>
+                {strategy.metrics ? (
+                  <>
+                    <span className={strategy.metrics.returnPercent >= 0 ? "gain" : "loss"}>
+                      {strategy.metrics.returnPercent >= 0 ? "+" : ""}
+                      {strategy.metrics.returnPercent}%
+                    </span>
+                    <span>{strategy.metrics.winRate === null ? "--" : `${strategy.metrics.winRate}%`}</span>
+                    <span className={strategy.metrics.maxDrawdown < 0 ? "loss" : ""}>{strategy.metrics.maxDrawdown}%</span>
+                    <span>{strategy.metrics.tradeCount}</span>
+                    <span>{money.format(strategy.metrics.finalEquity)}</span>
+                  </>
+                ) : (
+                  <span className="loss perf-error-row">{strategy.error || "Backtest failed."}</span>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function ProfitBoard({ scan, status, range }: { scan: ScanResult | null; status: string; range: ChartRange }) {
+  const strategies = scan?.strategies ?? [];
+
+  return (
+    <section className="profit-board">
+      <div className="section-title">
+        <span>Algorithm Profits — totals across your open stocks</span>
+        <BarChart3 size={16} />
+      </div>
+      <div className="perf-status">{status}</div>
+      {strategies.length > 0 && (
+        <>
+          <div className="profit-cards">
+            {strategies.map((strategy, index) => (
+              <div key={strategy.id} style={{ borderLeftColor: strategyPalette[index % strategyPalette.length] }}>
+                <span>{strategy.name}</span>
+                <strong className={strategy.totals.pnl >= 0 ? "gain" : "loss"}>
+                  {strategy.totals.pnl >= 0 ? "+" : ""}
+                  {money.format(strategy.totals.pnl)}
+                </strong>
+                <small>
+                  {strategy.totals.avgReturnPercent >= 0 ? "+" : ""}
+                  {strategy.totals.avgReturnPercent}% avg return · {strategy.totals.profitableSymbols}/{strategy.totals.scoredSymbols} stocks
+                  profitable
+                </small>
+              </div>
+            ))}
+          </div>
+          <div className="section-title signal-board-title">
+            <span>What each algorithm says to do right now</span>
+          </div>
+          <div className="signal-board">
+            {strategies.map((strategy, index) => (
+              <div className="signal-row" key={strategy.id}>
+                <strong>
+                  <i className="perf-dot" style={{ background: strategyPalette[index % strategyPalette.length] }} />
+                  {strategy.name}
+                </strong>
+                <div className="signal-chips">
+                  {strategy.perSymbol.map((entry) => (
+                    <span
+                      className={`signal-chip ${entry.error ? "error" : entry.recommendation === "buy" ? "buy" : entry.recommendation === "sell" ? "sell" : entry.recommendation === "hold" ? "hold" : ""}`}
+                      key={`${strategy.id}-${entry.symbol}`}
+                      title={
+                        entry.lastAction
+                          ? `Last ${entry.lastAction.side.toUpperCase()} ${displayTime(entry.lastAction.time, range)} @ ${priceMoney(entry.lastAction.price)}`
+                          : undefined
+                      }
+                    >
+                      <strong>{entry.symbol}</strong>
+                      {entry.error ? "n/a" : (entry.recommendation ?? "stand by").toUpperCase()}
+                      {entry.lastAction && (
+                        <em>
+                          last {entry.lastAction.side} {displayTime(entry.lastAction.time, range)}
+                        </em>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function StatsSheet({ scan, status, range }: { scan: ScanResult | null; status: string; range: ChartRange }) {
+  const strategies = scan?.strategies ?? [];
+
+  return (
+    <section className="stats-sheet-panel">
+      <div className="section-title">
+        <span>Strategy Statistics Sheet — {scan?.symbols.join(", ") || "no stocks"} · {range} window</span>
+        <Table2 size={16} />
+      </div>
+      <div className="perf-status">{status}</div>
+      <div className="stat-sheet">
+        <strong>Strategy</strong>
+        <strong>Symbol</strong>
+        <strong>Return</strong>
+        <strong>P/L $</strong>
+        <strong>Win Rate</strong>
+        <strong>Max DD</strong>
+        <strong>Sharpe</strong>
+        <strong>Profit Factor</strong>
+        <strong>Exposure</strong>
+        <strong>Avg Trade</strong>
+        <strong>Trades</strong>
+        <strong>Position</strong>
+        <strong>Last Action</strong>
+        <strong>Signal</strong>
+        {strategies.flatMap((strategy, index) =>
+          strategy.perSymbol.map((entry) => (
+            <React.Fragment key={`${strategy.id}-${entry.symbol}`}>
+              <span>
+                <i className="perf-dot" style={{ background: strategyPalette[index % strategyPalette.length] }} />
+                {strategy.name}
+              </span>
+              <span>{entry.symbol}</span>
+              {entry.error ? (
+                <span className="loss stat-error">{entry.error}</span>
+              ) : (
+                <>
+                  <span className={(entry.returnPercent ?? 0) >= 0 ? "gain" : "loss"}>
+                    {(entry.returnPercent ?? 0) >= 0 ? "+" : ""}
+                    {entry.returnPercent}%
+                  </span>
+                  <span className={(entry.pnl ?? 0) >= 0 ? "gain" : "loss"}>{money.format(entry.pnl ?? 0)}</span>
+                  <span>{entry.winRate === null || entry.winRate === undefined ? "--" : `${entry.winRate}%`}</span>
+                  <span className={(entry.maxDrawdown ?? 0) < 0 ? "loss" : ""}>{entry.maxDrawdown}%</span>
+                  <span>{entry.sharpe}</span>
+                  <span>{entry.profitFactor}</span>
+                  <span>{entry.exposurePercent}%</span>
+                  <span className={(entry.avgTradePercent ?? 0) >= 0 ? "gain" : "loss"}>
+                    {(entry.avgTradePercent ?? 0) >= 0 ? "+" : ""}
+                    {entry.avgTradePercent}%
+                  </span>
+                  <span>{entry.tradeCount}</span>
+                  <span>{entry.openPosition ? "Open" : "Flat"}</span>
+                  <span>
+                    {entry.lastAction
+                      ? `${entry.lastAction.side.toUpperCase()} ${displayTime(entry.lastAction.time, range)} @ ${priceMoney(entry.lastAction.price)}`
+                      : "--"}
+                  </span>
+                  <span className={entry.recommendation === "buy" ? "gain" : entry.recommendation === "sell" ? "loss" : ""}>
+                    {(entry.recommendation ?? "--").toUpperCase()}
+                  </span>
+                </>
+              )}
+            </React.Fragment>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
 function PanelFrame({
   panelId,
   children,
@@ -1146,8 +1421,6 @@ function PanelFrame({
 function App() {
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [portfolio, setPortfolio] = React.useState<Portfolio | null>(null);
-  const [strategies, setStrategies] = React.useState<StrategyScore[]>([]);
-  const [selectedStrategyName, setSelectedStrategyName] = React.useState("Stockbot Momentum");
   const [assetUniverse, setAssetUniverse] = React.useState({ source: "local", assetCount: 0 });
   const [query, setQuery] = React.useState("");
   const [searchResults, setSearchResults] = React.useState<Asset[]>([]);
@@ -1162,8 +1435,6 @@ function App() {
   const [settingsPayload, setSettingsPayload] = React.useState<SettingsPayload | null>(null);
   const [settingsDraft, setSettingsDraft] = React.useState<Record<string, string>>({});
   const [settingsStatus, setSettingsStatus] = React.useState("");
-  const [backtest, setBacktest] = React.useState<BacktestResult | null>(null);
-  const [backtestStatus, setBacktestStatus] = React.useState("Configure Alpaca in Settings to run historical Stockbot Momentum.");
   const [panelOrder, setPanelOrder] = React.useState<PanelId[]>(defaultPanelOrder);
   const [closedPanels, setClosedPanels] = React.useState<PanelId[]>([]);
   const [overlays, setOverlays] = React.useState<Record<ChartOverlay, boolean>>({
@@ -1174,6 +1445,21 @@ function App() {
     wicks: true
   });
   const [notice, setNotice] = React.useState("Live paper monitor online");
+  const [realBars, setRealBars] = React.useState<Record<string, BarsEntry>>({});
+  const [chartStyle, setChartStyle] = React.useState<ChartStyle>("line");
+  const [view, setView] = React.useState<AppView>("stocks");
+  const [compare, setCompare] = React.useState<CompareResult | null>(null);
+  const [compareStatus, setCompareStatus] = React.useState("Loading strategy comparison...");
+  const [compareVersion, setCompareVersion] = React.useState(0);
+  const [algorithms, setAlgorithms] = React.useState<AlgorithmsPayload | null>(null);
+  const [algorithmStatus, setAlgorithmStatus] = React.useState("");
+  const [checkedAlgorithms, setCheckedAlgorithms] = React.useState<string[]>([]);
+  const [checklistTouched, setChecklistTouched] = React.useState(false);
+  const [homeTab, setHomeTab] = React.useState<HomeTab>("profits");
+  const [scan, setScan] = React.useState<ScanResult | null>(null);
+  const [scanStatus, setScanStatus] = React.useState("Scanning your open stocks with every algorithm...");
+  const [paramDrafts, setParamDrafts] = React.useState<Record<string, Record<string, string>>>({});
+  const algorithmFileInput = React.useRef<HTMLInputElement | null>(null);
   const requestCache = React.useRef(new Map<string, CacheEntry<unknown>>());
   const draggedPanel = React.useRef<PanelId | null>(null);
 
@@ -1184,10 +1470,30 @@ function App() {
   const visibleSidebarAssets = query.trim() ? searchResults : assets.slice(0, 12);
   const signal = selected && selectedHasRealData ? evaluateStockbotMomentum(selected) : null;
   const baselines = selected && selectedHasRealData ? compareBaselines(selected) : [];
-  const selectedStrategy = strategies.find((strategy) => strategy.name === selectedStrategyName) ?? strategies[0] ?? null;
-  const isStockbotMomentum = selectedStrategy?.name === "Stockbot Momentum";
-  const historicalCandles = selectedHasRealData && isStockbotMomentum && backtest?.symbol === selected?.symbol && backtest.range === chartRange ? backtest.bars : undefined;
-  const strategyTrades = selected && selectedHasRealData && selectedStrategy ? (isStockbotMomentum ? backtest?.trades ?? [] : buildStrategyTrades(selected, selectedStrategy.name)) : [];
+  const chartBarsEntry = selected ? realBars[`${selected.symbol}:${chartRange}`] : undefined;
+  const chartCandles = chartBarsEntry?.bars ?? [];
+  const compareStrategies = compare?.strategies ?? [];
+  const strategyTrades: AlgorithmTrade[] = compareStrategies
+    .map((strategy, index) => ({ strategy, color: strategyPalette[index % strategyPalette.length] }))
+    .filter(({ strategy }) => strategy.type === "primary" && checkedAlgorithms.includes(strategy.name))
+    .flatMap(({ strategy, color }) =>
+      (strategy.trades ?? []).map((trade) => ({ ...trade, strategyName: strategy.name, color }))
+    )
+    .sort((a, b) => String(a.time).localeCompare(String(b.time)));
+  const methodScores: StrategyScore[] = compareStrategies
+    .filter((strategy) => strategy.metrics)
+    .map((strategy) => ({
+      name: strategy.name,
+      type: strategy.type,
+      returnPercent: strategy.metrics!.returnPercent,
+      maxDrawdown: strategy.metrics!.maxDrawdown,
+      winRate: strategy.metrics!.winRate ?? 0,
+      sharpe: strategy.metrics!.sharpe,
+      profitFactor: strategy.metrics!.profitFactor,
+      trades: strategy.metrics!.tradeCount,
+      exposurePercent: strategy.metrics!.exposurePercent,
+      avgTradePercent: strategy.metrics!.avgTradePercent
+    }));
   const selectedSavedCandles = selected ? savedCandles.filter((saved) => saved.symbol === selected.symbol) : [];
 
   async function cachedJson<T>(url: string, ttl: number, options?: { force?: boolean }) {
@@ -1196,7 +1502,15 @@ function App() {
       return cached.data;
     }
     const response = await fetch(url);
-    const payload = await response.json();
+    const text = await response.text();
+    let payload: { error?: string };
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(
+        `API returned an unexpected response (${response.status}). The API server is likely outdated — stop it and run npm run dev again.`
+      );
+    }
     if (!response.ok) {
       throw new Error(payload.error || `Request failed: ${response.status}`);
     }
@@ -1232,23 +1546,12 @@ function App() {
   }, [activeSymbols, selectedSymbol]);
 
   const loadPortfolio = React.useCallback(async () => {
-    if (closedPanels.includes("portfolio")) {
+    if (closedPanels.includes("portfolio") && view !== "home") {
       return;
     }
     const payload = await cachedJson<{ data: Portfolio }>("/api/portfolio", cacheTtl.portfolio);
     setPortfolio(payload.data);
-  }, [closedPanels]);
-
-  const loadStrategies = React.useCallback(async () => {
-    if (closedPanels.includes("signal") && closedPanels.includes("methods")) {
-      return;
-    }
-    const payload = await cachedJson<{ data: StrategyScore[] }>("/api/strategies", cacheTtl.strategies);
-    setStrategies(payload.data);
-    if (payload.data.length > 0 && !payload.data.some((strategy) => strategy.name === selectedStrategyName)) {
-      setSelectedStrategyName(payload.data[0].name);
-    }
-  }, [closedPanels, selectedStrategyName]);
+  }, [closedPanels, view]);
 
   React.useEffect(() => {
     loadMarket().catch(() => setNotice("Unable to reach Stockbot API"));
@@ -1258,6 +1561,182 @@ function App() {
     return () => window.clearInterval(timer);
   }, [loadMarket]);
 
+  const loadBars = React.useCallback(async (symbol: string, range: ChartRange, force = false) => {
+    const key = `${symbol}:${range}`;
+    try {
+      const payload = await cachedJson<{ data: { source: string; bars: Candle[] } }>(
+        `/api/market/bars/${encodeURIComponent(symbol)}?range=${encodeURIComponent(range)}`,
+        cacheTtl.bars,
+        { force }
+      );
+      setRealBars((current) => ({ ...current, [key]: { source: payload.data.source, bars: payload.data.bars } }));
+    } catch (error) {
+      setRealBars((current) => ({
+        ...current,
+        [key]: { source: "unavailable", bars: [], error: error instanceof Error ? error.message : "Historical bars unavailable." }
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  React.useEffect(() => {
+    const symbol = selected?.symbol;
+    if (!symbol) {
+      return;
+    }
+    loadBars(symbol, chartRange);
+    const timer = window.setInterval(() => loadBars(symbol, chartRange, true), 60000);
+    return () => window.clearInterval(timer);
+  }, [selected?.symbol, chartRange, loadBars]);
+
+  React.useEffect(() => {
+    const symbol = selected?.symbol;
+    if (!symbol) {
+      return;
+    }
+    let cancelled = false;
+    setCompareStatus("Running strategy backtests on real bars...");
+    cachedJson<{ data: CompareResult }>(`/api/compare/${encodeURIComponent(symbol)}?range=${encodeURIComponent(chartRange)}`, cacheTtl.compare)
+      .then((payload) => {
+        if (!cancelled) {
+          setCompare(payload.data);
+          setCompareStatus(`All strategies backtested on the same ${chartRange} window of ${payload.data.source} bars. Click a strategy to show or hide it.`);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setCompare(null);
+          setCompareStatus(error instanceof Error ? error.message : "Strategy comparison unavailable.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.symbol, chartRange, compareVersion]);
+
+  React.useEffect(() => {
+    if (checklistTouched || checkedAlgorithms.length > 0) {
+      return;
+    }
+    const firstPrimary = compare?.strategies.find((strategy) => strategy.type === "primary" && !strategy.error);
+    if (firstPrimary) {
+      setCheckedAlgorithms([firstPrimary.name]);
+    }
+  }, [compare, checkedAlgorithms.length, checklistTouched]);
+
+  React.useEffect(() => {
+    if (view !== "home") {
+      return;
+    }
+    const symbolList = activeSymbols.join(",");
+    let cancelled = false;
+    setScanStatus("Scanning your open stocks with every algorithm...");
+    cachedJson<{ data: ScanResult }>(
+      `/api/algorithms/scan?symbols=${encodeURIComponent(symbolList)}&range=${encodeURIComponent(chartRange)}`,
+      cacheTtl.compare
+    )
+      .then((payload) => {
+        if (!cancelled) {
+          setScan(payload.data);
+          setScanStatus(
+            `Every algorithm backtested across ${payload.data.symbols.length} stocks on the same ${payload.data.range} window.`
+          );
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setScan(null);
+          setScanStatus(error instanceof Error ? error.message : "Scan unavailable.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, activeSymbols, chartRange, compareVersion]);
+
+  function toggleAlgorithm(name: string) {
+    setChecklistTouched(true);
+    setCheckedAlgorithms((current) => (current.includes(name) ? current.filter((item) => item !== name) : [...current, name]));
+  }
+
+  async function saveAlgorithmParams(algorithm: AlgorithmInfo) {
+    const draft = paramDrafts[algorithm.id] ?? {};
+    setAlgorithmStatus(`Saving parameters for ${algorithm.name}...`);
+    try {
+      const response = await fetch("/api/algorithms/params", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: algorithm.id, params: { ...algorithm.params, ...draft } })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || `Save failed: ${response.status}`);
+      }
+      setAlgorithms(payload.data ?? null);
+      setParamDrafts((current) => ({ ...current, [algorithm.id]: {} }));
+      setAlgorithmStatus(`${algorithm.name} parameters saved. Backtests refreshed.`);
+      requestCache.current.clear();
+      setCompareVersion((current) => current + 1);
+    } catch (error) {
+      setAlgorithmStatus(error instanceof Error ? error.message : "Parameter save failed.");
+    }
+  }
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch("/api/algorithms")
+      .then((response) => response.json())
+      .then((payload) => {
+        if (!cancelled) {
+          setAlgorithms(payload.data ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAlgorithmStatus("Could not load the algorithm library. Is the API server up to date?");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [view, compareVersion]);
+
+  async function uploadAlgorithm(file: File) {
+    setAlgorithmStatus(`Uploading ${file.name}...`);
+    try {
+      const code = await file.text();
+      const response = await fetch("/api/algorithms/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, code })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || `Upload failed: ${response.status}`);
+      }
+      setAlgorithms(payload.data ?? null);
+      setAlgorithmStatus(`${file.name} installed. Backtests refreshed.`);
+      requestCache.current.clear();
+      setCompareVersion((current) => current + 1);
+    } catch (error) {
+      setAlgorithmStatus(error instanceof Error ? error.message : "Upload failed.");
+    }
+  }
+
+  React.useEffect(() => {
+    for (const symbol of activeSymbols) {
+      loadBars(symbol, "1D");
+    }
+    const timer = window.setInterval(() => {
+      for (const symbol of activeSymbols) {
+        loadBars(symbol, "1D", true);
+      }
+    }, 120000);
+    return () => window.clearInterval(timer);
+  }, [activeSymbols, loadBars]);
+
   React.useEffect(() => {
     loadPortfolio().catch(() => setNotice("Portfolio refresh failed"));
     const timer = window.setInterval(() => {
@@ -1265,14 +1744,6 @@ function App() {
     }, 6000);
     return () => window.clearInterval(timer);
   }, [loadPortfolio]);
-
-  React.useEffect(() => {
-    loadStrategies().catch(() => setNotice("Strategy refresh failed"));
-    const timer = window.setInterval(() => {
-      loadStrategies().catch(() => setNotice("Strategy refresh failed"));
-    }, 60000);
-    return () => window.clearInterval(timer);
-  }, [loadStrategies]);
 
   async function loadSettings() {
     const payload = await cachedJson<{ data: SettingsPayload }>("/api/settings", cacheTtl.settings);
@@ -1340,37 +1811,6 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  React.useEffect(() => {
-    if (!selected || !selectedHasRealData || !isStockbotMomentum || (closedPanels.includes("chart") && closedPanels.includes("analysis"))) {
-      setBacktest(null);
-      if (selected && !selectedHasRealData) {
-        setBacktestStatus("Real quote unavailable. Historical backtest paused until market data loads.");
-      }
-      return;
-    }
-
-    let cancelled = false;
-    setBacktestStatus("Loading historical Stockbot Momentum backtest...");
-    cachedJson<{ data: BacktestResult }>(`/api/backtest/${encodeURIComponent(selected.symbol)}?range=${encodeURIComponent(chartRange)}`, cacheTtl.backtest)
-      .then((payload) => {
-        if (cancelled) {
-          return;
-        }
-        setBacktest(payload.data);
-        setBacktestStatus(`Historical backtest loaded from ${payload.data.source}.`);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setBacktest(null);
-          setBacktestStatus(error.message || "Historical backtest request failed.");
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [chartRange, closedPanels, isStockbotMomentum, selected?.symbol, selectedHasRealData]);
-
   function openTab(symbol: string) {
     setSelectedSymbol(symbol);
     setActiveSymbols((current) => {
@@ -1416,7 +1856,7 @@ function App() {
     if (!selected) {
       return;
     }
-    const strategyName = selectedStrategy?.name ?? "Strategy";
+    const strategyName = checkedAlgorithms[0] ?? "Manual";
     const saved = buildSavedCandle(selected, strategyName, chartRange, candle, candleIndex);
     setSavedCandles((current) => [saved, ...current.filter((item) => !(item.symbol === saved.symbol && item.strategyName === saved.strategyName && item.range === saved.range && item.time === saved.time))].slice(0, 24));
     setAnalysisTab("calculations");
@@ -1490,14 +1930,34 @@ function App() {
                 )}
               </div>
             </div>
-            <RangeControls range={chartRange} zoom={zoom} onRangeChange={changeChartRange} onZoomChange={setZoom} onExpand={() => setFocusedChartOpen(true)} />
+            <RangeControls
+              chartStyle={chartStyle}
+              range={chartRange}
+              zoom={zoom}
+              onChartStyleChange={setChartStyle}
+              onRangeChange={changeChartRange}
+              onZoomChange={setZoom}
+              onExpand={() => setFocusedChartOpen(true)}
+            />
           </div>
           {hasRealMarketData(selected) ? (
             <>
               <OverlayControls overlays={overlays} setOverlays={setOverlays} />
-              <CandlestickChart asset={selected} historicalCandles={historicalCandles} onSaveCandle={saveCandle} overlays={overlays} range={chartRange} trades={strategyTrades} zoom={zoom} />
-              <RangeReadout asset={selected} historicalCandles={historicalCandles} range={chartRange} zoom={zoom} />
-              {isStockbotMomentum && <BacktestProgress backtest={backtest} status={backtestStatus} />}
+              {chartCandles.length > 0 ? (
+                <CandlestickChart asset={selected} chartStyle={chartStyle} sourceCandles={chartCandles} onSaveCandle={saveCandle} overlays={overlays} range={chartRange} trades={strategyTrades} zoom={zoom} />
+              ) : (
+                <div className="chart-placeholder" role="status">
+                  {chartBarsEntry?.error ? (
+                    <>
+                      <strong>Historical bars unavailable for {selected.symbol}</strong>
+                      <span>{chartBarsEntry.error}</span>
+                    </>
+                  ) : (
+                    <span>Loading real {chartRange} bars for {selected.symbol}...</span>
+                  )}
+                </div>
+              )}
+              <RangeReadout asset={selected} sourceCandles={chartCandles} range={chartRange} zoom={zoom} />
               <div className="stats-grid">
                 <div>
                   <span>Volume</span>
@@ -1508,8 +1968,12 @@ function App() {
                   <strong>{priceMoney(selected.previousClose, selected.price)}</strong>
                 </div>
                 <div>
-                  <span>Source</span>
+                  <span>Quote source</span>
                   <strong>{selected.dataSource || "Configured provider"}</strong>
+                </div>
+                <div>
+                  <span>Bars source</span>
+                  <strong>{chartBarsEntry?.source ?? "Loading"}</strong>
                 </div>
                 <div>
                   <span>Quote time</span>
@@ -1533,13 +1997,13 @@ function App() {
           </div>
           {analysisTab === "trace" ? (
             <div className="analysis-grid">
-              <DiagnosticSheet asset={selected} />
-              <TradeTraceSheet strategyName={selectedStrategy?.name ?? "Strategy"} trades={strategyTrades} />
+              <DiagnosticSheet asset={selected} sourceCandles={chartCandles} />
+              <TradeTraceSheet range={chartRange} trades={strategyTrades} />
             </div>
           ) : (
             <CandleCalculationSheet
               asset={selected}
-              historicalCandles={historicalCandles}
+              sourceCandles={chartCandles}
               onClearSaved={() => setSavedCandles((current) => current.filter((saved) => saved.symbol !== selected.symbol))}
               range={chartRange}
               savedCandles={selectedSavedCandles}
@@ -1560,7 +2024,7 @@ function App() {
               {hasRealMarketData(asset) ? (
                 <>
                   <strong>{priceMoney(asset.price)}</strong>
-                  <MiniCandles asset={asset} />
+                  <MiniCandles asset={asset} sourceCandles={realBars[`${asset.symbol}:1D`]?.bars ?? []} />
                 </>
               ) : (
                 <>
@@ -1621,13 +2085,13 @@ function App() {
       return (
         <div className="strategy-panel">
           <div className="section-title">
-            <span>Signal</span>
+            <span>Algorithms on Chart</span>
             <Activity size={16} />
           </div>
-          <StrategySelector strategies={strategies} selectedStrategyName={selectedStrategyName} onSelect={setSelectedStrategyName} />
+          <AlgorithmChecklist checked={checkedAlgorithms} onToggle={toggleAlgorithm} range={chartRange} strategies={compareStrategies} />
           {signal && selected && hasRealMarketData(selected) && (
             <div className="signal-card">
-              <span>Stockbot Momentum</span>
+              <span>Quote momentum read</span>
               <strong>{signal.action.toUpperCase()}</strong>
               <p>{signal.reason}</p>
               <div className="meter">
@@ -1644,7 +2108,7 @@ function App() {
       );
     }
 
-    return <MethodBoard strategies={strategies} />;
+    return <MethodBoard strategies={methodScores} />;
   }
 
   return (
@@ -1659,6 +2123,17 @@ function App() {
             <span>Algorithm monitor</span>
           </div>
         </div>
+
+        <nav className="side-nav" aria-label="Dashboard views">
+          <button className={view === "stocks" ? "selected" : ""} onClick={() => setView("stocks")} type="button">
+            <BarChart3 size={16} />
+            <span>Stock Dashboard</span>
+          </button>
+          <button className={view === "home" ? "selected" : ""} onClick={() => setView("home")} type="button">
+            <Home size={16} />
+            <span>My Algorithms</span>
+          </button>
+        </nav>
 
         <label className="search-box">
           <Search size={18} />
@@ -1706,8 +2181,16 @@ function App() {
       <section className="main-panel">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Live Strategy Cockpit</p>
-            <h1>{selected ? `${selected.symbol} ${assetPriceLabel(selected)}` : "Loading market"}</h1>
+            <p className="eyebrow">{view === "home" ? "Auto-Trading Home" : "Live Strategy Cockpit"}</p>
+            <h1>
+              {view === "home"
+                ? portfolio
+                  ? `Equity ${money.format(portfolio.equity)}`
+                  : "Loading portfolio"
+                : selected
+                  ? `${selected.symbol} ${assetPriceLabel(selected)}`
+                  : "Loading market"}
+            </h1>
           </div>
           <div className="status-row">
             <div className="status-pill">
@@ -1725,53 +2208,195 @@ function App() {
           </div>
         </header>
 
-        <nav className="symbol-tabs" aria-label="Open stock charts">
-          {activeAssets.map((asset) => (
-            <button key={asset.symbol} className={selected?.symbol === asset.symbol ? "selected" : ""} onClick={() => openTab(asset.symbol)}>
-              <strong>{asset.symbol}</strong>
-              {hasRealMarketData(asset) ? (
-                <span className={asset.changePercent >= 0 ? "gain" : "loss"}>
-                  {asset.changePercent >= 0 ? "+" : ""}
-                  {asset.changePercent}%
-                </span>
-              ) : (
-                <span className="loss">Load error</span>
-              )}
-            </button>
-          ))}
-        </nav>
+        {view === "stocks" ? (
+          <>
+            <nav className="symbol-tabs" aria-label="Open stock charts">
+              {activeAssets.map((asset) => (
+                <button key={asset.symbol} className={selected?.symbol === asset.symbol ? "selected" : ""} onClick={() => openTab(asset.symbol)}>
+                  <strong>{asset.symbol}</strong>
+                  {hasRealMarketData(asset) ? (
+                    <span className={asset.changePercent >= 0 ? "gain" : "loss"}>
+                      {asset.changePercent >= 0 ? "+" : ""}
+                      {asset.changePercent}%
+                    </span>
+                  ) : (
+                    <span className="loss">Load error</span>
+                  )}
+                </button>
+              ))}
+            </nav>
 
-        {closedPanels.length > 0 && (
-          <div className="panel-restore-strip" aria-label="Restore hidden panels">
-            {closedPanels.map((panelId) => (
-              <button key={panelId} onClick={() => restorePanel(panelId)} type="button">
-                <Eye size={14} />
-                {panelLabels[panelId]}
+            {closedPanels.length > 0 && (
+              <div className="panel-restore-strip" aria-label="Restore hidden panels">
+                {closedPanels.map((panelId) => (
+                  <button key={panelId} onClick={() => restorePanel(panelId)} type="button">
+                    <Eye size={14} />
+                    {panelLabels[panelId]}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <section className="dashboard-workspace">
+              {visiblePanels.map((panelId) => {
+                const panel = renderPanel(panelId);
+                if (!panel) {
+                  return null;
+                }
+                return (
+                  <PanelFrame
+                    key={panelId}
+                    panelId={panelId}
+                    onClose={closePanel}
+                    onDragOver={movePanelOver}
+                    onDragStart={startPanelDrag}
+                    onDrop={finishPanelDrag}
+                  >
+                    {panel}
+                  </PanelFrame>
+                );
+              })}
+            </section>
+          </>
+        ) : (
+          <section className="home-dashboard">
+            <div className="analysis-tabs home-tabs" aria-label="My Algorithms tabs">
+              <button className={homeTab === "profits" ? "selected" : ""} onClick={() => setHomeTab("profits")} type="button">
+                Profits &amp; Signals
               </button>
-            ))}
-          </div>
+              <button className={homeTab === "stats" ? "selected" : ""} onClick={() => setHomeTab("stats")} type="button">
+                Stats Sheet
+              </button>
+            </div>
+            {homeTab === "profits" && portfolio && (
+              <div className="home-summary">
+                <div>
+                  <span>Total equity</span>
+                  <strong>{money.format(portfolio.equity)}</strong>
+                </div>
+                <div>
+                  <span>Cash</span>
+                  <strong>{money.format(portfolio.cash)}</strong>
+                </div>
+                <div>
+                  <span>Realized P/L</span>
+                  <strong className={portfolio.realizedPnl >= 0 ? "gain" : "loss"}>{money.format(portfolio.realizedPnl)}</strong>
+                </div>
+                <div>
+                  <span>Unrealized P/L</span>
+                  <strong className={portfolio.positions.reduce((sum, position) => sum + position.unrealizedPnl, 0) >= 0 ? "gain" : "loss"}>
+                    {money.format(portfolio.positions.reduce((sum, position) => sum + position.unrealizedPnl, 0))}
+                  </strong>
+                </div>
+                <div>
+                  <span>Open positions</span>
+                  <strong>{portfolio.positions.length}</strong>
+                </div>
+              </div>
+            )}
+            <div className="home-controls">
+              <span>
+                Chart compares on <strong>{selected?.symbol ?? "--"}</strong>; totals scan {activeSymbols.join(", ")} — pick stocks from the
+                sidebar
+              </span>
+              <div className="range-tabs" aria-label="Comparison time frame">
+                {chartRanges.map((option) => (
+                  <button className={option.key === chartRange ? "selected" : ""} key={option.key} onClick={() => changeChartRange(option.key)} type="button">
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {homeTab === "profits" ? (
+              <>
+                <ProfitBoard range={chartRange} scan={scan} status={scanStatus} />
+                {selected && <PerformancePanel compare={compare} range={chartRange} status={compareStatus} symbol={selected.symbol} />}
+              </>
+            ) : (
+              <StatsSheet range={chartRange} scan={scan} status={scanStatus} />
+            )}
+            <section className="algorithm-library">
+              <div className="section-title">
+                <span>Algorithm Library</span>
+                <SlidersHorizontal size={16} />
+              </div>
+              <p className="library-note">
+                Every .js file in the <code>algorithms/</code> folder is backtested above against the S&amp;P 500 and Cash controls. Write your own
+                using the format in <code>algorithms/README.md</code>, drop it in the folder, or upload it here.
+              </p>
+              <div className="library-actions">
+                <button className="primary-action" onClick={() => algorithmFileInput.current?.click()} type="button">
+                  Upload algorithm (.js)
+                </button>
+                <input
+                  accept=".js"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      uploadAlgorithm(file);
+                    }
+                    event.target.value = "";
+                  }}
+                  ref={algorithmFileInput}
+                  type="file"
+                />
+                {algorithmStatus && <span className="library-status">{algorithmStatus}</span>}
+              </div>
+              <div className="library-grid">
+                <strong>Algorithm</strong>
+                <strong>Author</strong>
+                <strong>Description</strong>
+                <strong>Parameters (editable)</strong>
+                <strong>File</strong>
+                {(algorithms?.algorithms ?? []).map((algorithm) => (
+                  <React.Fragment key={algorithm.id}>
+                    <span>{algorithm.name}</span>
+                    <span>{algorithm.author || "--"}</span>
+                    <span>{algorithm.description || "--"}</span>
+                    <span className="param-cell">
+                      {Object.keys(algorithm.params ?? {}).length === 0 ? (
+                        "--"
+                      ) : (
+                        <>
+                          {Object.entries(algorithm.params ?? {}).map(([key, value]) => (
+                            <label key={key}>
+                              <span>{key}</span>
+                              <input
+                                onChange={(event) =>
+                                  setParamDrafts((current) => ({
+                                    ...current,
+                                    [algorithm.id]: { ...current[algorithm.id], [key]: event.target.value }
+                                  }))
+                                }
+                                value={paramDrafts[algorithm.id]?.[key] ?? String(value)}
+                              />
+                            </label>
+                          ))}
+                          <button className="secondary-action" onClick={() => saveAlgorithmParams(algorithm)} type="button">
+                            Save
+                          </button>
+                        </>
+                      )}
+                    </span>
+                    <span>
+                      {algorithm.file}
+                      {algorithm.uploaded ? " (uploaded)" : ""}
+                    </span>
+                  </React.Fragment>
+                ))}
+                {algorithms && algorithms.algorithms.length === 0 && (
+                  <span className="empty-row">No algorithms installed. Add .js files to the algorithms folder.</span>
+                )}
+              </div>
+              {(algorithms?.errors ?? []).map((loadError) => (
+                <p className="library-error" key={loadError.file}>
+                  <ShieldAlert size={14} /> {loadError.file}: {loadError.error}
+                </p>
+              ))}
+            </section>
+          </section>
         )}
-
-        <section className="dashboard-workspace">
-          {visiblePanels.map((panelId) => {
-            const panel = renderPanel(panelId);
-            if (!panel) {
-              return null;
-            }
-            return (
-              <PanelFrame
-                key={panelId}
-                panelId={panelId}
-                onClose={closePanel}
-                onDragOver={movePanelOver}
-                onDragStart={startPanelDrag}
-                onDrop={finishPanelDrag}
-              >
-                {panel}
-              </PanelFrame>
-            );
-          })}
-        </section>
       </section>
 
       {selected && focusedChartOpen && hasRealMarketData(selected) && (
@@ -1784,8 +2409,10 @@ function App() {
               </div>
               <div className="focus-actions">
                 <RangeControls
+                  chartStyle={chartStyle}
                   range={chartRange}
                   zoom={zoom}
+                  onChartStyleChange={setChartStyle}
                   onRangeChange={changeChartRange}
                   onZoomChange={setZoom}
                   onExpand={() => setFocusedChartOpen(false)}
@@ -1797,8 +2424,14 @@ function App() {
               </div>
             </header>
             <OverlayControls overlays={overlays} setOverlays={setOverlays} />
-            <CandlestickChart asset={selected} expanded historicalCandles={historicalCandles} onSaveCandle={saveCandle} overlays={overlays} range={chartRange} trades={strategyTrades} zoom={zoom} />
-            <RangeReadout asset={selected} historicalCandles={historicalCandles} range={chartRange} zoom={zoom} />
+            {chartCandles.length > 0 ? (
+              <CandlestickChart asset={selected} chartStyle={chartStyle} expanded sourceCandles={chartCandles} onSaveCandle={saveCandle} overlays={overlays} range={chartRange} trades={strategyTrades} zoom={zoom} />
+            ) : (
+              <div className="chart-placeholder" role="status">
+                <span>Loading real {chartRange} bars for {selected.symbol}...</span>
+              </div>
+            )}
+            <RangeReadout asset={selected} sourceCandles={chartCandles} range={chartRange} zoom={zoom} />
           </div>
         </section>
       )}

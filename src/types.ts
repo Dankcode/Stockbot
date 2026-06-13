@@ -13,9 +13,11 @@ export type AlgorithmTrade = {
   side: "buy" | "sell";
   price: number;
   quantity: number;
-  rule: string;
-  confidence: number;
+  rule?: string;
+  confidence?: number;
   pnlPercent: number;
+  strategyName?: string;
+  color?: string;
 };
 
 export type AlgorithmDiagnostic = {

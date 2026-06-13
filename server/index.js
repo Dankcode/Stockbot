@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 dotenv.config();
 
@@ -11,9 +11,11 @@ const app = express();
 const port = Number(process.env.PORT ?? 4000);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const envPath = path.join(workspaceRoot, ".env");
+const algorithmsDir = path.join(workspaceRoot, "algorithms");
+const algorithmUploadsDir = path.join(algorithmsDir, "uploads");
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 const symbols = [
   { symbol: "NVDA", name: "NVIDIA", sector: "Semiconductors", price: 217.83, previousClose: 214.86, volume: 5374242, aliases: ["nvidia", "gpu", "ai chips", "semiconductor", "chips", "jensen"] },
@@ -70,6 +72,11 @@ const assetCatalogCache = {
 };
 const quoteCache = new Map();
 const quoteCacheTtlMs = 30000;
+const barsCache = new Map();
+
+function barsCacheTtlMs(range) {
+  return range === "1H" || range === "1D" ? 60000 : 5 * 60000;
+}
 const settingGroups = [
   {
     id: "alpaca",
@@ -394,8 +401,8 @@ function getDiagnostics(candles) {
 
 function rangeBacktestConfig(range = "1Y") {
   const configs = {
-    "1H": { days: 3, timeframe: "5Min", polygonMultiplier: 5, polygonTimespan: "minute", finnhubResolution: "5", limit: 120 },
-    "1D": { days: 7, timeframe: "5Min", polygonMultiplier: 5, polygonTimespan: "minute", finnhubResolution: "5", limit: 390 },
+    "1H": { days: 3, timeframe: "1Min", polygonMultiplier: 1, polygonTimespan: "minute", finnhubResolution: "1", limit: 60 },
+    "1D": { days: 7, timeframe: "5Min", polygonMultiplier: 5, polygonTimespan: "minute", finnhubResolution: "5", limit: 78 },
     "1W": { days: 14, timeframe: "1Hour", polygonMultiplier: 1, polygonTimespan: "hour", finnhubResolution: "60", limit: 180 },
     "1M": { days: 45, timeframe: "1Day", polygonMultiplier: 1, polygonTimespan: "day", finnhubResolution: "D", limit: 60 },
     "3M": { days: 120, timeframe: "1Day", polygonMultiplier: 1, polygonTimespan: "day", finnhubResolution: "D", limit: 140 },
@@ -418,11 +425,13 @@ function alpacaHeaders() {
 }
 
 function isCryptoSymbol(symbol) {
-  return ["BTCUSD", "ETHUSD", "SOLUSD", "DOGEUSD"].includes(symbol);
+  const normalized = String(symbol).toUpperCase();
+  return normalized.includes("/") || ["BTCUSD", "ETHUSD", "SOLUSD", "DOGEUSD"].includes(normalized);
 }
 
 function cryptoPair(symbol) {
-  return symbol.replace("USD", "/USD");
+  const normalized = String(symbol).toUpperCase();
+  return normalized.includes("/") ? normalized : normalized.replace("USD", "/USD");
 }
 
 function quoteCacheKey(symbol) {
@@ -622,12 +631,13 @@ async function fetchAlpacaHistoricalBars(symbol, range) {
     url.searchParams.set("symbols", cryptoPair(symbol));
   } else {
     url.searchParams.set("feed", process.env.ALPACA_STOCK_FEED ?? "iex");
+    url.searchParams.set("adjustment", "split");
   }
   url.searchParams.set("timeframe", config.timeframe);
   url.searchParams.set("start", toIsoDate(config.days));
   url.searchParams.set("end", new Date().toISOString());
   url.searchParams.set("limit", String(config.limit));
-  url.searchParams.set("sort", "asc");
+  url.searchParams.set("sort", "desc");
 
   const alpacaResponse = await fetch(url, { headers });
   if (!alpacaResponse.ok) {
@@ -638,7 +648,10 @@ async function fetchAlpacaHistoricalBars(symbol, range) {
 
   const payload = await alpacaResponse.json();
   const rawBars = isCryptoSymbol(symbol) ? payload.bars?.[cryptoPair(symbol)] ?? [] : payload.bars ?? [];
-  const bars = rawBars.map((bar) => normalizeHistoricalBar(bar, symbol)).filter((bar) => Number.isFinite(bar.close));
+  const bars = rawBars
+    .map((bar) => normalizeHistoricalBar(bar, symbol))
+    .filter((bar) => Number.isFinite(bar.close))
+    .sort((a, b) => String(a.time).localeCompare(String(b.time)));
   if (bars.length === 0) {
     throw new Error("Alpaca returned no historical bars.");
   }
@@ -755,6 +768,26 @@ async function fetchHistoricalBars(symbol, range) {
   throw error;
 }
 
+async function fetchCachedHistoricalBars(symbol, range) {
+  const cacheKey = `${String(symbol).toUpperCase()}:${range}`;
+  const cached = barsCache.get(cacheKey);
+  if (cached && Date.now() - cached.cachedAt < barsCacheTtlMs(range)) {
+    if (cached.error) {
+      throw cached.error;
+    }
+    return cached.data;
+  }
+
+  try {
+    const data = await fetchHistoricalBars(symbol, range);
+    barsCache.set(cacheKey, { cachedAt: Date.now(), data });
+    return data;
+  } catch (error) {
+    barsCache.set(cacheKey, { cachedAt: Date.now(), error });
+    throw error;
+  }
+}
+
 function emaSeries(values, period) {
   const multiplier = 2 / (period + 1);
   let previous = values[0];
@@ -862,6 +895,309 @@ function backtestStockbotMomentum(symbol, bars, startingCash = 100000) {
     }
   };
 }
+
+function smaSeries(values, period) {
+  return values.map((_, index) => {
+    const sample = values.slice(Math.max(0, index - period + 1), index + 1);
+    return sample.reduce((sum, value) => sum + value, 0) / sample.length;
+  });
+}
+
+function rsiSeries(values, period = 14) {
+  let avgGain = 0;
+  let avgLoss = 0;
+  return values.map((value, index) => {
+    if (index === 0) {
+      return 50;
+    }
+    const change = value - values[index - 1];
+    const gain = Math.max(change, 0);
+    const loss = Math.max(-change, 0);
+    if (index <= period) {
+      avgGain = (avgGain * (index - 1) + gain) / index;
+      avgLoss = (avgLoss * (index - 1) + loss) / index;
+    } else {
+      avgGain = (avgGain * (period - 1) + gain) / period;
+      avgLoss = (avgLoss * (period - 1) + loss) / period;
+    }
+    if (avgLoss === 0) {
+      return avgGain === 0 ? 50 : 100;
+    }
+    const rs = avgGain / avgLoss;
+    return 100 - 100 / (1 + rs);
+  });
+}
+
+function trueRangeSeries(bars) {
+  return bars.map((bar, index) => {
+    if (index === 0) {
+      return bar.high - bar.low;
+    }
+    const previousClose = bars[index - 1].close;
+    return Math.max(bar.high - bar.low, Math.abs(bar.high - previousClose), Math.abs(bar.low - previousClose));
+  });
+}
+
+function atrSeries(bars, period = 14) {
+  const ranges = trueRangeSeries(bars);
+  let previous = ranges[0];
+  return ranges.map((value, index) => {
+    previous = index === 0 ? value : (previous * (period - 1) + value) / period;
+    return previous;
+  });
+}
+
+function rollingExtreme(bars, period, pick, field) {
+  return bars.map((bar, index) => {
+    const sample = bars.slice(Math.max(0, index - period), index).map((item) => item[field]);
+    return sample.length > 0 ? pick(...sample) : bar[field];
+  });
+}
+
+function createIndicators(bars) {
+  const closes = bars.map((bar) => bar.close);
+  const cache = new Map();
+  const memo = (key, compute) => {
+    if (!cache.has(key)) {
+      cache.set(key, compute());
+    }
+    return cache.get(key);
+  };
+
+  return {
+    closes,
+    ema: (period) => memo(`ema:${period}`, () => emaSeries(closes, period)),
+    sma: (period) => memo(`sma:${period}`, () => smaSeries(closes, period)),
+    rsi: (period = 14) => memo(`rsi:${period}`, () => rsiSeries(closes, period)),
+    atr: (period = 14) => memo(`atr:${period}`, () => atrSeries(bars, period)),
+    highestHigh: (period) => memo(`hh:${period}`, () => rollingExtreme(bars, period, Math.max, "high")),
+    lowestLow: (period) => memo(`ll:${period}`, () => rollingExtreme(bars, period, Math.min, "low"))
+  };
+}
+
+function runAlgorithmBacktest(bars, algorithm, startingCash = 100000) {
+  const indicators = createIndicators(bars);
+  const closes = indicators.closes;
+  const params = algorithm.params ?? {};
+  let state = {};
+  if (typeof algorithm.init === "function") {
+    state = algorithm.init({ bars, closes, params, indicators }) ?? {};
+  }
+
+  let cash = startingCash;
+  let qty = 0;
+  let entryPrice = 0;
+  let entryIndex = -1;
+  let wins = 0;
+  let sells = 0;
+  let grossWin = 0;
+  let grossLoss = 0;
+  let pnlPercentSum = 0;
+  let barsInPosition = 0;
+  let peak = startingCash;
+  let maxDrawdown = 0;
+  let lastSignal = null;
+  const trades = [];
+  const equityCurve = [{ time: bars[0]?.time ?? "", equity: startingCash }];
+
+  for (let index = 1; index < bars.length; index += 1) {
+    const bar = bars[index];
+    const signal = algorithm.signal({
+      index,
+      bar,
+      bars,
+      closes,
+      state,
+      params,
+      indicators,
+      position: { qty, entryPrice, entryIndex }
+    });
+    if (index === bars.length - 1) {
+      lastSignal = signal ?? null;
+    }
+
+    if (signal === "buy" && qty === 0) {
+      const notional = cash * 0.95;
+      qty = notional / bar.close;
+      cash -= notional;
+      entryPrice = bar.close;
+      entryIndex = index;
+      trades.push({
+        id: `${algorithm.name}-${index}-buy`,
+        time: bar.time,
+        side: "buy",
+        price: bar.close,
+        quantity: Number(qty.toFixed(4)),
+        rule: `${algorithm.name} entry signal`,
+        pnlPercent: 0
+      });
+    } else if (signal === "sell" && qty > 0) {
+      const proceeds = qty * bar.close;
+      const pnl = proceeds - entryPrice * qty;
+      const pnlPercent = ((bar.close - entryPrice) / entryPrice) * 100;
+      cash += proceeds;
+      sells += 1;
+      pnlPercentSum += pnlPercent;
+      if (pnl >= 0) {
+        wins += 1;
+        grossWin += pnl;
+      } else {
+        grossLoss += Math.abs(pnl);
+      }
+      trades.push({
+        id: `${algorithm.name}-${index}-sell`,
+        time: bar.time,
+        side: "sell",
+        price: bar.close,
+        quantity: Number(qty.toFixed(4)),
+        rule: `${algorithm.name} exit signal`,
+        pnlPercent: Number(pnlPercent.toFixed(2))
+      });
+      qty = 0;
+      entryPrice = 0;
+      entryIndex = -1;
+    }
+
+    if (qty > 0) {
+      barsInPosition += 1;
+    }
+    const equity = cash + qty * bar.close;
+    peak = Math.max(peak, equity);
+    maxDrawdown = Math.min(maxDrawdown, ((equity - peak) / peak) * 100);
+    equityCurve.push({ time: bar.time, equity: Number(equity.toFixed(2)) });
+  }
+
+  const finalEquity = equityCurve[equityCurve.length - 1]?.equity ?? startingCash;
+  const periodReturns = equityCurve.slice(1).map((point, index) => point.equity / equityCurve[index].equity - 1);
+  const meanReturn = periodReturns.reduce((sum, value) => sum + value, 0) / Math.max(periodReturns.length, 1);
+  const variance =
+    periodReturns.reduce((sum, value) => sum + (value - meanReturn) ** 2, 0) / Math.max(periodReturns.length - 1, 1);
+  const stdDev = Math.sqrt(variance);
+  const sharpe = stdDev > 0 ? (meanReturn / stdDev) * Math.sqrt(252) : 0;
+
+  return {
+    trades,
+    lastSignal,
+    equityCurve,
+    metrics: {
+      returnPercent: Number((((finalEquity - startingCash) / startingCash) * 100).toFixed(2)),
+      finalEquity,
+      tradeCount: trades.length,
+      winRate: sells > 0 ? Number(((wins / sells) * 100).toFixed(1)) : null,
+      maxDrawdown: Number(maxDrawdown.toFixed(2)),
+      sharpe: Number(sharpe.toFixed(2)),
+      profitFactor: grossLoss > 0 ? Number((grossWin / grossLoss).toFixed(2)) : grossWin > 0 ? 99 : 1,
+      exposurePercent: Number(((barsInPosition / Math.max(bars.length - 1, 1)) * 100).toFixed(1)),
+      avgTradePercent: sells > 0 ? Number((pnlPercentSum / sells).toFixed(2)) : 0,
+      openPosition: qty > 0
+    }
+  };
+}
+
+function validateAlgorithm(algorithm, file) {
+  if (!algorithm || typeof algorithm !== "object") {
+    throw new Error(`${file} has no default export. Export a default object — see algorithms/README.md.`);
+  }
+  if (typeof algorithm.name !== "string" || algorithm.name.trim() === "") {
+    throw new Error(`${file} is missing a "name" string.`);
+  }
+  if (typeof algorithm.signal !== "function") {
+    throw new Error(`${file} is missing a "signal" function.`);
+  }
+}
+
+const algorithmCache = { loadedAt: 0, items: [], errors: [] };
+const algorithmCacheTtlMs = 15000;
+const algorithmParamsPath = path.join(algorithmsDir, "params.json");
+
+function readParamOverrides() {
+  try {
+    return JSON.parse(fs.readFileSync(algorithmParamsPath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveParamOverrides(overrides) {
+  fs.mkdirSync(algorithmsDir, { recursive: true });
+  fs.writeFileSync(algorithmParamsPath, `${JSON.stringify(overrides, null, 2)}\n`);
+}
+
+async function loadAlgorithms(force = false) {
+  const now = Date.now();
+  if (!force && now - algorithmCache.loadedAt < algorithmCacheTtlMs) {
+    return algorithmCache;
+  }
+
+  const items = [];
+  const errors = [];
+  const overrides = readParamOverrides();
+  const sources = [
+    { dir: algorithmsDir, uploaded: false },
+    { dir: algorithmUploadsDir, uploaded: true }
+  ];
+
+  for (const source of sources) {
+    if (!fs.existsSync(source.dir)) {
+      continue;
+    }
+    for (const file of fs.readdirSync(source.dir).sort()) {
+      if (!file.endsWith(".js")) {
+        continue;
+      }
+      const fullPath = path.join(source.dir, file);
+      try {
+        const stat = fs.statSync(fullPath);
+        const module = await import(`${pathToFileURL(fullPath).href}?v=${stat.mtimeMs}`);
+        const algorithm = module.default;
+        validateAlgorithm(algorithm, file);
+        const id = `${source.uploaded ? "uploads/" : ""}${file.replace(/\.js$/, "")}`;
+        const defaultParams = algorithm.params ?? {};
+        items.push({
+          id,
+          file: path.relative(workspaceRoot, fullPath),
+          uploaded: source.uploaded,
+          name: algorithm.name,
+          author: typeof algorithm.author === "string" ? algorithm.author : undefined,
+          description: typeof algorithm.description === "string" ? algorithm.description : undefined,
+          defaultParams,
+          params: { ...defaultParams, ...(overrides[id] ?? {}) },
+          signal: algorithm.signal,
+          init: algorithm.init
+        });
+      } catch (error) {
+        errors.push({ file: path.relative(workspaceRoot, fullPath), error: error.message });
+      }
+    }
+  }
+
+  algorithmCache.loadedAt = now;
+  algorithmCache.items = items;
+  algorithmCache.errors = errors;
+  return algorithmCache;
+}
+
+function publicAlgorithms(loaded) {
+  return {
+    algorithms: loaded.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      author: item.author,
+      description: item.description,
+      params: item.params,
+      defaultParams: item.defaultParams,
+      file: item.file,
+      uploaded: item.uploaded
+    })),
+    errors: loaded.errors
+  };
+}
+
+const controlAlgorithms = {
+  spyHold: { name: "S&P 500 Index (SPY)", signal: ({ index }) => (index === 1 ? "buy" : null) },
+  cash: { name: "Cash", signal: () => null }
+};
+
 
 function getAlgorithmTrades(asset, candles, index) {
   const tradePoints = [
@@ -1159,12 +1495,288 @@ app.get("/api/market/symbol/:symbol", async (request, response) => {
   response.json({ data: asset });
 });
 
+app.get("/api/market/bars/:symbol", async (request, response) => {
+  const symbol = String(request.params.symbol ?? "").toUpperCase();
+  const range = String(request.query.range ?? "1D");
+
+  try {
+    const historical = await fetchCachedHistoricalBars(symbol, range);
+    response.json({ data: { symbol, range, source: historical.source, bars: historical.bars } });
+  } catch (error) {
+    response.status(error.statusCode ?? 500).json({
+      error: error.message,
+      data: { symbol, range, source: "unavailable", bars: [] }
+    });
+  }
+});
+
+app.get("/api/compare/:symbol", async (request, response) => {
+  const symbol = String(request.params.symbol ?? "").toUpperCase();
+  const range = String(request.query.range ?? "1Y");
+
+  try {
+    const historical = await fetchCachedHistoricalBars(symbol, range);
+    if (historical.bars.length < 5) {
+      throw new Error("Not enough historical bars to compare strategies.");
+    }
+
+    let spyHistorical = null;
+    if (symbol !== "SPY") {
+      try {
+        spyHistorical = await fetchCachedHistoricalBars("SPY", range);
+      } catch {
+        spyHistorical = null;
+      }
+    }
+
+    const windowLength = spyHistorical
+      ? Math.min(historical.bars.length, spyHistorical.bars.length)
+      : historical.bars.length;
+    const bars = historical.bars.slice(-windowLength);
+    const loaded = await loadAlgorithms();
+    const strategies = [];
+
+    for (const algorithm of loaded.items) {
+      try {
+        const result = runAlgorithmBacktest(bars, algorithm);
+        strategies.push({
+          id: algorithm.id,
+          name: algorithm.name,
+          type: "primary",
+          description: algorithm.description,
+          source: algorithm.file,
+          equityCurve: result.equityCurve,
+          trades: result.trades,
+          lastSignal: result.lastSignal,
+          metrics: result.metrics
+        });
+      } catch (error) {
+        strategies.push({
+          id: algorithm.id,
+          name: algorithm.name,
+          type: "primary",
+          source: algorithm.file,
+          error: `Algorithm crashed during backtest: ${error.message}`,
+          equityCurve: [],
+          trades: [],
+          metrics: null
+        });
+      }
+    }
+
+    const spyBars = spyHistorical ? spyHistorical.bars.slice(-windowLength) : bars;
+    const spyHold = runAlgorithmBacktest(spyBars, controlAlgorithms.spyHold);
+    strategies.push({
+      id: "control/spy",
+      name: "S&P 500 Index (SPY) — Control",
+      type: "control",
+      description: "Buy-and-hold the S&P 500 ETF over the same window. The benchmark every algorithm should beat.",
+      equityCurve: spyHold.equityCurve,
+      trades: [],
+      metrics: spyHold.metrics
+    });
+
+    const cash = runAlgorithmBacktest(bars, controlAlgorithms.cash);
+    strategies.push({
+      id: "control/cash",
+      name: "Cash — Control",
+      type: "control",
+      description: "Flat $100,000 baseline.",
+      equityCurve: cash.equityCurve,
+      trades: [],
+      metrics: cash.metrics
+    });
+
+    response.json({
+      data: {
+        symbol,
+        range,
+        source: historical.source,
+        startingCash: 100000,
+        algorithmErrors: loaded.errors,
+        strategies
+      }
+    });
+  } catch (error) {
+    response.status(error.statusCode ?? 500).json({
+      error: error.message,
+      data: { symbol, range, source: "unavailable", startingCash: 100000, algorithmErrors: [], strategies: [] }
+    });
+  }
+});
+
+app.get("/api/algorithms", async (_request, response) => {
+  response.json({ data: publicAlgorithms(await loadAlgorithms(true)) });
+});
+
+app.post("/api/algorithms/params", async (request, response) => {
+  const id = String(request.body?.id ?? "");
+  const incoming = request.body?.params;
+  const loaded = await loadAlgorithms(true);
+  const algorithm = loaded.items.find((item) => item.id === id);
+
+  if (!algorithm) {
+    response.status(404).json({ error: `Unknown algorithm: ${id}` });
+    return;
+  }
+  if (!incoming || typeof incoming !== "object") {
+    response.status(400).json({ error: "params must be an object." });
+    return;
+  }
+
+  const cleaned = {};
+  for (const [key, rawValue] of Object.entries(incoming)) {
+    if (!(key in algorithm.defaultParams)) {
+      continue;
+    }
+    const defaultValue = algorithm.defaultParams[key];
+    if (typeof defaultValue === "number") {
+      const value = Number(rawValue);
+      if (!Number.isFinite(value)) {
+        response.status(400).json({ error: `Parameter "${key}" must be a number.` });
+        return;
+      }
+      cleaned[key] = value;
+    } else {
+      cleaned[key] = String(rawValue);
+    }
+  }
+
+  const overrides = readParamOverrides();
+  overrides[id] = cleaned;
+  saveParamOverrides(overrides);
+  response.json({ data: publicAlgorithms(await loadAlgorithms(true)) });
+});
+
+app.get("/api/algorithms/scan", async (request, response) => {
+  const symbols = String(request.query.symbols ?? "")
+    .split(",")
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter(Boolean)
+    .slice(0, 10);
+  const range = String(request.query.range ?? "3M");
+
+  if (symbols.length === 0) {
+    response.status(400).json({ error: "Provide symbols, e.g. ?symbols=AAPL,NVDA" });
+    return;
+  }
+
+  const loaded = await loadAlgorithms();
+  const barsBySymbol = {};
+  await Promise.all(
+    symbols.map(async (symbol) => {
+      try {
+        barsBySymbol[symbol] = (await fetchCachedHistoricalBars(symbol, range)).bars;
+      } catch (error) {
+        barsBySymbol[symbol] = { error: error.message };
+      }
+    })
+  );
+
+  const strategies = loaded.items.map((algorithm) => {
+    const perSymbol = [];
+    let totalPnl = 0;
+    let returnSum = 0;
+    let scored = 0;
+    let profitable = 0;
+
+    for (const symbol of symbols) {
+      const bars = barsBySymbol[symbol];
+      if (!Array.isArray(bars)) {
+        perSymbol.push({ symbol, error: bars?.error ?? "Bars unavailable." });
+        continue;
+      }
+      try {
+        const result = runAlgorithmBacktest(bars, algorithm);
+        const pnl = Number((result.metrics.finalEquity - 100000).toFixed(2));
+        const lastTrade = result.trades[result.trades.length - 1] ?? null;
+        const recommendation =
+          result.lastSignal === "buy" && !result.metrics.openPosition
+            ? "buy"
+            : result.lastSignal === "sell" && result.metrics.openPosition
+              ? "sell"
+              : result.metrics.openPosition
+                ? "hold"
+                : "stand by";
+        perSymbol.push({
+          symbol,
+          returnPercent: result.metrics.returnPercent,
+          pnl,
+          winRate: result.metrics.winRate,
+          maxDrawdown: result.metrics.maxDrawdown,
+          sharpe: result.metrics.sharpe,
+          profitFactor: result.metrics.profitFactor,
+          exposurePercent: result.metrics.exposurePercent,
+          avgTradePercent: result.metrics.avgTradePercent,
+          tradeCount: result.metrics.tradeCount,
+          openPosition: result.metrics.openPosition,
+          recommendation,
+          lastAction: lastTrade ? { side: lastTrade.side, time: lastTrade.time, price: lastTrade.price } : null
+        });
+        totalPnl += pnl;
+        returnSum += result.metrics.returnPercent;
+        scored += 1;
+        if (pnl > 0) {
+          profitable += 1;
+        }
+      } catch (error) {
+        perSymbol.push({ symbol, error: error.message });
+      }
+    }
+
+    return {
+      id: algorithm.id,
+      name: algorithm.name,
+      description: algorithm.description,
+      totals: {
+        pnl: Number(totalPnl.toFixed(2)),
+        avgReturnPercent: scored > 0 ? Number((returnSum / scored).toFixed(2)) : 0,
+        profitableSymbols: profitable,
+        scoredSymbols: scored
+      },
+      perSymbol
+    };
+  });
+
+  response.json({ data: { range, symbols, strategies, algorithmErrors: loaded.errors } });
+});
+
+app.post("/api/algorithms/upload", async (request, response) => {
+  const rawName = String(request.body?.filename ?? "algorithm").trim();
+  const code = String(request.body?.code ?? "");
+  const safeName = rawName.replace(/\.js$/i, "").replace(/[^a-zA-Z0-9-_]/g, "-").slice(0, 64);
+
+  if (!safeName) {
+    response.status(400).json({ error: "Invalid file name." });
+    return;
+  }
+  if (code.trim().length === 0 || code.length > 500000) {
+    response.status(400).json({ error: "Algorithm file must be non-empty and under 500 KB." });
+    return;
+  }
+
+  fs.mkdirSync(algorithmUploadsDir, { recursive: true });
+  const fullPath = path.join(algorithmUploadsDir, `${safeName}.js`);
+  fs.writeFileSync(fullPath, code);
+
+  try {
+    const module = await import(`${pathToFileURL(fullPath).href}?v=${Date.now()}`);
+    validateAlgorithm(module.default, `${safeName}.js`);
+  } catch (error) {
+    fs.unlinkSync(fullPath);
+    response.status(400).json({ error: `Algorithm rejected: ${error.message}` });
+    return;
+  }
+
+  response.status(201).json({ data: publicAlgorithms(await loadAlgorithms(true)) });
+});
+
 app.get("/api/backtest/:symbol", async (request, response) => {
   const symbol = String(request.params.symbol ?? "").toUpperCase();
   const range = String(request.query.range ?? "1Y");
 
   try {
-    const historical = await fetchHistoricalBars(symbol, range);
+    const historical = await fetchCachedHistoricalBars(symbol, range);
     const bars = historical.bars;
     const backtest = backtestStockbotMomentum(symbol, bars);
     response.json({

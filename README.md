@@ -38,3 +38,5 @@ When `ALPACA_API_KEY` and `ALPACA_API_SECRET` are present, search loads active U
 You can also open **Settings** in the dashboard to save local Alpaca/OpenAI credentials. Stockbot writes those values to `.env`, which is ignored by git, while `.env.example` documents the fields for anyone cloning the project.
 
 Stockbot Momentum backtests use real historical bars only. The server tries Alpaca first, then Polygon, then Finnhub. If no provider can supply historical bars, the dashboard reports that historical data is unavailable and does not invent buy/sell markers.
+
+All charts render real market bars. Every chart range (1H through ALL) is served by `GET /api/market/bars/:symbol?range=`, which pulls real historical bars from Alpaca, then Polygon, then Finnhub, with a short server-side cache (60s intraday, 5 min for longer ranges). Mini tab charts use real 1D bars, and chart diagnostics (RSI, EMA, VWAP, ATR) are computed from those real bars. If no provider can supply bars for a symbol, the chart shows an explicit "unavailable" state instead of synthetic data.
