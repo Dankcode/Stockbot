@@ -82,6 +82,7 @@ type ScanSymbolResult = {
   openPosition?: boolean;
   recommendation?: "buy" | "sell" | "hold" | "stand by";
   lastAction?: { side: "buy" | "sell"; time: string; price: number } | null;
+  trades?: AlgorithmTrade[];
 };
 type ScanStrategy = {
   id: string;
@@ -96,7 +97,7 @@ type ScanResult = {
   strategies: ScanStrategy[];
   algorithmErrors: AlgorithmLoadError[];
 };
-type HomeTab = "profits" | "stats";
+type HomeTab = "profits" | "detail" | "stats";
 type AlgorithmLoadError = { file: string; error: string };
 type CompareResult = {
   symbol: string;
@@ -114,6 +115,7 @@ type AlgorithmInfo = {
   params?: Record<string, number | string>;
   defaultParams?: Record<string, number | string>;
   file: string;
+  code?: string;
   uploaded: boolean;
 };
 type AlgorithmsPayload = {
@@ -157,6 +159,8 @@ type CacheEntry<T> = {
   at: number;
   data: T;
 };
+type AlgorithmSymbolSettings = Record<string, Record<string, boolean>>;
+type AlgorithmSortKey = "return" | "pnl" | "trades" | "winRate" | "name";
 
 const panelLabels: Record<PanelId, string> = {
   chart: "Chart",
@@ -664,6 +668,204 @@ function DataLoadError({ asset }: { asset: Asset }) {
   );
 }
 
+function metricValue(metric: keyof CompareMetrics, metrics: CompareMetrics | null) {
+  if (!metrics) {
+    return "--";
+  }
+  if (metric === "finalEquity") {
+    return money.format(metrics.finalEquity);
+  }
+  if (metric === "winRate") {
+    return metrics.winRate === null ? "--" : `${metrics.winRate}%`;
+  }
+  if (metric === "tradeCount") {
+    return number.format(metrics.tradeCount);
+  }
+  if (metric === "openPosition") {
+    return metrics.openPosition ? "Open" : "Flat";
+  }
+  if (metric === "sharpe" || metric === "profitFactor") {
+    return metrics[metric].toFixed(2);
+  }
+  return `${metrics[metric] >= 0 ? "+" : ""}${metrics[metric]}%`;
+}
+
+function metricDelta(metric: keyof CompareMetrics, algorithm: CompareMetrics | null, control: CompareMetrics | null) {
+  if (!algorithm || !control || metric === "openPosition" || algorithm[metric] === null || control[metric] === null) {
+    return "--";
+  }
+  const algorithmValue = Number(algorithm[metric]);
+  const controlValue = Number(control[metric]);
+  if (!Number.isFinite(algorithmValue) || !Number.isFinite(controlValue)) {
+    return "--";
+  }
+  const delta = algorithmValue - controlValue;
+  if (metric === "finalEquity") {
+    return money.format(delta);
+  }
+  if (metric === "tradeCount") {
+    return number.format(delta);
+  }
+  if (metric === "sharpe" || metric === "profitFactor") {
+    return `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`;
+  }
+  return `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%`;
+}
+
+function metricWinner(metric: keyof CompareMetrics, algorithm: CompareMetrics | null, control: CompareMetrics | null) {
+  if (!algorithm || !control || metric === "openPosition" || algorithm[metric] === null || control[metric] === null) {
+    return "--";
+  }
+  const algorithmValue = Number(algorithm[metric]);
+  const controlValue = Number(control[metric]);
+  if (metric === "maxDrawdown") {
+    return algorithmValue >= controlValue ? "Algorithm" : "Control";
+  }
+  if (metric === "tradeCount" || metric === "exposurePercent") {
+    return algorithmValue === controlValue ? "Tie" : algorithmValue < controlValue ? "Algorithm" : "Control";
+  }
+  return algorithmValue === controlValue ? "Tie" : algorithmValue > controlValue ? "Algorithm" : "Control";
+}
+
+function controlCodeSnippet(controlId: string) {
+  if (controlId === "control/spy") {
+    return `// S&P 500 buy-and-hold control\nexport default {\n  name: "S&P 500 Index (SPY) — Control",\n  signal({ index }) {\n    return index === 1 ? "buy" : null;\n  }\n};`;
+  }
+  return `// Cash control\nexport default {\n  name: "Cash — Control",\n  signal() {\n    return null;\n  }\n};`;
+}
+
+function orderedCompareStrategies(strategies: CompareStrategy[]) {
+  return [...strategies].sort((a, b) => {
+    if (a.type !== b.type) {
+      return a.type === "control" ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function readStoredAlgorithmSymbols() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem("stockbot.algorithmSymbols") || "{}");
+    return parsed && typeof parsed === "object" ? (parsed as AlgorithmSymbolSettings) : {};
+  } catch {
+    return {};
+  }
+}
+
+function isSymbolEnabledForAlgorithm(settings: AlgorithmSymbolSettings, strategyId: string, symbol: string) {
+  return settings[strategyId]?.[symbol] !== false;
+}
+
+function enabledSymbolsForStrategy(settings: AlgorithmSymbolSettings, strategyId: string, symbols: string[]) {
+  return symbols.filter((symbol) => isSymbolEnabledForAlgorithm(settings, strategyId, symbol));
+}
+
+function recomputeStrategyTotals(perSymbol: ScanSymbolResult[]) {
+  const scored = perSymbol.filter((entry) => !entry.error);
+  const totalPnl = scored.reduce((sum, entry) => sum + (entry.pnl ?? 0), 0);
+  const returnSum = scored.reduce((sum, entry) => sum + (entry.returnPercent ?? 0), 0);
+  return {
+    pnl: Number(totalPnl.toFixed(2)),
+    avgReturnPercent: scored.length > 0 ? Number((returnSum / scored.length).toFixed(2)) : 0,
+    profitableSymbols: scored.filter((entry) => (entry.pnl ?? 0) > 0).length,
+    scoredSymbols: scored.length
+  };
+}
+
+function filterScanResult(scan: ScanResult | null, settings: AlgorithmSymbolSettings, symbols: string[]) {
+  if (!scan) {
+    return null;
+  }
+  return {
+    ...scan,
+    symbols,
+    strategies: scan.strategies.map((strategy) => {
+      const enabled = new Set(enabledSymbolsForStrategy(settings, strategy.id, symbols));
+      const perSymbol = strategy.perSymbol.filter((entry) => enabled.has(entry.symbol));
+      return { ...strategy, perSymbol, totals: recomputeStrategyTotals(perSymbol) };
+    })
+  };
+}
+
+function bestSymbolForStrategy(strategy: ScanStrategy) {
+  return strategy.perSymbol
+    .filter((entry) => !entry.error && typeof entry.returnPercent === "number")
+    .sort((a, b) => (b.returnPercent ?? -Infinity) - (a.returnPercent ?? -Infinity))[0] ?? null;
+}
+
+function totalTradesForStrategy(strategy: ScanStrategy) {
+  return strategy.perSymbol.reduce((sum, entry) => sum + (entry.tradeCount ?? entry.trades?.length ?? 0), 0);
+}
+
+function averageWinRateForStrategy(strategy: ScanStrategy) {
+  const scored = strategy.perSymbol.filter((entry) => !entry.error && typeof entry.winRate === "number");
+  if (scored.length === 0) {
+    return null;
+  }
+  return Number((scored.reduce((sum, entry) => sum + (entry.winRate ?? 0), 0) / scored.length).toFixed(1));
+}
+
+function sortStrategiesForRail(strategies: ScanStrategy[], sortKey: AlgorithmSortKey) {
+  return [...strategies].sort((a, b) => {
+    if (sortKey === "name") {
+      return a.name.localeCompare(b.name);
+    }
+    const getValue = (strategy: ScanStrategy) => {
+      if (sortKey === "return") {
+        return strategy.totals.avgReturnPercent;
+      }
+      if (sortKey === "pnl") {
+        return strategy.totals.pnl;
+      }
+      if (sortKey === "trades") {
+        return totalTradesForStrategy(strategy);
+      }
+      return averageWinRateForStrategy(strategy) ?? -Infinity;
+    };
+    return getValue(b) - getValue(a) || a.name.localeCompare(b.name);
+  });
+}
+
+function collectScanTrades(scan: ScanResult | null) {
+  return (scan?.strategies ?? [])
+    .flatMap((strategy) =>
+      strategy.perSymbol
+        .filter((entry) => !entry.error && (entry.trades?.length || entry.lastAction))
+        .flatMap((entry) => {
+          const trades = entry.trades?.length
+            ? entry.trades
+            : entry.lastAction
+              ? [{ ...entry.lastAction, id: `${strategy.id}-${entry.symbol}-${entry.lastAction.time}`, quantity: 0, pnlPercent: entry.returnPercent ?? 0 }]
+              : [];
+          return trades.map((trade) => ({
+          id: `${strategy.id}-${entry.symbol}-${trade.time}-${trade.side}`,
+          strategyId: strategy.id,
+          strategyName: strategy.name,
+          symbol: entry.symbol,
+          side: trade.side,
+          time: trade.time,
+          price: trade.price,
+          rule: trade.rule,
+          pnl: entry.pnl ?? 0,
+          returnPercent: trade.pnlPercent ?? entry.returnPercent ?? 0,
+          recommendation: entry.recommendation ?? "stand by"
+          }));
+        })
+    )
+    .sort((a, b) => String(b.time).localeCompare(String(a.time)));
+}
+
+function nearestAlgorithmTrade(trades: AlgorithmTrade[], time: string) {
+  if (trades.length === 0) {
+    return null;
+  }
+  return trades.reduce((closest, trade) => {
+    const tradeDistance = Math.abs(new Date(trade.time).getTime() - new Date(time).getTime());
+    const closestDistance = Math.abs(new Date(closest.time).getTime() - new Date(time).getTime());
+    return tradeDistance < closestDistance ? trade : closest;
+  }, trades[0]);
+}
+
 function OverlayControls({ overlays, setOverlays }: { overlays: Record<ChartOverlay, boolean>; setOverlays: React.Dispatch<React.SetStateAction<Record<ChartOverlay, boolean>>> }) {
   const options: Array<{ key: ChartOverlay; label: string }> = [
     { key: "trades", label: "Trades" },
@@ -1102,19 +1304,13 @@ function PerformancePanel({
   compare: CompareResult | null;
   status: string;
 }) {
-  const [hiddenStrategies, setHiddenStrategies] = React.useState<string[]>(["Cash"]);
-  const strategies = compare?.strategies ?? [];
-  const visibleStrategies = strategies.filter((strategy) => !hiddenStrategies.includes(strategy.name));
+  const strategies = orderedCompareStrategies(compare?.strategies ?? []);
   const startingCash = compare?.startingCash ?? 100000;
   const chart = { left: 58, top: 18, width: 788, height: 240 };
   const axisY = chart.top + chart.height + 26;
 
-  function toggleStrategy(name: string) {
-    setHiddenStrategies((current) => (current.includes(name) ? current.filter((item) => item !== name) : [...current, name]));
-  }
-
   const gainOf = (equity: number) => ((equity - startingCash) / startingCash) * 100;
-  const allGains = visibleStrategies.flatMap((strategy) => strategy.equityCurve.map((point) => gainOf(point.equity)));
+  const allGains = strategies.flatMap((strategy) => strategy.equityCurve.map((point) => gainOf(point.equity)));
   const maxGain = Math.max(...(allGains.length ? allGains : [0]), 0.4);
   const minGain = Math.min(...(allGains.length ? allGains : [0]), -0.4);
   const gainSpan = maxGain - minGain || 1;
@@ -1132,18 +1328,13 @@ function PerformancePanel({
       <div className="perf-status">{status}</div>
       {strategies.length > 0 && (
         <>
-          <div className="perf-legend" aria-label="Toggle strategies">
+          <div className="perf-legend static" aria-label="Comparison series">
             {strategies.map((strategy, index) => {
-              const active = !hiddenStrategies.includes(strategy.name);
               return (
-                <button
-                  className={active ? "active" : ""}
-                  key={strategy.name}
-                  onClick={() => toggleStrategy(strategy.name)}
-                  type="button"
-                >
+                <span className={strategy.type === "control" ? "control-series" : ""} key={strategy.name}>
                   <i style={{ background: strategyPalette[index % strategyPalette.length] }} />
                   <span>{strategy.name}</span>
+                  <em>{strategy.type === "control" ? "control" : "algorithm"}</em>
                   {strategy.metrics ? (
                     <strong className={strategy.metrics.returnPercent >= 0 ? "gain" : "loss"}>
                       {strategy.metrics.returnPercent >= 0 ? "+" : ""}
@@ -1152,7 +1343,7 @@ function PerformancePanel({
                   ) : (
                     <strong className="loss">error</strong>
                   )}
-                </button>
+                </span>
               );
             })}
           </div>
@@ -1175,9 +1366,6 @@ function PerformancePanel({
               <line className="zero-line" x1={chart.left} x2={chart.left + chart.width} y1={gainY(0)} y2={gainY(0)} />
             )}
             {strategies.map((strategy, index) => {
-              if (hiddenStrategies.includes(strategy.name)) {
-                return null;
-              }
               const points = strategy.equityCurve;
               const stepX = chart.width / Math.max(points.length - 1, 1);
               const path = points
@@ -1230,13 +1418,28 @@ function PerformancePanel({
   );
 }
 
-function ProfitBoard({ scan, status, range }: { scan: ScanResult | null; status: string; range: ChartRange }) {
+function ProfitBoard({
+  scan,
+  status,
+  range,
+  symbols,
+  settings,
+  onToggleSymbol
+}: {
+  scan: ScanResult | null;
+  status: string;
+  range: ChartRange;
+  symbols: string[];
+  settings: AlgorithmSymbolSettings;
+  onToggleSymbol: (strategyId: string, symbol: string) => void;
+}) {
   const strategies = scan?.strategies ?? [];
+  const tradeTape = collectScanTrades(scan).slice(0, 24);
 
   return (
     <section className="profit-board">
       <div className="section-title">
-        <span>Algorithm Profits — totals across your open stocks</span>
+        <span>Algorithm Results</span>
         <BarChart3 size={16} />
       </div>
       <div className="perf-status">{status}</div>
@@ -1252,48 +1455,168 @@ function ProfitBoard({ scan, status, range }: { scan: ScanResult | null; status:
                 </strong>
                 <small>
                   {strategy.totals.avgReturnPercent >= 0 ? "+" : ""}
-                  {strategy.totals.avgReturnPercent}% avg return · {strategy.totals.profitableSymbols}/{strategy.totals.scoredSymbols} stocks
-                  profitable
+                  {strategy.totals.avgReturnPercent}% avg return · {strategy.totals.profitableSymbols}/{strategy.totals.scoredSymbols} profitable
                 </small>
+                {bestSymbolForStrategy(strategy) && (
+                  <em>
+                    Best: {bestSymbolForStrategy(strategy)?.symbol} ({bestSymbolForStrategy(strategy)!.returnPercent! >= 0 ? "+" : ""}
+                    {bestSymbolForStrategy(strategy)?.returnPercent}%)
+                  </em>
+                )}
               </div>
             ))}
           </div>
           <div className="section-title signal-board-title">
-            <span>What each algorithm says to do right now</span>
+            <span>Candidate Stocks by Algorithm</span>
           </div>
-          <div className="signal-board">
-            {strategies.map((strategy, index) => (
-              <div className="signal-row" key={strategy.id}>
-                <strong>
-                  <i className="perf-dot" style={{ background: strategyPalette[index % strategyPalette.length] }} />
-                  {strategy.name}
-                </strong>
-                <div className="signal-chips">
-                  {strategy.perSymbol.map((entry) => (
-                    <span
-                      className={`signal-chip ${entry.error ? "error" : entry.recommendation === "buy" ? "buy" : entry.recommendation === "sell" ? "sell" : entry.recommendation === "hold" ? "hold" : ""}`}
-                      key={`${strategy.id}-${entry.symbol}`}
-                      title={
-                        entry.lastAction
-                          ? `Last ${entry.lastAction.side.toUpperCase()} ${displayTime(entry.lastAction.time, range)} @ ${priceMoney(entry.lastAction.price)}`
-                          : undefined
-                      }
-                    >
-                      <strong>{entry.symbol}</strong>
-                      {entry.error ? "n/a" : (entry.recommendation ?? "stand by").toUpperCase()}
-                      {entry.lastAction && (
-                        <em>
-                          last {entry.lastAction.side} {displayTime(entry.lastAction.time, range)}
-                        </em>
-                      )}
-                    </span>
-                  ))}
+          <div className="algorithm-candidate-grid">
+            {strategies.map((strategy) => (
+              <div className="candidate-row" key={strategy.id}>
+                <strong>{strategy.name}</strong>
+                <div>
+                  {symbols.map((symbol) => {
+                    const enabled = isSymbolEnabledForAlgorithm(settings, strategy.id, symbol);
+                    return (
+                      <button className={enabled ? "enabled" : ""} key={`${strategy.id}-${symbol}`} onClick={() => onToggleSymbol(strategy.id, symbol)} type="button">
+                        {symbol}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
+          <div className="section-title signal-board-title">
+            <span>Algorithm Trade Tape</span>
+          </div>
+          <div className="algorithm-trade-tape">
+            <strong>Time</strong>
+            <strong>Symbol</strong>
+            <strong>Side</strong>
+            <strong>Algorithm</strong>
+            <strong>Price</strong>
+            <strong>P/L</strong>
+            <strong>Return</strong>
+            <strong>State</strong>
+            {tradeTape.length === 0 ? (
+              <span className="empty-row">No algorithm trades in this window.</span>
+            ) : (
+              tradeTape.map((trade, index) => (
+                <React.Fragment key={trade.id}>
+                  <span>{displayTime(trade.time, range)}</span>
+                  <span>{trade.symbol}</span>
+                  <span className={trade.side === "buy" ? "gain" : "loss"}>{trade.side.toUpperCase()}</span>
+                  <span>
+                    <i className="perf-dot" style={{ background: strategyPalette[index % strategyPalette.length] }} />
+                    {trade.strategyName}
+                  </span>
+                  <span>{priceMoney(trade.price)}</span>
+                  <span className={trade.pnl >= 0 ? "gain" : "loss"}>{money.format(trade.pnl)}</span>
+                  <span className={trade.returnPercent >= 0 ? "gain" : "loss"}>
+                    {trade.returnPercent >= 0 ? "+" : ""}
+                    {trade.returnPercent}%
+                  </span>
+                  <span>{trade.recommendation.toUpperCase()}</span>
+                </React.Fragment>
+              ))
+            )}
+          </div>
         </>
       )}
+    </section>
+  );
+}
+
+function AlgorithmTradesRail({
+  scan,
+  range,
+  status,
+  selectedStrategyId,
+  onSelectStrategy
+}: {
+  scan: ScanResult | null;
+  range: ChartRange;
+  status: string;
+  selectedStrategyId: string;
+  onSelectStrategy: (strategyId: string) => void;
+}) {
+  const [sortKey, setSortKey] = React.useState<AlgorithmSortKey>("return");
+  const strategies = scan?.strategies ?? [];
+  const sortedStrategies = sortStrategiesForRail(strategies, sortKey);
+  const selectedStrategy = strategies.find((strategy) => strategy.id === selectedStrategyId) ?? strategies[0] ?? null;
+  const trades = selectedStrategy
+    ? selectedStrategy.perSymbol.flatMap((entry) =>
+        (entry.trades?.length
+          ? entry.trades
+          : entry.lastAction
+            ? [{ ...entry.lastAction, id: `${selectedStrategy.id}-${entry.symbol}-${entry.lastAction.time}`, quantity: 0, pnlPercent: entry.returnPercent ?? 0 }]
+            : []
+        ).map((trade) => ({
+          ...trade,
+          symbol: entry.symbol,
+          recommendation: entry.recommendation,
+          pnl: entry.pnl ?? 0
+        }))
+      )
+    : [];
+
+  return (
+    <section className="algorithm-trades-rail">
+      <div className="section-title">
+        <span>Algorithm Trades</span>
+        <Activity size={16} />
+      </div>
+      <p>{status}</p>
+      <label className="rail-sort-control">
+        <span>Sort algorithms</span>
+        <select value={sortKey} onChange={(event) => setSortKey(event.target.value as AlgorithmSortKey)}>
+          <option value="return">Best avg return</option>
+          <option value="pnl">Highest P/L</option>
+          <option value="trades">Most trades</option>
+          <option value="winRate">Best win rate</option>
+          <option value="name">Name A-Z</option>
+        </select>
+      </label>
+      <div className="rail-algorithm-list">
+        {sortedStrategies.map((strategy) => {
+          const best = bestSymbolForStrategy(strategy);
+          const winRate = averageWinRateForStrategy(strategy);
+          const tradesCount = totalTradesForStrategy(strategy);
+          return (
+            <button className={selectedStrategy?.id === strategy.id ? "selected" : ""} key={strategy.id} onClick={() => onSelectStrategy(strategy.id)} type="button">
+              <strong>{strategy.name}</strong>
+              <span>
+                {best ? `Best ${best.symbol} ${best.returnPercent! >= 0 ? "+" : ""}${best.returnPercent}%` : "No scored stocks"}
+              </span>
+              <div className="rail-algorithm-metrics">
+                <em className={strategy.totals.avgReturnPercent >= 0 ? "gain" : "loss"}>
+                  {strategy.totals.avgReturnPercent >= 0 ? "+" : ""}
+                  {strategy.totals.avgReturnPercent}%
+                </em>
+                <em className={strategy.totals.pnl >= 0 ? "gain" : "loss"}>{money.format(strategy.totals.pnl)}</em>
+                <em>{tradesCount} trades</em>
+                <em>{winRate === null ? "Win --" : `Win ${winRate}%`}</em>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="rail-trade-list">
+        {trades.map((trade) => (
+          <div className="rail-trade-row" key={trade.id}>
+            <div>
+              <strong>{trade.symbol}</strong>
+              <span>{trade.rule ?? trade.recommendation ?? "algorithm trade"}</span>
+            </div>
+            <div>
+              <strong className={trade.side === "buy" ? "gain" : "loss"}>{trade.side.toUpperCase()}</strong>
+              <span>{displayTime(trade.time, range)}</span>
+            </div>
+          </div>
+        ))}
+        {selectedStrategy && trades.length === 0 && <span className="empty-state">No buys or sells for {selectedStrategy.name} in this window.</span>}
+        {!selectedStrategy && <span className="empty-state">No algorithms available.</span>}
+      </div>
     </section>
   );
 }
@@ -1365,6 +1688,265 @@ function StatsSheet({ scan, status, range }: { scan: ScanResult | null; status: 
           ))
         )}
       </div>
+    </section>
+  );
+}
+
+function AlgorithmDeepDive({
+  compare,
+  algorithms,
+  sourceCandles,
+  selectedAlgorithmId,
+  selectedControlId,
+  onAlgorithmChange,
+  onControlChange,
+  range,
+  status,
+  loading
+}: {
+  compare: CompareResult | null;
+  algorithms: AlgorithmsPayload | null;
+  sourceCandles: Candle[];
+  selectedAlgorithmId: string;
+  selectedControlId: string;
+  onAlgorithmChange: (id: string) => void;
+  onControlChange: (id: string) => void;
+  range: ChartRange;
+  status: string;
+  loading: boolean;
+}) {
+  const strategies = compare?.strategies ?? [];
+  const primaryStrategies = strategies.filter((strategy) => strategy.type === "primary");
+  const controls = strategies.filter((strategy) => strategy.type === "control");
+  const selectedAlgorithm = primaryStrategies.find((strategy) => strategy.id === selectedAlgorithmId) ?? primaryStrategies[0] ?? null;
+  const selectedControl = controls.find((strategy) => strategy.id === selectedControlId) ?? controls[0] ?? null;
+  const algorithmInfo = algorithms?.algorithms.find((algorithm) => algorithm.id === selectedAlgorithm?.id);
+  const code = algorithmInfo?.code || "// Algorithm source is unavailable. Restart the API server if this file was just added.";
+  const [simulationStatus, setSimulationStatus] = React.useState("watch");
+  const [simulationTime, setSimulationTime] = React.useState("");
+  const [simulationNotional, setSimulationNotional] = React.useState("10000");
+  const metricRows: Array<{ key: keyof CompareMetrics; label: string }> = [
+    { key: "returnPercent", label: "Return" },
+    { key: "finalEquity", label: "Final Equity" },
+    { key: "winRate", label: "Win Rate" },
+    { key: "maxDrawdown", label: "Max Drawdown" },
+    { key: "sharpe", label: "Sharpe" },
+    { key: "profitFactor", label: "Profit Factor" },
+    { key: "exposurePercent", label: "Exposure" },
+    { key: "avgTradePercent", label: "Avg Trade" },
+    { key: "tradeCount", label: "Trades" },
+    { key: "openPosition", label: "Position" }
+  ];
+  const tradeRows = selectedAlgorithm?.trades ?? [];
+  const defaultBuyTime = tradeRows.find((trade) => trade.side === "buy")?.time ?? sourceCandles[0]?.time ?? "";
+  const simulationCandle = sourceCandles.find((candle) => candle.time === simulationTime) ?? sourceCandles.find((candle) => candle.time === defaultBuyTime) ?? sourceCandles[0];
+  const exitCandle = sourceCandles[sourceCandles.length - 1];
+  const notional = Math.max(0, Number(simulationNotional) || 0);
+  const simulatedQuantity = simulationCandle ? notional / simulationCandle.close : 0;
+  const simulatedPnl = simulationCandle && exitCandle ? (exitCandle.close - simulationCandle.close) * simulatedQuantity : 0;
+  const simulatedReturn = simulationCandle && exitCandle ? ((exitCandle.close - simulationCandle.close) / simulationCandle.close) * 100 : 0;
+  const nearestTrade = simulationCandle ? nearestAlgorithmTrade(tradeRows, simulationCandle.time) : null;
+
+  React.useEffect(() => {
+    const selectedTimeExists = sourceCandles.some((candle) => candle.time === simulationTime);
+    if (defaultBuyTime && (!simulationTime || !selectedTimeExists)) {
+      setSimulationTime(defaultBuyTime);
+    }
+  }, [defaultBuyTime, simulationTime, sourceCandles]);
+
+  return (
+    <section className="algorithm-deep-dive">
+      <div className="section-title">
+        <span>Trade Simulator — {compare?.symbol ?? "--"} · {range}</span>
+        <Table2 size={16} />
+      </div>
+      <div className="detail-status">
+        <span>{loading ? "Loading section data..." : status}</span>
+      </div>
+      <div className="detail-selector-row">
+        <label>
+          <span>Algorithm</span>
+          <select value={selectedAlgorithm?.id ?? ""} onChange={(event) => onAlgorithmChange(event.target.value)}>
+            {primaryStrategies.map((strategy) => (
+              <option key={strategy.id} value={strategy.id}>
+                {strategy.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Control group</span>
+          <select value={selectedControl?.id ?? ""} onChange={(event) => onControlChange(event.target.value)}>
+            {controls.map((strategy) => (
+              <option key={strategy.id} value={strategy.id}>
+                {strategy.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div>
+          <span>File</span>
+          <strong>{algorithmInfo?.file ?? selectedAlgorithm?.source ?? "--"}</strong>
+        </div>
+        <div>
+          <span>Last Signal</span>
+          <strong className={selectedAlgorithm?.lastSignal === "buy" ? "gain" : selectedAlgorithm?.lastSignal === "sell" ? "loss" : ""}>
+            {(selectedAlgorithm?.lastSignal ?? "none").toUpperCase()}
+          </strong>
+        </div>
+      </div>
+
+      <section className="simulation-panel">
+        <div className="simulation-inputs">
+          <label>
+            <span>Status</span>
+            <select value={simulationStatus} onChange={(event) => setSimulationStatus(event.target.value)}>
+              <option value="watch">Watch only</option>
+              <option value="bought">Bought</option>
+              <option value="closed">Closed position</option>
+            </select>
+          </label>
+          <label>
+            <span>Buy time</span>
+            <select value={simulationCandle?.time ?? ""} onChange={(event) => setSimulationTime(event.target.value)}>
+              {sourceCandles.map((candle) => (
+                <option key={candle.time} value={candle.time}>
+                  {displayTime(candle.time, range)} · {priceMoney(candle.close)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Buy amount</span>
+            <input min="0" onChange={(event) => setSimulationNotional(event.target.value)} type="number" value={simulationNotional} />
+          </label>
+        </div>
+        <div className="simulation-results">
+          <div>
+            <span>Entry</span>
+            <strong>{simulationCandle ? priceMoney(simulationCandle.close) : "--"}</strong>
+          </div>
+          <div>
+            <span>Current/Exit</span>
+            <strong>{exitCandle ? priceMoney(exitCandle.close) : "--"}</strong>
+          </div>
+          <div>
+            <span>Shares</span>
+            <strong>{number.format(simulatedQuantity)}</strong>
+          </div>
+          <div>
+            <span>Sim P/L</span>
+            <strong className={simulatedPnl >= 0 ? "gain" : "loss"}>{money.format(simulatedPnl)}</strong>
+          </div>
+          <div>
+            <span>Return</span>
+            <strong className={simulatedReturn >= 0 ? "gain" : "loss"}>
+              {simulatedReturn >= 0 ? "+" : ""}
+              {simulatedReturn.toFixed(2)}%
+            </strong>
+          </div>
+        </div>
+        <div className="simulation-readout">
+          <strong>Algorithm at selected time</strong>
+          <span>
+            {nearestTrade
+              ? `${nearestTrade.side.toUpperCase()} ${displayTime(nearestTrade.time, range)} @ ${priceMoney(nearestTrade.price)} · ${nearestTrade.rule ?? "strategy rule"}`
+              : "No algorithm trade near the selected time."}
+          </span>
+        </div>
+      </section>
+
+      <details className="algorithm-detail-drawer">
+        <summary>Open detailed spreadsheet, code, and control comparison</summary>
+        <div className="algorithm-detail-layout">
+          <section className="detail-block">
+            <div className="section-title">
+              <span>Metrics vs Control</span>
+            </div>
+            <div className="metric-compare-grid">
+              <strong>Metric</strong>
+              <strong>{selectedControl?.name ?? "Control"}</strong>
+              <strong>{selectedAlgorithm?.name ?? "Algorithm"}</strong>
+              <strong>Delta</strong>
+              <strong>Winner</strong>
+              {metricRows.map((row) => {
+                const winner = metricWinner(row.key, selectedAlgorithm?.metrics ?? null, selectedControl?.metrics ?? null);
+                const delta = metricDelta(row.key, selectedAlgorithm?.metrics ?? null, selectedControl?.metrics ?? null);
+                return (
+                  <React.Fragment key={row.key}>
+                    <span>{row.label}</span>
+                    <span>{metricValue(row.key, selectedControl?.metrics ?? null)}</span>
+                    <span>{metricValue(row.key, selectedAlgorithm?.metrics ?? null)}</span>
+                    <span className={delta === "--" ? "" : String(delta).startsWith("-") ? "loss" : "gain"}>{delta}</span>
+                    <span className={winner === "Algorithm" ? "gain" : winner === "Control" ? "loss" : ""}>{winner}</span>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="detail-block">
+            <div className="section-title">
+              <span>Algorithm Code</span>
+            </div>
+            <pre className="code-pane" aria-label={`${selectedAlgorithm?.name ?? "Algorithm"} source code`}>
+              {code
+                .split("\n")
+                .map((line, index) => `${String(index + 1).padStart(3, " ")}  ${line}`)
+                .join("\n")}
+            </pre>
+          </section>
+        </div>
+
+        <section className="detail-block">
+          <div className="section-title">
+            <span>Trade Ledger</span>
+          </div>
+          <div className="algorithm-trade-sheet">
+            <strong>#</strong>
+            <strong>Time</strong>
+            <strong>Side</strong>
+            <strong>Price</strong>
+            <strong>Qty</strong>
+            <strong>Notional</strong>
+            <strong>P/L %</strong>
+            <strong>Rule</strong>
+            <strong>Control Equity</strong>
+            {tradeRows.length === 0 ? (
+              <span className="empty-row">No trades generated by this algorithm in the selected window.</span>
+            ) : (
+              tradeRows.map((trade, index) => {
+                const controlPoint = selectedControl?.equityCurve[index] ?? selectedControl?.equityCurve[selectedControl.equityCurve.length - 1];
+                return (
+                  <React.Fragment key={trade.id}>
+                    <span>{index + 1}</span>
+                    <span>{displayTime(trade.time, range)}</span>
+                    <span className={trade.side === "buy" ? "gain" : "loss"}>{trade.side.toUpperCase()}</span>
+                    <span>{priceMoney(trade.price)}</span>
+                    <span>{number.format(trade.quantity)}</span>
+                    <span>{money.format(trade.price * trade.quantity)}</span>
+                    <span className={trade.pnlPercent >= 0 ? "gain" : "loss"}>
+                      {trade.pnlPercent >= 0 ? "+" : ""}
+                      {trade.pnlPercent}%
+                    </span>
+                    <span>{trade.rule ?? "--"}</span>
+                    <span>{controlPoint ? money.format(controlPoint.equity) : "--"}</span>
+                  </React.Fragment>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        <section className="detail-block control-code-block">
+          <div className="section-title">
+            <span>Selected Control Logic</span>
+          </div>
+          <pre className="code-pane small" aria-label={`${selectedControl?.name ?? "Control"} source code`}>
+            {controlCodeSnippet(selectedControl?.id ?? "control/cash")}
+          </pre>
+        </section>
+      </details>
     </section>
   );
 }
@@ -1458,9 +2040,15 @@ function App() {
   const [homeTab, setHomeTab] = React.useState<HomeTab>("profits");
   const [scan, setScan] = React.useState<ScanResult | null>(null);
   const [scanStatus, setScanStatus] = React.useState("Scanning your open stocks with every algorithm...");
+  const [selectedAlgorithmId, setSelectedAlgorithmId] = React.useState("");
+  const [selectedControlId, setSelectedControlId] = React.useState("control/spy");
+  const [selectedTradeStrategyId, setSelectedTradeStrategyId] = React.useState("");
+  const [algorithmSymbols, setAlgorithmSymbols] = React.useState<AlgorithmSymbolSettings>(() => readStoredAlgorithmSymbols());
+  const [loadingSections, setLoadingSections] = React.useState<Record<string, boolean>>({});
   const [paramDrafts, setParamDrafts] = React.useState<Record<string, Record<string, string>>>({});
   const algorithmFileInput = React.useRef<HTMLInputElement | null>(null);
   const requestCache = React.useRef(new Map<string, CacheEntry<unknown>>());
+  const inflightRequests = React.useRef(new Map<string, Promise<unknown>>());
   const draggedPanel = React.useRef<PanelId | null>(null);
 
   const selected = assets.find((asset) => asset.symbol === selectedSymbol) ?? assets[0] ?? null;
@@ -1468,6 +2056,7 @@ function App() {
   const visiblePanels = panelOrder.filter((panelId) => !closedPanels.includes(panelId));
   const activeAssets = activeSymbols.map((symbol) => assets.find((asset) => asset.symbol === symbol)).filter(Boolean) as Asset[];
   const visibleSidebarAssets = query.trim() ? searchResults : assets.slice(0, 12);
+  const filteredScan = React.useMemo(() => filterScanResult(scan, algorithmSymbols, activeSymbols), [scan, algorithmSymbols, activeSymbols]);
   const signal = selected && selectedHasRealData ? evaluateStockbotMomentum(selected) : null;
   const baselines = selected && selectedHasRealData ? compareBaselines(selected) : [];
   const chartBarsEntry = selected ? realBars[`${selected.symbol}:${chartRange}`] : undefined;
@@ -1496,26 +2085,50 @@ function App() {
     }));
   const selectedSavedCandles = selected ? savedCandles.filter((saved) => saved.symbol === selected.symbol) : [];
 
+  React.useEffect(() => {
+    window.localStorage.setItem("stockbot.algorithmSymbols", JSON.stringify(algorithmSymbols));
+  }, [algorithmSymbols]);
+
+  function setSectionLoading(section: string, loading: boolean) {
+    setLoadingSections((current) => {
+      if (current[section] === loading) {
+        return current;
+      }
+      return { ...current, [section]: loading };
+    });
+  }
+
   async function cachedJson<T>(url: string, ttl: number, options?: { force?: boolean }) {
     const cached = requestCache.current.get(url) as CacheEntry<T> | undefined;
     if (!options?.force && cached && Date.now() - cached.at < ttl) {
       return cached.data;
     }
-    const response = await fetch(url);
-    const text = await response.text();
-    let payload: { error?: string };
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      throw new Error(
-        `API returned an unexpected response (${response.status}). The API server is likely outdated — stop it and run npm run dev again.`
-      );
+    const existing = inflightRequests.current.get(url) as Promise<T> | undefined;
+    if (existing && !options?.force) {
+      return existing;
     }
-    if (!response.ok) {
-      throw new Error(payload.error || `Request failed: ${response.status}`);
-    }
-    requestCache.current.set(url, { at: Date.now(), data: payload });
-    return payload as T;
+    const request = fetch(url)
+      .then(async (response) => {
+        const text = await response.text();
+        let payload: { error?: string };
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          throw new Error(
+            `API returned an unexpected response (${response.status}). The API server is likely outdated — stop it and run npm run dev again.`
+          );
+        }
+        if (!response.ok) {
+          throw new Error(payload.error || `Request failed: ${response.status}`);
+        }
+        requestCache.current.set(url, { at: Date.now(), data: payload });
+        return payload as T;
+      })
+      .finally(() => {
+        inflightRequests.current.delete(url);
+      });
+    inflightRequests.current.set(url, request);
+    return request;
   }
 
   const loadMarket = React.useCallback(async () => {
@@ -1563,6 +2176,7 @@ function App() {
 
   const loadBars = React.useCallback(async (symbol: string, range: ChartRange, force = false) => {
     const key = `${symbol}:${range}`;
+    setSectionLoading(`bars:${key}`, true);
     try {
       const payload = await cachedJson<{ data: { source: string; bars: Candle[] } }>(
         `/api/market/bars/${encodeURIComponent(symbol)}?range=${encodeURIComponent(range)}`,
@@ -1575,6 +2189,8 @@ function App() {
         ...current,
         [key]: { source: "unavailable", bars: [], error: error instanceof Error ? error.message : "Historical bars unavailable." }
       }));
+    } finally {
+      setSectionLoading(`bars:${key}`, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1595,6 +2211,7 @@ function App() {
       return;
     }
     let cancelled = false;
+    setSectionLoading("compare", true);
     setCompareStatus("Running strategy backtests on real bars...");
     cachedJson<{ data: CompareResult }>(`/api/compare/${encodeURIComponent(symbol)}?range=${encodeURIComponent(chartRange)}`, cacheTtl.compare)
       .then((payload) => {
@@ -1608,9 +2225,15 @@ function App() {
           setCompare(null);
           setCompareStatus(error instanceof Error ? error.message : "Strategy comparison unavailable.");
         }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSectionLoading("compare", false);
+        }
       });
     return () => {
       cancelled = true;
+      setSectionLoading("compare", false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.symbol, chartRange, compareVersion]);
@@ -1622,8 +2245,23 @@ function App() {
     const firstPrimary = compare?.strategies.find((strategy) => strategy.type === "primary" && !strategy.error);
     if (firstPrimary) {
       setCheckedAlgorithms([firstPrimary.name]);
+      setSelectedAlgorithmId((current) => current || firstPrimary.id);
     }
   }, [compare, checkedAlgorithms.length, checklistTouched]);
+
+  React.useEffect(() => {
+    if (!compare) {
+      return;
+    }
+    const firstPrimary = compare?.strategies.find((strategy) => strategy.type === "primary" && !strategy.error);
+    const firstControl = compare?.strategies.find((strategy) => strategy.type === "control");
+    if (firstPrimary && !compare.strategies.some((strategy) => strategy.id === selectedAlgorithmId)) {
+      setSelectedAlgorithmId(firstPrimary.id);
+    }
+    if (firstControl && !compare.strategies.some((strategy) => strategy.id === selectedControlId)) {
+      setSelectedControlId(firstControl.id);
+    }
+  }, [compare, selectedAlgorithmId, selectedControlId]);
 
   React.useEffect(() => {
     if (view !== "home") {
@@ -1631,7 +2269,8 @@ function App() {
     }
     const symbolList = activeSymbols.join(",");
     let cancelled = false;
-    setScanStatus("Scanning your open stocks with every algorithm...");
+    setSectionLoading("scan", true);
+    setScanStatus(`Scanning ${activeSymbols.length} candidate stocks for each algorithm...`);
     cachedJson<{ data: ScanResult }>(
       `/api/algorithms/scan?symbols=${encodeURIComponent(symbolList)}&range=${encodeURIComponent(chartRange)}`,
       cacheTtl.compare
@@ -1640,7 +2279,7 @@ function App() {
         if (!cancelled) {
           setScan(payload.data);
           setScanStatus(
-            `Every algorithm backtested across ${payload.data.symbols.length} stocks on the same ${payload.data.range} window.`
+            `Each algorithm backtested its enabled candidates from ${payload.data.symbols.length} available stocks on the same ${payload.data.range} window.`
           );
         }
       })
@@ -1649,16 +2288,46 @@ function App() {
           setScan(null);
           setScanStatus(error instanceof Error ? error.message : "Scan unavailable.");
         }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSectionLoading("scan", false);
+        }
       });
     return () => {
       cancelled = true;
+      setSectionLoading("scan", false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, activeSymbols, chartRange, compareVersion]);
 
+  React.useEffect(() => {
+    const firstStrategy = filteredScan?.strategies[0];
+    if (firstStrategy && !filteredScan?.strategies.some((strategy) => strategy.id === selectedTradeStrategyId)) {
+      setSelectedTradeStrategyId(firstStrategy.id);
+    }
+  }, [filteredScan, selectedTradeStrategyId]);
+
   function toggleAlgorithm(name: string) {
     setChecklistTouched(true);
     setCheckedAlgorithms((current) => (current.includes(name) ? current.filter((item) => item !== name) : [...current, name]));
+  }
+
+  function toggleAlgorithmSymbol(strategyId: string, symbol: string) {
+    setAlgorithmSymbols((current) => ({
+      ...current,
+      [strategyId]: {
+        ...current[strategyId],
+        [symbol]: !isSymbolEnabledForAlgorithm(current, strategyId, symbol)
+      }
+    }));
+  }
+
+  function addSymbolToAlgorithmTests(symbol: string) {
+    const normalized = symbol.toUpperCase();
+    setActiveSymbols((current) => (current.includes(normalized) ? current : [...current, normalized]));
+    setSelectedSymbol(normalized);
+    setNotice(`${normalized} added to algorithm tests.`);
   }
 
   async function saveAlgorithmParams(algorithm: AlgorithmInfo) {
@@ -1678,6 +2347,7 @@ function App() {
       setParamDrafts((current) => ({ ...current, [algorithm.id]: {} }));
       setAlgorithmStatus(`${algorithm.name} parameters saved. Backtests refreshed.`);
       requestCache.current.clear();
+      inflightRequests.current.clear();
       setCompareVersion((current) => current + 1);
     } catch (error) {
       setAlgorithmStatus(error instanceof Error ? error.message : "Parameter save failed.");
@@ -1719,6 +2389,7 @@ function App() {
       setAlgorithms(payload.data ?? null);
       setAlgorithmStatus(`${file.name} installed. Backtests refreshed.`);
       requestCache.current.clear();
+      inflightRequests.current.clear();
       setCompareVersion((current) => current + 1);
     } catch (error) {
       setAlgorithmStatus(error instanceof Error ? error.message : "Upload failed.");
@@ -1772,6 +2443,7 @@ function App() {
     });
     const payload = await response.json();
     requestCache.current.clear();
+    inflightRequests.current.clear();
     setSettingsPayload(payload.data);
     setSettingsStatus(response.ok ? "Saved to local .env. Runtime settings refreshed." : "Unable to save settings.");
     loadMarket().catch(() => setNotice("Market refresh failed after settings save"));
@@ -2113,7 +2785,7 @@ function App() {
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${view === "home" ? "algorithm-sidebar" : ""}`}>
         <div className="brand-row">
           <div className="brand-mark">
             <LineChart size={21} />
@@ -2135,47 +2807,71 @@ function App() {
           </button>
         </nav>
 
-        <label className="search-box">
-          <Search size={18} />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={submitSearch}
-            placeholder="Search any Alpaca stock"
-          />
-        </label>
-        <div className="asset-universe">
-          <span>{assetUniverse.source === "alpaca" ? "Alpaca" : "Local"} universe</span>
-          <strong>{number.format(assetUniverse.assetCount || assets.length)} assets</strong>
-        </div>
+        {view === "stocks" ? (
+          <>
+            <label className="search-box">
+              <Search size={18} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={submitSearch}
+                placeholder="Search any Alpaca stock"
+              />
+            </label>
+            <div className="asset-universe">
+              <span>{assetUniverse.source === "alpaca" ? "Alpaca" : "Local"} universe</span>
+              <strong>{number.format(assetUniverse.assetCount || assets.length)} assets</strong>
+            </div>
 
-        <section className="watchlist">
-          <div className="section-title">
-            <span>{query.trim() ? "Search Results" : "Latest Movers"}</span>
-            <Activity size={16} />
+            <section className="watchlist">
+              <div className="section-title">
+                <span>{query.trim() ? "Search Results" : "Latest Movers"}</span>
+                <Activity size={16} />
+              </div>
+              {visibleSidebarAssets.map((asset) => (
+                <div className={`asset-row ${selected?.symbol === asset.symbol ? "active" : ""}`} key={asset.symbol}>
+                  <button className="asset-main" onClick={() => openSearchResult(asset)} type="button">
+                    <div>
+                      <strong>{asset.symbol}</strong>
+                      <span>{asset.name}</span>
+                      {query.trim() && <small>{asset.matchReason || asset.sector}</small>}
+                    </div>
+                    <div className="asset-price">
+                      <strong className={hasRealMarketData(asset) ? "" : "loss"}>{assetPriceLabel(asset)}</strong>
+                      {hasRealMarketData(asset) ? (
+                        <span className={asset.changePercent >= 0 ? "gain" : "loss"}>
+                          {asset.changePercent >= 0 ? "+" : ""}
+                          {asset.changePercent}%
+                        </span>
+                      ) : (
+                        <span className="loss">Quote unavailable</span>
+                      )}
+                    </div>
+                  </button>
+                  <button className={activeSymbols.includes(asset.symbol) ? "asset-add added" : "asset-add"} onClick={() => addSymbolToAlgorithmTests(asset.symbol)} type="button">
+                    {activeSymbols.includes(asset.symbol) ? "Testing" : "Test"}
+                  </button>
+                </div>
+              ))}
+              {query.trim() && visibleSidebarAssets.length === 0 && <p className="empty-state">No matches. Try company name, sector, or nickname.</p>}
+            </section>
+          </>
+        ) : (
+          <div className="algorithm-sidebar-content">
+            <div className="algorithm-rail-summary">
+              <span>Active analysis</span>
+              <strong>{filteredScan?.strategies.length ?? 0} algorithms</strong>
+              <small>{activeSymbols.length} candidates · {chartRange} window</small>
+            </div>
+            <AlgorithmTradesRail
+              range={chartRange}
+              scan={filteredScan}
+              selectedStrategyId={selectedTradeStrategyId}
+              status={loadingSections.scan ? "Loading algorithm trades..." : scanStatus}
+              onSelectStrategy={setSelectedTradeStrategyId}
+            />
           </div>
-          {visibleSidebarAssets.map((asset) => (
-            <button className={`asset-row ${selected?.symbol === asset.symbol ? "active" : ""}`} key={asset.symbol} onClick={() => openSearchResult(asset)}>
-              <div>
-                <strong>{asset.symbol}</strong>
-                <span>{asset.name}</span>
-                {query.trim() && <small>{asset.matchReason || asset.sector}</small>}
-              </div>
-              <div className="asset-price">
-                <strong className={hasRealMarketData(asset) ? "" : "loss"}>{assetPriceLabel(asset)}</strong>
-                {hasRealMarketData(asset) ? (
-                  <span className={asset.changePercent >= 0 ? "gain" : "loss"}>
-                    {asset.changePercent >= 0 ? "+" : ""}
-                    {asset.changePercent}%
-                  </span>
-                ) : (
-                  <span className="loss">Quote unavailable</span>
-                )}
-              </div>
-            </button>
-          ))}
-          {query.trim() && visibleSidebarAssets.length === 0 && <p className="empty-state">No matches. Try company name, sector, or nickname.</p>}
-        </section>
+        )}
       </aside>
 
       <section className="main-panel">
@@ -2260,13 +2956,22 @@ function App() {
           </>
         ) : (
           <section className="home-dashboard">
-            <div className="analysis-tabs home-tabs" aria-label="My Algorithms tabs">
+            <div className="algorithm-workspace-header">
+              <div>
+                <span>Analysis workspace</span>
+                <strong>Profits, signals, and model simulation</strong>
+              </div>
+              <div className="algorithm-view-switch" aria-label="My Algorithms views">
               <button className={homeTab === "profits" ? "selected" : ""} onClick={() => setHomeTab("profits")} type="button">
                 Profits &amp; Signals
               </button>
+                <button className={homeTab === "detail" ? "selected" : ""} onClick={() => setHomeTab("detail")} type="button">
+                  Simulator
+                </button>
               <button className={homeTab === "stats" ? "selected" : ""} onClick={() => setHomeTab("stats")} type="button">
-                Stats Sheet
+                  Detail Sheet
               </button>
+              </div>
             </div>
             {homeTab === "profits" && portfolio && (
               <div className="home-summary">
@@ -2295,28 +3000,62 @@ function App() {
               </div>
             )}
             <div className="home-controls">
-              <span>
-                Chart compares on <strong>{selected?.symbol ?? "--"}</strong>; totals scan {activeSymbols.join(", ")} — pick stocks from the
-                sidebar
-              </span>
-              <div className="range-tabs" aria-label="Comparison time frame">
-                {chartRanges.map((option) => (
-                  <button className={option.key === chartRange ? "selected" : ""} key={option.key} onClick={() => changeChartRange(option.key)} type="button">
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+              <label>
+                <span>Analysis symbol</span>
+                <select value={selected?.symbol ?? ""} onChange={(event) => openTab(event.target.value)}>
+                  {activeSymbols.map((symbol) => (
+                    <option key={symbol} value={symbol}>
+                      {symbol}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Timeframe</span>
+                <select value={chartRange} onChange={(event) => changeChartRange(event.target.value as ChartRange)}>
+                  {chartRanges.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label} · {option.resolution}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span>Candidate set: {activeSymbols.join(", ")}.</span>
             </div>
-            {homeTab === "profits" ? (
+            {homeTab === "detail" ? (
+              <AlgorithmDeepDive
+                algorithms={algorithms}
+                compare={compare}
+                loading={Boolean(loadingSections.compare)}
+                range={chartRange}
+                selectedAlgorithmId={selectedAlgorithmId}
+                selectedControlId={selectedControlId}
+                sourceCandles={chartCandles}
+                status={compareStatus}
+                onAlgorithmChange={setSelectedAlgorithmId}
+                onControlChange={setSelectedControlId}
+              />
+            ) : homeTab === "profits" ? (
               <>
-                <ProfitBoard range={chartRange} scan={scan} status={scanStatus} />
-                {selected && <PerformancePanel compare={compare} range={chartRange} status={compareStatus} symbol={selected.symbol} />}
+                <ProfitBoard
+                  range={chartRange}
+                  scan={filteredScan}
+                  settings={algorithmSymbols}
+                  status={loadingSections.scan ? "Loading scan data..." : scanStatus}
+                  symbols={activeSymbols}
+                  onToggleSymbol={toggleAlgorithmSymbol}
+                />
+                {selected && <PerformancePanel compare={compare} range={chartRange} status={loadingSections.compare ? "Updating comparison..." : compareStatus} symbol={selected.symbol} />}
               </>
             ) : (
-              <StatsSheet range={chartRange} scan={scan} status={scanStatus} />
+              <StatsSheet range={chartRange} scan={filteredScan} status={loadingSections.scan ? "Loading scan data..." : scanStatus} />
             )}
-            <section className="algorithm-library">
-              <div className="section-title">
+            <details className="algorithm-library">
+              <summary>
+                <span>Algorithm Library &amp; Parameters</span>
+                <SlidersHorizontal size={16} />
+              </summary>
+              <div className="section-title library-title-hidden">
                 <span>Algorithm Library</span>
                 <SlidersHorizontal size={16} />
               </div>
@@ -2394,7 +3133,7 @@ function App() {
                   <ShieldAlert size={14} /> {loadError.file}: {loadError.error}
                 </p>
               ))}
-            </section>
+            </details>
           </section>
         )}
       </section>

@@ -1148,6 +1148,7 @@ async function loadAlgorithms(force = false) {
       const fullPath = path.join(source.dir, file);
       try {
         const stat = fs.statSync(fullPath);
+        const code = fs.readFileSync(fullPath, "utf8");
         const module = await import(`${pathToFileURL(fullPath).href}?v=${stat.mtimeMs}`);
         const algorithm = module.default;
         validateAlgorithm(algorithm, file);
@@ -1156,6 +1157,7 @@ async function loadAlgorithms(force = false) {
         items.push({
           id,
           file: path.relative(workspaceRoot, fullPath),
+          code,
           uploaded: source.uploaded,
           name: algorithm.name,
           author: typeof algorithm.author === "string" ? algorithm.author : undefined,
@@ -1187,6 +1189,7 @@ function publicAlgorithms(loaded) {
       params: item.params,
       defaultParams: item.defaultParams,
       file: item.file,
+      code: item.code,
       uploaded: item.uploaded
     })),
     errors: loaded.errors
@@ -1711,7 +1714,8 @@ app.get("/api/algorithms/scan", async (request, response) => {
           tradeCount: result.metrics.tradeCount,
           openPosition: result.metrics.openPosition,
           recommendation,
-          lastAction: lastTrade ? { side: lastTrade.side, time: lastTrade.time, price: lastTrade.price } : null
+          lastAction: lastTrade ? { side: lastTrade.side, time: lastTrade.time, price: lastTrade.price } : null,
+          trades: result.trades
         });
         totalPnl += pnl;
         returnSum += result.metrics.returnPercent;
