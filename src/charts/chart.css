@@ -1,0 +1,454 @@
+.stockbot-market-chart,
+.stockbot-session-replay {
+  --stockbot-chart-bg: var(--chart-bg, #070d13);
+  --stockbot-chart-raised: var(--chart-raised, #0b141d);
+  --stockbot-chart-grid: var(--chart-grid, #22313d);
+  --stockbot-chart-axis: var(--chart-axis, #9cabb8);
+  --stockbot-chart-text: var(--chart-text, #eef4f8);
+  --stockbot-chart-crosshair: var(--chart-crosshair, #9cabb8);
+  --stockbot-chart-candle-up: var(--chart-candle-up, #39c461);
+  --stockbot-chart-candle-down: var(--chart-candle-down, #ff5358);
+  --stockbot-chart-volume: var(--chart-volume, #526474);
+  --stockbot-chart-line: var(--chart-line, #2c95ff);
+  --stockbot-chart-area-from: var(--chart-area-from, rgb(44 149 255 / 0.22));
+  --stockbot-chart-area-to: var(--chart-area-to, rgb(44 149 255 / 0));
+  --stockbot-chart-ma: var(--chart-ma, #f0aa2c);
+  --stockbot-chart-vwap: var(--chart-vwap, #a78bfa);
+  --stockbot-chart-band: var(--chart-band, #63788a);
+  --stockbot-chart-marker-buy: var(--chart-marker-buy, #39c461);
+  --stockbot-chart-marker-sell: var(--chart-marker-sell, #ff5358);
+  --stockbot-chart-marker-blocked: var(--chart-marker-blocked, #f0aa2c);
+  --stockbot-chart-risk-event: var(--chart-risk-event, #ff5358);
+  --stockbot-chart-drawdown-band: var(--chart-drawdown-band, rgb(255 83 88 / 0.12));
+  --stockbot-chart-series-1: var(--chart-series-1, #2c95ff);
+  --stockbot-chart-series-2: var(--chart-series-2, #aab7c2);
+  --stockbot-chart-series-3: var(--chart-series-3, #39c461);
+  --stockbot-chart-series-4: var(--chart-series-4, #f0aa2c);
+  --stockbot-chart-series-5: var(--chart-series-5, #a78bfa);
+  --stockbot-chart-series-6: var(--chart-series-6, #2dc7c9);
+  color: var(--stockbot-chart-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stockbot-market-chart {
+  min-width: 0;
+  border: 1px solid var(--stockbot-chart-grid);
+  border-radius: 8px;
+  background: var(--stockbot-chart-bg);
+  overflow: hidden;
+}
+
+.stockbot-chart-toolbar,
+.stockbot-chart-context,
+.stockbot-chart-actions,
+.stockbot-chart-legend,
+.stockbot-chart-legend span,
+.stockbot-session-replay,
+.stockbot-replay-buttons,
+.stockbot-replay-speed {
+  display: flex;
+  align-items: center;
+}
+
+.stockbot-chart-toolbar {
+  min-height: 42px;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--stockbot-chart-grid);
+  padding: 6px 10px;
+  background: var(--stockbot-chart-raised);
+}
+
+.stockbot-chart-context {
+  min-width: 0;
+  gap: 8px;
+  color: var(--stockbot-chart-axis);
+  font-size: 12px;
+}
+
+.stockbot-chart-context strong {
+  color: var(--stockbot-chart-text);
+  font-size: 13px;
+}
+
+.stockbot-chart-actions,
+.stockbot-replay-buttons {
+  gap: 4px;
+}
+
+.stockbot-chart-actions button,
+.stockbot-replay-buttons button,
+.stockbot-replay-speed select {
+  min-height: 28px;
+  border: 1px solid var(--stockbot-chart-grid);
+  border-radius: 6px;
+  background: var(--stockbot-chart-bg);
+  color: var(--stockbot-chart-axis);
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.stockbot-chart-actions button:hover:not(:disabled),
+.stockbot-replay-buttons button:hover:not(:disabled),
+.stockbot-replay-speed select:hover:not(:disabled),
+.stockbot-chart-actions button.is-active {
+  border-color: var(--stockbot-chart-line);
+  color: var(--stockbot-chart-text);
+}
+
+.stockbot-chart-actions button:focus-visible,
+.stockbot-replay-buttons button:focus-visible,
+.stockbot-replay-speed select:focus-visible,
+.stockbot-session-replay input:focus-visible,
+.stockbot-session-replay:focus-visible,
+.stockbot-chart-interaction:focus-visible {
+  outline: 2px solid var(--stockbot-chart-line);
+  outline-offset: 2px;
+}
+
+.stockbot-chart-actions button:disabled,
+.stockbot-replay-buttons button:disabled,
+.stockbot-session-replay input:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.stockbot-chart-legend {
+  min-height: 30px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  border-bottom: 1px solid var(--stockbot-chart-grid);
+  padding: 5px 11px;
+  color: var(--stockbot-chart-axis);
+  font-size: 11px;
+}
+
+.stockbot-chart-legend span {
+  --stockbot-series-color: var(--stockbot-chart-series-1);
+  gap: 6px;
+}
+
+.stockbot-chart-legend i {
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  background: var(--stockbot-series-color);
+}
+
+.stockbot-chart-stage {
+  position: relative;
+  min-height: 280px;
+  background: var(--stockbot-chart-bg);
+  contain: layout paint;
+  touch-action: none;
+  user-select: none;
+}
+
+.stockbot-chart-static-scene,
+.stockbot-chart-interaction,
+.stockbot-chart-svg,
+.stockbot-chart-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.stockbot-chart-static-scene,
+.stockbot-chart-svg,
+.stockbot-chart-canvas {
+  pointer-events: none;
+}
+
+.stockbot-chart-background {
+  fill: var(--stockbot-chart-bg);
+}
+
+.stockbot-chart-plot-background {
+  fill: var(--stockbot-chart-bg);
+  stroke: var(--stockbot-chart-grid);
+  stroke-width: 1;
+}
+
+.stockbot-chart-grid-line {
+  stroke: var(--stockbot-chart-grid);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.stockbot-chart-grid-line.is-vertical {
+  opacity: 0.58;
+}
+
+.stockbot-chart-candle-layer,
+.stockbot-chart-canvas {
+  z-index: 1;
+}
+
+.stockbot-chart-overlay-layer {
+  z-index: 2;
+}
+
+.stockbot-chart-interaction {
+  z-index: 3;
+  cursor: crosshair;
+  outline: none;
+}
+
+.stockbot-chart-interaction:active {
+  cursor: grabbing;
+}
+
+.stockbot-chart-wick {
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.stockbot-chart-body {
+  stroke-width: 0;
+}
+
+.stockbot-chart-candle.is-up .stockbot-chart-wick {
+  stroke: var(--stockbot-chart-candle-up);
+}
+
+.stockbot-chart-candle.is-up .stockbot-chart-body {
+  fill: var(--stockbot-chart-candle-up);
+}
+
+.stockbot-chart-candle.is-down .stockbot-chart-wick {
+  stroke: var(--stockbot-chart-candle-down);
+}
+
+.stockbot-chart-candle.is-down .stockbot-chart-body {
+  fill: var(--stockbot-chart-candle-down);
+}
+
+.stockbot-chart-volume {
+  fill: var(--stockbot-chart-volume);
+  opacity: 0.36;
+}
+
+.stockbot-chart-path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.stockbot-chart-path.is-ma {
+  stroke: var(--stockbot-chart-ma);
+}
+
+.stockbot-chart-path.is-vwap {
+  stroke: var(--stockbot-chart-vwap);
+}
+
+.stockbot-chart-path.is-band {
+  stroke: var(--stockbot-chart-band);
+  stroke-dasharray: 4 4;
+  opacity: 0.76;
+}
+
+.stockbot-chart-path.is-equity {
+  --stockbot-series-color: var(--stockbot-chart-series-1);
+  stroke: var(--stockbot-series-color);
+  stroke-width: 2;
+}
+
+.stockbot-chart-path.is-equity.is-control {
+  stroke-width: 1.5;
+}
+
+.stockbot-chart-path.is-equity.is-cash {
+  stroke-dasharray: 5 4;
+}
+
+.stockbot-chart-series-1 { --stockbot-series-color: var(--stockbot-chart-series-1); }
+.stockbot-chart-series-2 { --stockbot-series-color: var(--stockbot-chart-series-2); }
+.stockbot-chart-series-3 { --stockbot-series-color: var(--stockbot-chart-series-3); }
+.stockbot-chart-series-4 { --stockbot-series-color: var(--stockbot-chart-series-4); }
+.stockbot-chart-series-5 { --stockbot-series-color: var(--stockbot-chart-series-5); }
+.stockbot-chart-series-6 { --stockbot-series-color: var(--stockbot-chart-series-6); }
+
+.stockbot-chart-axis text,
+.stockbot-chart-trade text {
+  fill: var(--stockbot-chart-axis);
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.stockbot-chart-current-value line {
+  stroke: var(--stockbot-chart-line);
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.stockbot-chart-current-value rect {
+  fill: var(--stockbot-chart-line);
+}
+
+.stockbot-chart-current-value text {
+  fill: var(--stockbot-chart-bg);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.stockbot-chart-trade path {
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.stockbot-chart-trade.is-buy path {
+  fill: var(--stockbot-chart-marker-buy);
+  stroke: var(--stockbot-chart-bg);
+}
+
+.stockbot-chart-trade.is-sell path {
+  fill: var(--stockbot-chart-marker-sell);
+  stroke: var(--stockbot-chart-bg);
+}
+
+.stockbot-chart-risk line {
+  stroke: var(--stockbot-chart-risk-event);
+  stroke-dasharray: 4 4;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.stockbot-chart-risk path {
+  fill: var(--stockbot-chart-risk-event);
+}
+
+.stockbot-chart-risk text {
+  fill: var(--stockbot-chart-bg);
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.stockbot-chart-risk.is-info path {
+  fill: var(--stockbot-chart-line);
+}
+
+.stockbot-chart-risk.is-warn path,
+.stockbot-chart-risk.is-block path {
+  fill: var(--stockbot-chart-marker-blocked);
+}
+
+.stockbot-chart-crosshair line {
+  stroke: var(--stockbot-chart-crosshair);
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+  opacity: 0.78;
+  vector-effect: non-scaling-stroke;
+}
+
+.stockbot-chart-crosshair circle {
+  fill: var(--stockbot-chart-text);
+  stroke: var(--stockbot-chart-bg);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.stockbot-chart-tooltip rect {
+  fill: var(--stockbot-chart-raised);
+  stroke: var(--stockbot-chart-grid);
+  stroke-width: 1;
+}
+
+.stockbot-chart-tooltip text {
+  fill: var(--stockbot-chart-axis);
+  font-size: 10px;
+}
+
+.stockbot-chart-tooltip .stockbot-chart-tooltip-title {
+  fill: var(--stockbot-chart-text);
+  font-weight: 700;
+}
+
+.stockbot-chart-empty {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  color: var(--stockbot-chart-axis);
+  font-size: 13px;
+}
+
+.stockbot-chart-renderer-status {
+  height: 0;
+  overflow: hidden;
+}
+
+.stockbot-chart-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.stockbot-session-replay {
+  min-width: 0;
+  gap: 12px;
+  border: 1px solid var(--stockbot-chart-grid);
+  border-radius: 8px;
+  background: var(--stockbot-chart-raised);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.stockbot-session-replay > input[type="range"] {
+  min-width: 100px;
+  flex: 1;
+  accent-color: var(--stockbot-chart-line);
+}
+
+.stockbot-replay-time {
+  min-width: 156px;
+  color: var(--stockbot-chart-text);
+  font-weight: 650;
+}
+
+.stockbot-replay-speed {
+  gap: 6px;
+  color: var(--stockbot-chart-axis);
+}
+
+@media (max-width: 760px) {
+  .stockbot-chart-stage {
+    min-height: 320px;
+  }
+
+  .stockbot-chart-toolbar,
+  .stockbot-session-replay {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stockbot-chart-actions,
+  .stockbot-replay-buttons {
+    width: 100%;
+  }
+
+  .stockbot-chart-actions button,
+  .stockbot-replay-buttons button {
+    flex: 1;
+  }
+
+  .stockbot-replay-time {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stockbot-market-chart *,
+  .stockbot-session-replay * {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+  }
+}

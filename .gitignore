@@ -1,5 +1,8 @@
 node_modules
 dist
+data
+algorithms/uploads
+algorithms/params.json
 .env
 .DS_Store
 npm-debug.log*

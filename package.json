@@ -9,7 +9,9 @@
     "server": "node server/index.js",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node --test",
+    "check": "npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
@@ -18,9 +20,12 @@
     "dotenv": "latest",
     "express": "latest",
     "lucide-react": "latest",
+    "pg": "^8.23.0",
     "react": "latest",
     "react-dom": "latest",
-    "vite": "latest"
+    "react-router-dom": "^7.18.2",
+    "vite": "latest",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "latest",
