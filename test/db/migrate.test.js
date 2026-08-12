@@ -21,8 +21,8 @@ test("initial migration creates the complete schema and is idempotent", async ()
     const first = await migrate(temporary.client, { now: () => 1_700_000_000_000 });
     const second = await migrate(temporary.client, { now: () => 1_800_000_000_000 });
 
-    assert.deepEqual(first, { applied: ["0001_init", "0002_order_signal_bar"], skipped: [] });
-    assert.deepEqual(second, { applied: [], skipped: ["0001_init", "0002_order_signal_bar"] });
+    assert.deepEqual(first, { applied: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes"], skipped: [] });
+    assert.deepEqual(second, { applied: [], skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes"] });
 
     const tables = await temporary.client.query(
       "SELECT name FROM sqlite_master WHERE type = ? AND name NOT LIKE ? ORDER BY name",
@@ -53,7 +53,7 @@ test("initial migration creates the complete schema and is idempotent", async ()
     );
 
     const applied = await getAppliedMigrations(temporary.client);
-    assert.equal(applied.length, 2);
+    assert.equal(applied.length, 3);
     assert.ok(applied.every((migration) => migration.appliedAt === 1_700_000_000_000));
     assert.ok(applied.every((migration) => migration.checksum.length === 64));
   } finally {

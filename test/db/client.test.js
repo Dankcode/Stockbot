@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { test } from "node:test";
 
 import { createClient, rewritePlaceholders } from "../../server/db/client.js";
@@ -51,6 +55,20 @@ test("SQLite client enforces foreign keys and preserves integers beyond Number s
     assert.equal(row.exact_value, exact.toString());
   } finally {
     await client.close();
+  }
+});
+
+test("file SQLite uses WAL, FULL synchronization, foreign keys, and a busy timeout", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "stockbot-db-pragmas-"));
+  const client = await createClient(pathToFileURL(join(directory, "stockbot.db")).href, { busyTimeoutMs: 7_500 });
+  try {
+    assert.equal((await client.query("PRAGMA journal_mode"))[0].journal_mode, "wal");
+    assert.equal((await client.query("PRAGMA synchronous"))[0].synchronous, 2);
+    assert.equal((await client.query("PRAGMA foreign_keys"))[0].foreign_keys, 1);
+    assert.equal((await client.query("PRAGMA busy_timeout"))[0].timeout, 7_500);
+  } finally {
+    await client.close();
+    await rm(directory, { recursive: true, force: true });
   }
 });
 

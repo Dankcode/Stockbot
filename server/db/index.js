@@ -7,4 +7,10 @@ export {
   readMigrations
 } from "./migrate.js";
 export * from "./repositories/index.js";
-
+export {
+  backupSqliteDatabase,
+  databaseStatus,
+  initializeDatabase,
+  tradeLedger,
+  tradeLedgerCsv
+} from "./operations.js";

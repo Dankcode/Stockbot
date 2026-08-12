@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import path from "node:path";
 import { accountsRouter } from "./routes/accounts.js";
 import { alertsRouter } from "./routes/alerts.js";
 import { algorithmsRouter } from "./routes/algorithms.js";
@@ -17,6 +18,32 @@ function localOrigin(origin) {
     const url = new URL(origin);
     return ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
   } catch { return false; }
+}
+
+export function mountProductionWeb(app, {
+  workspaceRoot,
+  nodeEnv = process.env.NODE_ENV
+} = {}) {
+  if (nodeEnv !== "production") return false;
+  if (!workspaceRoot) throw new TypeError("workspaceRoot is required when serving the production web app.");
+
+  const webRoot = path.join(workspaceRoot, "dist");
+  app.use(express.static(webRoot, {
+    index: false,
+    maxAge: "1h",
+    setHeaders(response, filename) {
+      if (path.basename(filename) === "index.html") {
+        response.setHeader("cache-control", "no-cache");
+      }
+    }
+  }));
+  app.get(/^(?!\/api(?:\/|$)).*/, (_request, response, next) => {
+    response.setHeader("cache-control", "no-cache");
+    response.sendFile("index.html", { root: webRoot }, (error) => {
+      if (error) next(error);
+    });
+  });
+  return true;
 }
 
 export function createHttpApp(context) {
@@ -42,6 +69,7 @@ export function createHttpApp(context) {
 
   // A small compatibility probe for older local launch scripts.
   app.get("/api/health", (_request, response) => response.redirect(307, "/api/v1/health"));
+  mountProductionWeb(app, { workspaceRoot: context.config.workspaceRoot });
   app.use(notFound);
   app.use(errorHandler);
   return app;

@@ -271,6 +271,187 @@ test("a paper signal is pending on tick N and fills only on tick N+1", async (t)
   assert.equal(riskEvents.filter((event) => event.ruleId === "manual_halt").length, 1);
 });
 
+test("continuous risk halts before a pending buy can fill", async (t) => {
+  const context = await harness(t);
+  const signalIndex = 39;
+  const signalAt = Date.UTC(2025, 1, 10, 21, 0, 2);
+  const nextOpenAt = Date.UTC(2025, 1, 11, 14, 30, 2);
+  context.setVisibleBars(signalIndex + 2);
+  context.setNow(signalAt);
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("risk-before-fill", {
+    mode: "paper",
+    params: { entry: 999, exit: 1_000 },
+    riskProfile: { rules: { maxDailyLoss: { percentOfStartingEquity: 3 } } }
+  }));
+  await context.supervisor.start(session.id);
+  await context.broker.submitOrder({
+    accountId: DEFAULT_ACCOUNT_ID,
+    sessionId: session.id,
+    clientOrderId: "risk-before-fill-position",
+    symbol: "AAPL",
+    side: "buy",
+    qty: 500_000_000
+  });
+  await context.repositories.sessions.addEquitySnapshot({
+    sessionId: session.id,
+    at: signalAt,
+    equity: 10_000_000,
+    cash: 5_000_000,
+    positionValue: 5_000_000
+  });
+  await context.broker.queueOrder({
+    accountId: DEFAULT_ACCOUNT_ID,
+    sessionId: session.id,
+    clientOrderId: "risk-before-fill-pending",
+    symbol: "MSFT",
+    side: "buy",
+    qty: 1_000_000,
+    signalBarAt: deterministicBars[signalIndex].time,
+    submittedAt: signalAt
+  });
+
+  context.quotePrices.set("AAPL", 80);
+  context.setNow(nextOpenAt);
+  const tick = await context.supervisor.tick(session.id, {
+    kind: "market",
+    phase: "open",
+    interval: "1day",
+    scheduledAt: nextOpenAt
+  });
+  assert.equal(tick.session.status, "halted");
+  const pending = await context.repositories.orders.getByClientOrderId("risk-before-fill-pending");
+  assert.equal(pending.status, "pending");
+  assert.equal((await context.repositories.orders.listFills({ orderId: pending.id })).length, 0);
+});
+
+test("unavailable position marks pause before a pending buy is processed", async (t) => {
+  const context = await harness(t);
+  const signalIndex = 39;
+  const signalAt = Date.UTC(2025, 1, 10, 21, 0, 2);
+  const nextOpenAt = Date.UTC(2025, 1, 11, 14, 30, 2);
+  context.setVisibleBars(signalIndex + 2);
+  context.setNow(signalAt);
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("pause-before-fill", {
+    mode: "paper",
+    params: { entry: 999, exit: 1_000 }
+  }));
+  await context.supervisor.start(session.id);
+  await context.broker.submitOrder({
+    accountId: DEFAULT_ACCOUNT_ID,
+    sessionId: session.id,
+    clientOrderId: "pause-before-fill-position",
+    symbol: "AAPL",
+    side: "buy",
+    qty: 1_000_000
+  });
+  await context.broker.queueOrder({
+    accountId: DEFAULT_ACCOUNT_ID,
+    sessionId: session.id,
+    clientOrderId: "pause-before-fill-pending",
+    symbol: "MSFT",
+    side: "buy",
+    qty: 1_000_000,
+    signalBarAt: deterministicBars[signalIndex].time,
+    submittedAt: signalAt
+  });
+
+  context.quotePrices.delete("AAPL");
+  context.setNow(nextOpenAt);
+  const tick = await context.supervisor.tick(session.id, {
+    kind: "market",
+    phase: "open",
+    interval: "1day",
+    scheduledAt: nextOpenAt
+  });
+  assert.equal(tick.session.status, "paused");
+  assert.equal(tick.fills.length, 0);
+  const pending = await context.repositories.orders.getByClientOrderId("pause-before-fill-pending");
+  assert.equal(pending.status, "pending");
+});
+
+test("a protective stop-loss is attributed once while its exit remains pending", async (t) => {
+  const context = await harness(t);
+  context.setNow(Date.UTC(2025, 2, 3, 15, 0, 2));
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("single-stop-loss", {
+    mode: "paper",
+    params: { entry: 999, exit: 1_000 }
+  }));
+  await context.supervisor.start(session.id);
+  await context.broker.submitOrder({
+    accountId: DEFAULT_ACCOUNT_ID,
+    sessionId: session.id,
+    clientOrderId: "single-stop-loss-position",
+    symbol: "AAPL",
+    side: "buy",
+    qty: 1_000_000
+  });
+  context.quotePrices.set("AAPL", 90);
+
+  const first = await context.supervisor.tick(session.id, {
+    kind: "market",
+    phase: "close",
+    interval: "1day",
+    scheduledAt: Date.UTC(2025, 2, 3, 15, 0, 2)
+  });
+  const second = await context.supervisor.tick(session.id, {
+    kind: "market",
+    phase: "close",
+    interval: "1day",
+    scheduledAt: Date.UTC(2025, 2, 3, 15, 0, 2)
+  });
+  assert.equal(first.protectiveExits.length, 1);
+  assert.equal(second.protectiveExits.length, 1);
+  const pendingExits = await context.repositories.orders.list({
+    sessionId: session.id,
+    status: "pending"
+  });
+  assert.equal(pendingExits.filter((order) => order.side === "sell").length, 1);
+  const riskEvents = await context.repositories.risk.listEvents({ sessionId: session.id });
+  assert.equal(riskEvents.filter((event) => event.ruleId === "position_stop_loss").length, 1);
+  const events = await context.supervisor.getEvents(session.id);
+  assert.equal(events.filter((event) => event.action === "session_protective_exit").length, 1);
+});
+
+test("a missed exact successor is rejected instead of filling at a later bar", async (t) => {
+  const context = await harness(t);
+  const signalIndex = 39;
+  const signalAt = Date.UTC(2025, 1, 10, 21, 0, 2);
+  const laterOpenAt = Date.UTC(2025, 1, 12, 14, 30, 2);
+  context.setVisibleBars(signalIndex + 3);
+  context.setNow(signalAt);
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("missed-successor", {
+    mode: "paper",
+    params: { entry: 999, exit: 1_000 }
+  }));
+  await context.supervisor.start(session.id);
+  await context.broker.queueOrder({
+    accountId: DEFAULT_ACCOUNT_ID,
+    sessionId: session.id,
+    clientOrderId: "missed-successor-order",
+    symbol: "AAPL",
+    side: "buy",
+    qty: 1_000_000,
+    signalBarAt: deterministicBars[signalIndex].time,
+    submittedAt: signalAt
+  });
+
+  context.setNow(laterOpenAt);
+  const tick = await context.supervisor.tick(session.id, {
+    kind: "market",
+    phase: "open",
+    interval: "1day",
+    scheduledAt: laterOpenAt
+  });
+  assert.equal(tick.fills.length, 1);
+  assert.equal(tick.fills[0].order.status, "rejected");
+  assert.equal(tick.fills[0].order.rejectReason, "missed_next_bar_open");
+  assert.equal((await context.repositories.orders.listFills({ orderId: tick.fills[0].order.id })).length, 0);
+});
+
 test("halt-all covers active sessions and restart recovery defaults them to errored", async (t) => {
   const context = await harness(t);
   await context.supervisor.bootstrap();

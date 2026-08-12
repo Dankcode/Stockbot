@@ -678,6 +678,13 @@ export function createSupervisor({
   }
 
   async function addRiskEvent(session, options, actionTaken = "session_halted") {
+    const persistedAction = {
+      session_paused: "logged",
+      new_entries_blocked: "logged",
+      protective_exit_queued: "logged",
+      protective_exit_already_pending: "logged",
+      position_exit: "logged"
+    }[actionTaken] ?? actionTaken;
     const event = await repositories.risk.addEvent({
       id: idFactory(),
       sessionId: session.id,
@@ -685,8 +692,10 @@ export function createSupervisor({
       at: clock(),
       ruleId: options.ruleId ?? "manual_halt",
       severity: options.severity ?? "halt",
-      actionTaken,
-      detail: options.detail ?? { reason: options.reason ?? "user" },
+      actionTaken: persistedAction,
+      detail: options.detail == null
+        ? { reason: options.reason ?? "user", runtimeAction: actionTaken }
+        : { ...options.detail, runtimeAction: actionTaken },
       orderId: options.orderId ?? null
     });
     eventHub?.publish("risk.event", { event });

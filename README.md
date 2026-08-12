@@ -51,6 +51,18 @@ npm run build    # Typecheck and production web build
 npm run check    # lint, tests, and build
 ```
 
+## Install on a user's laptop
+
+The production package connects only to the database selected by that host user's private `DATABASE_URL`; no database address or credential is compiled into the dashboard. It accepts either a PostgreSQL URL or a file-backed SQLite URL.
+
+```bash
+npm run laptop:init       # create a protected host config and enter DATABASE_URL
+npm run laptop:install    # build and install the per-user macOS service
+npm run laptop:tailscale  # expose only the loopback app through private HTTPS
+```
+
+`laptop:install` migrates and validates the selected database before starting the service. Automated orders, fills, session-owned lots, equity, risk events, and audit records are written to SQL. Inspect or export them with `npm run db:status -- --env-file "$HOME/.config/stockbot/stockbot.env"` and `npm run db:trades -- --env-file "$HOME/.config/stockbot/stockbot.env"`. See [Laptop deployment](./docs/LAPTOP_DEPLOYMENT.md) and [Database operations](./docs/DATABASE_OPERATIONS.md) before installing. The scripts are portable and do not install or configure anything until run on the future host.
+
 ## Configuration
 
 `.env` is for bootstrap configuration. Settings saved from the dashboard are persisted in the database; Stockbot does not rewrite `.env`.

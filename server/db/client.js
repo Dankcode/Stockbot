@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DatabaseSync } from "node:sqlite";
+import { backup as sqliteBackup, DatabaseSync } from "node:sqlite";
 
 const MAX_SAFE_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
 const MIN_SAFE_BIGINT = BigInt(Number.MIN_SAFE_INTEGER);
@@ -214,6 +214,17 @@ async function createSqliteClient(databaseUrl, options = {}) {
 
   const database = new DatabaseSync(filename);
   database.exec("PRAGMA foreign_keys = ON");
+  if (filename !== ":memory:") {
+    const journalMode = database.prepare("PRAGMA journal_mode = WAL").get()?.journal_mode;
+    if (String(journalMode).toLowerCase() !== "wal") {
+      database.close();
+      throw databaseError("SQLite could not enable WAL journal mode.", "ERR_SQLITE_WAL");
+    }
+  }
+  // FULL is intentionally more conservative than SQLite's WAL default. The
+  // laptop process is a trading ledger, so acknowledged commits must survive a
+  // power loss even if that costs a little write throughput.
+  database.exec("PRAGMA synchronous = FULL");
   const busyTimeout = Number(options.busyTimeoutMs ?? 5_000);
   if (Number.isFinite(busyTimeout) && busyTimeout >= 0) {
     database.exec(`PRAGMA busy_timeout = ${Math.floor(busyTimeout)}`);
@@ -305,6 +316,14 @@ async function createSqliteClient(databaseUrl, options = {}) {
         }
       });
     },
+    backup: (destination, backupOptions = {}) =>
+      enqueue(async () => {
+        assertOpen();
+        if (filename === ":memory:") {
+          throw databaseError("SQLite backups require a file-backed database.", "ERR_SQLITE_BACKUP_MEMORY");
+        }
+        return sqliteBackup(database, destination, backupOptions);
+      }),
     close: () =>
       enqueue(async () => {
         if (!closed) {
@@ -455,4 +474,3 @@ export async function createClient(databaseUrl, options = {}) {
     "ERR_DATABASE_URL"
   );
 }
-

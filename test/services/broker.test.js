@@ -107,6 +107,55 @@ test("FIFO sells support partial lots and persist exact realized P&L", async (t)
   assert.equal(lots[0].qtyOpen, 1_000_000);
 });
 
+test("session-owned positions cannot be sold by another session on the same account", async (t) => {
+  const context = await harness();
+  t.after(() => context.client.close());
+  await context.broker.ensureDefaultAccount({ id: "shared-account", startingCash: 20_000 });
+  for (const id of ["session-owner", "session-other"]) {
+    await context.repositories.sessions.create({
+      id,
+      accountId: "shared-account",
+      name: id,
+      mode: "paper",
+      status: "running",
+      symbols: ["AAPL"],
+      barInterval: "1day",
+      fillModel: {},
+      riskProfile: {},
+      schedule: { type: "manual", timezone: "UTC" },
+      startingEquity: 20_000,
+      createdAt: NOW
+    });
+  }
+
+  context.quotes.set("AAPL", 10);
+  const purchase = await context.broker.submitOrder({
+    accountId: "shared-account",
+    sessionId: "session-owner",
+    clientOrderId: "owned-buy",
+    symbol: "AAPL",
+    side: "buy",
+    qty: 1_000_000
+  });
+  assert.equal(purchase.order.status, "filled");
+
+  context.quotes.set("AAPL", 12);
+  const foreignSale = await context.broker.submitOrder({
+    accountId: "shared-account",
+    sessionId: "session-other",
+    clientOrderId: "foreign-sale",
+    symbol: "AAPL",
+    side: "sell",
+    qty: 1_000_000
+  });
+  assert.equal(foreignSale.order.status, "rejected");
+  assert.equal(foreignSale.order.rejectReason, "insufficient_position");
+  assert.equal((await context.ledger.listOpenPositions("shared-account", { sessionId: "session-other" })).length, 0);
+  const ownerPositions = await context.ledger.listOpenPositions("shared-account", { sessionId: "session-owner" });
+  assert.equal(ownerPositions.length, 1);
+  assert.equal(ownerPositions[0].qty, 1_000_000);
+});
+
 test("portfolio marks real quotes and derives dayChange from persisted equity", async (t) => {
   const context = await harness();
   t.after(() => context.client.close());

@@ -29,7 +29,10 @@ test("SQLite data and migration state survive a client restart", async () => {
     await client.close();
 
     client = await createClient(databaseUrl);
-    assert.deepEqual(await migrate(client), { applied: [], skipped: ["0001_init", "0002_order_signal_bar"] });
+    assert.deepEqual(await migrate(client), {
+      applied: [],
+      skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes"]
+    });
     repositories = createRepositories(client);
     assert.equal((await repositories.accounts.getById("account-restart")).cash, 1_000_000);
     assert.equal((await repositories.settings.get("restart_marker")).value, "present");
