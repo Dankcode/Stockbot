@@ -6,6 +6,7 @@ import {
   validateAlgorithm,
   validateAlgorithmSource
 } from "../algorithms/validator.js";
+import { ResearchFrameSchema } from "../../packages/shared/research.js";
 import { runBacktest } from "./backtest.js";
 import { createIndicators } from "./indicators.js";
 
@@ -48,6 +49,18 @@ function normalizeSignal(rawSignal) {
   throw new TypeError('Algorithm signal() must return "buy", "sell", a structured signal, or null.');
 }
 
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function normalizeResearchFrame(input) {
+  if (input === null || input === undefined) return null;
+  const cloned = structuredClone(input);
+  return deepFreeze(ResearchFrameSchema.parse(cloned));
+}
+
 function evaluateLatestSignal(algorithm, payload) {
   if (!Array.isArray(payload.bars) || payload.bars.length === 0) {
     throw new TypeError("Signal evaluation requires at least one closed bar.");
@@ -76,11 +89,12 @@ function evaluateLatestSignal(algorithm, payload) {
   const closes = Object.freeze(indicators.closes.slice());
   const params = Object.freeze({ ...(algorithm.params ?? {}), ...(payload.params ?? {}) });
   const position = Object.freeze({ qty: 0, entryPrice: 0, entryIndex: -1, ...(payload.position ?? {}) });
+  const research = normalizeResearchFrame(payload.research);
   const empty = Object.freeze([]);
   const state = payload.state !== undefined
     ? payload.state
     : typeof algorithm.init === "function"
-      ? algorithm.init({ bars: empty, closes: empty, params, indicators: indicators.at(-1) }) ?? {}
+      ? algorithm.init({ bars: empty, closes: empty, params, indicators: indicators.at(-1), research: null }) ?? {}
       : {};
   const signal = normalizeSignal(algorithm.signal({
     index,
@@ -90,7 +104,8 @@ function evaluateLatestSignal(algorithm, payload) {
     state,
     params,
     indicators: indicators.at(index),
-    position
+    position,
+    research
   }));
   return Object.freeze({
     signal,
@@ -123,7 +138,9 @@ export async function executeWorkerTask(kind, payload) {
     ...payload.options,
     bars: payload.bars,
     algorithm,
-    params: payload.params ?? payload.options?.params
+    params: payload.params ?? payload.options?.params,
+    researchTimeline: payload.researchTimeline,
+    symbol: payload.symbol
   });
 }
 

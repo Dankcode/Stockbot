@@ -38,6 +38,7 @@ const session: Session = SessionSchema.parse({
   mode: "backtest",
   status: "draft",
   algorithmVersionId: null,
+  researchPlanVersionId: null,
   params: {},
   symbols: ["SPY"],
   barInterval: interval,

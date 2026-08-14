@@ -162,14 +162,22 @@ export class EnginePool {
     return this.submit("validate", { algorithmSource, filename }, options);
   }
 
-  evaluateSignal({ algorithmSource, filename = "algorithm.js", bars, params, position, state }, options) {
-    return this.submit("signal", { algorithmSource, filename, bars, params, position, state }, options);
+  evaluateSignal({ algorithmSource, filename = "algorithm.js", bars, params, position, state, research }, options) {
+    return this.submit("signal", { algorithmSource, filename, bars, params, position, state, research }, options);
   }
 
-  runBacktest({ algorithmSource, filename = "algorithm.js", bars, params, ...options }, taskOptions) {
+  runBacktest({
+    algorithmSource,
+    filename = "algorithm.js",
+    bars,
+    params,
+    researchTimeline,
+    symbol,
+    ...options
+  }, taskOptions) {
     return this.submit(
       "backtest",
-      { algorithmSource, filename, bars, params, options },
+      { algorithmSource, filename, bars, params, researchTimeline, symbol, options },
       taskOptions
     );
   }

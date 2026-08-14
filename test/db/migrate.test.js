@@ -21,8 +21,14 @@ test("initial migration creates the complete schema and is idempotent", async ()
     const first = await migrate(temporary.client, { now: () => 1_700_000_000_000 });
     const second = await migrate(temporary.client, { now: () => 1_800_000_000_000 });
 
-    assert.deepEqual(first, { applied: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes"], skipped: [] });
-    assert.deepEqual(second, { applied: [], skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes"] });
+    assert.deepEqual(first, {
+      applied: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research"],
+      skipped: []
+    });
+    assert.deepEqual(second, {
+      applied: [],
+      skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research"]
+    });
 
     const tables = await temporary.client.query(
       "SELECT name FROM sqlite_master WHERE type = ? AND name NOT LIKE ? ORDER BY name",
@@ -42,6 +48,11 @@ test("initial migration creates the complete schema and is idempotent", async ()
         "fills",
         "orders",
         "position_lots",
+        "research_documents",
+        "research_plan_versions",
+        "research_plans",
+        "research_runs",
+        "research_snapshots",
         "risk_events",
         "risk_profiles",
         "schema_migrations",
@@ -53,9 +64,43 @@ test("initial migration creates the complete schema and is idempotent", async ()
     );
 
     const applied = await getAppliedMigrations(temporary.client);
-    assert.equal(applied.length, 3);
+    assert.equal(applied.length, 4);
     assert.ok(applied.every((migration) => migration.appliedAt === 1_700_000_000_000));
     assert.ok(applied.every((migration) => migration.checksum.length === 64));
+
+    const sessionColumns = await temporary.client.query("PRAGMA table_info(sessions)");
+    const orderColumns = await temporary.client.query("PRAGMA table_info(orders)");
+    assert.ok(sessionColumns.some((column) => column.name === "research_plan_version_id"));
+    assert.ok(orderColumns.some((column) => column.name === "research_snapshot_id"));
+
+    const sessionForeignKeys = await temporary.client.query("PRAGMA foreign_key_list(sessions)");
+    const orderForeignKeys = await temporary.client.query("PRAGMA foreign_key_list(orders)");
+    assert.ok(sessionForeignKeys.some((foreignKey) =>
+      foreignKey.from === "research_plan_version_id" && foreignKey.table === "research_plan_versions"
+    ));
+    assert.ok(orderForeignKeys.some((foreignKey) =>
+      foreignKey.from === "research_snapshot_id" && foreignKey.table === "research_snapshots"
+    ));
+
+    const indexes = await temporary.client.query(
+      "SELECT name FROM sqlite_master WHERE type = ? AND name LIKE ? AND name NOT LIKE ? ORDER BY name",
+      ["index", "%research%", "sqlite_autoindex_%"]
+    );
+    assert.deepEqual(indexes.map((index) => index.name), [
+      "idx_orders_research_snapshot",
+      "idx_research_documents_content",
+      "idx_research_documents_run",
+      "idx_research_plan_versions_plan",
+      "idx_research_plans_created",
+      "idx_research_runs_plan",
+      "idx_research_runs_plan_symbol",
+      "idx_research_runs_status",
+      "idx_research_runs_symbol",
+      "idx_research_snapshots_eligible",
+      "idx_research_snapshots_run",
+      "idx_research_snapshots_timeline",
+      "idx_sessions_research_plan_version"
+    ]);
   } finally {
     await temporary.client.close();
     await rm(temporary.directory, { recursive: true, force: true });

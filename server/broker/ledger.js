@@ -93,6 +93,7 @@ function assertSameOrder(order, input, qty) {
   const expected = {
     accountId: input.accountId,
     sessionId: input.sessionId ?? null,
+    researchSnapshotId: input.researchSnapshotId ?? null,
     symbol: String(input.symbol).toUpperCase(),
     side: input.side,
     qty
@@ -206,6 +207,7 @@ export function createLedger({ client, repositories = createRepositories(client)
         id: orderId,
         clientOrderId: input.clientOrderId,
         sessionId: input.sessionId ?? null,
+        researchSnapshotId: input.researchSnapshotId ?? null,
         accountId: input.accountId,
         symbol,
         side: input.side,
@@ -254,6 +256,7 @@ export function createLedger({ client, repositories = createRepositories(client)
         id: orderId,
         clientOrderId: input.clientOrderId,
         sessionId: input.sessionId ?? null,
+        researchSnapshotId: input.researchSnapshotId ?? null,
         accountId: input.accountId,
         symbol,
         side: input.side,
@@ -303,6 +306,7 @@ export function createLedger({ client, repositories = createRepositories(client)
           id: orderId,
           clientOrderId: input.clientOrderId,
           sessionId: input.sessionId ?? null,
+          researchSnapshotId: input.researchSnapshotId ?? null,
           accountId: input.accountId,
           symbol: String(input.symbol).toUpperCase(),
           side,

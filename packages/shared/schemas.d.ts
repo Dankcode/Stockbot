@@ -54,6 +54,7 @@ export interface Order {
   id: string;
   clientOrderId: string;
   sessionId: string | null;
+  researchSnapshotId: string | null;
   accountId: string;
   symbol: string;
   side: OrderSide;
@@ -106,6 +107,7 @@ export interface Session {
   mode: SessionMode;
   status: SessionStatus;
   algorithmVersionId: string | null;
+  researchPlanVersionId: string | null;
   params: Record<string, unknown>;
   symbols: string[];
   barInterval: BarInterval;

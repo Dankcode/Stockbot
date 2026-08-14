@@ -9,6 +9,8 @@ const CreateSessionSchema = z.object({
   name: z.string().trim().min(1).max(200),
   mode: z.enum(["backtest", "paper"]),
   algorithmVersionId: z.string().min(1),
+  researchPlanId: z.string().trim().min(1).max(128).optional(),
+  researchPlanVersionId: z.string().trim().min(1).max(128).optional(),
   symbols: z.array(z.string().trim().toUpperCase().regex(/^[A-Z0-9./-]+$/)).min(1).max(20),
   barInterval: z.enum(["1min", "5min", "1hour", "1day", "1week", "1month"]),
   params: z.record(z.string(), z.unknown()).optional(),
@@ -17,7 +19,15 @@ const CreateSessionSchema = z.object({
   schedule: z.record(z.string(), z.unknown()).optional(),
   windowStart: z.number().int().nonnegative().nullable().optional(),
   windowEnd: z.number().int().nonnegative().nullable().optional()
-}).strict();
+}).strict().superRefine((input, context) => {
+  if (input.researchPlanId && input.researchPlanVersionId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["researchPlanVersionId"],
+      message: "Choose either researchPlanId or researchPlanVersionId, not both."
+    });
+  }
+});
 
 const HaltSchema = z.object({ liquidate: z.boolean().optional(), reason: z.string().max(500).optional(), operationId: z.string().max(128).optional() }).strict();
 

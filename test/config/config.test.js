@@ -9,7 +9,15 @@ const KEYS = [
   "STOCKBOT_CONFIG_FILE",
   "STOCKBOT_ALLOW_REMOTE",
   "STOCKBOT_API_TOKEN",
-  "STOCKBOT_SETTINGS_KEY"
+  "STOCKBOT_SETTINGS_KEY",
+  "RESEARCH_WEB_SOURCES_JSON",
+  "AI_CLI_COMMAND",
+  "AI_CLI_ARGS_JSON",
+  "AI_CLI_MODEL",
+  "AI_CLI_TIMEOUT_MS",
+  "AI_CLI_MAX_INPUT_BYTES",
+  "AI_CLI_MAX_OUTPUT_BYTES",
+  "AI_CLI_ENV_ALLOWLIST_JSON"
 ];
 
 function withEnvironment(values, callback) {
@@ -56,4 +64,28 @@ test("configuration exposes its protected source and infers provider-neutral dat
   withEnvironment({ STOCKBOT_DATABASE_LOCATION: "public-cloud" }, () => {
     assert.throws(loadConfig, /local or remote/);
   });
+});
+
+test("research adapters are configured only by strict operator JSON", () => {
+  withEnvironment({
+    RESEARCH_WEB_SOURCES_JSON: '{"sec":"https://www.sec.gov"}',
+    AI_CLI_COMMAND: "/usr/local/bin/research-summary",
+    AI_CLI_ARGS_JSON: '["--json"]',
+    AI_CLI_MODEL: "local-model",
+    AI_CLI_ENV_ALLOWLIST_JSON: '["OPENAI_API_KEY"]'
+  }, () => {
+    const config = loadConfig();
+    assert.deepEqual(config.researchWebSources, { sec: "https://www.sec.gov" });
+    assert.deepEqual(config.aiCli, {
+      command: "/usr/local/bin/research-summary",
+      args: ["--json"],
+      model: "local-model",
+      timeoutMs: 60_000,
+      maxInputBytes: 500_000,
+      maxOutputBytes: 100_000,
+      envAllowlist: ["OPENAI_API_KEY"]
+    });
+  });
+  withEnvironment({ AI_CLI_ARGS_JSON: '"--shell"' }, () => assert.throws(loadConfig, /array of strings/));
+  withEnvironment({ RESEARCH_WEB_SOURCES_JSON: "[]" }, () => assert.throws(loadConfig, /JSON object/));
 });

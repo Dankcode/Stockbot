@@ -4,6 +4,7 @@ import { createAlgorithmsRepository } from "./algorithms.js";
 import { createAuditRepository } from "./audit.js";
 import { createOrdersRepository } from "./orders.js";
 import { createRiskRepository } from "./risk.js";
+import { createResearchRepository } from "./research.js";
 import { createSessionsRepository } from "./sessions.js";
 import { createSettingsRepository } from "./settings.js";
 
@@ -13,6 +14,7 @@ export {
   createAlgorithmsRepository,
   createAuditRepository,
   createOrdersRepository,
+  createResearchRepository,
   createRiskRepository,
   createSessionsRepository,
   createSettingsRepository
@@ -25,9 +27,9 @@ export function createRepositories(client) {
     algorithms: createAlgorithmsRepository(client),
     audit: createAuditRepository(client),
     orders: createOrdersRepository(client),
+    research: createResearchRepository(client),
     risk: createRiskRepository(client),
     sessions: createSessionsRepository(client),
     settings: createSettingsRepository(client)
   });
 }
-

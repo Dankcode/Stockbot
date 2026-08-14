@@ -10,6 +10,7 @@ const persistedSession = {
   mode: "paper",
   status: "running",
   algorithmVersionId: "algorithm:v1",
+  researchPlanVersionId: null,
   paramsJson: { fast: 9 },
   symbolsJson: ["SPY"],
   barInterval: "5min",

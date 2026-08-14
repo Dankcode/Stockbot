@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { ResearchSnapshotSchema } from "../../packages/shared/research.js";
 import { createClient } from "../../server/db/client.js";
 import { migrate } from "../../server/db/migrate.js";
 import { createRepositories } from "../../server/db/repositories/index.js";
 import { createLedger, DEFAULT_ACCOUNT_ID } from "../../server/broker/ledger.js";
 import { createPaperBroker } from "../../server/broker/paper-broker.js";
 import { EnginePool } from "../../server/engine/pool.js";
+import { researchTimelineHash } from "../../server/research/timeline.js";
 import { createSupervisor } from "../../server/runtime/supervisor.js";
 import { deterministicBars } from "../engine/fixtures/bars.js";
 
@@ -52,7 +54,7 @@ class FakeScheduler {
   }
 }
 
-async function harness(t) {
+async function harness(t, { researchOverrides } = {}) {
   const client = await createClient("file::memory:");
   await migrate(client);
   const repositories = createRepositories(client);
@@ -84,9 +86,15 @@ async function harness(t) {
     quoteFreshnessMs: 5_000,
     fillModel: { slippageBps: 0, fixedCommission: 0, perShareCommission: 0 }
   });
+  const supervisorRepositories = researchOverrides
+    ? Object.freeze({
+        ...repositories,
+        research: Object.freeze({ ...repositories.research, ...researchOverrides })
+      })
+    : repositories;
   const supervisor = createSupervisor({
     client,
-    repositories,
+    repositories: supervisorRepositories,
     market,
     enginePool,
     ledger,
@@ -160,6 +168,137 @@ function sessionInput(id, overrides = {}) {
   };
 }
 
+function researchPlan({ id = "strategy-research", required = true, symbols = ["AAPL"] } = {}) {
+  return {
+    schemaVersion: 1,
+    id,
+    name: "Strategy research fixture",
+    symbols,
+    steps: [
+      {
+        id: "page",
+        kind: "scrape",
+        adapter: "web.page.v1",
+        request: {
+          sourceId: "fixture-source",
+          pathTemplate: "/markets/{symbol}",
+          format: "html"
+        },
+        limits: { timeoutMs: 1_000, maxBytes: 10_000 }
+      },
+      {
+        id: "summary",
+        kind: "summarize",
+        adapter: "ai.cli.summary.v1",
+        dependsOn: ["page"],
+        promptTemplate: "market-summary.v1",
+        responseSchema: "market-summary.v1",
+        limits: { timeoutMs: 1_000, maxInputBytes: 10_000 }
+      }
+    ],
+    outputStep: "summary",
+    delivery: { strategy: true, required, maxAgeMs: 0 }
+  };
+}
+
+async function importResearchPlan(context, {
+  plan = researchPlan(),
+  versionId = `${plan.id}-v1`,
+  sourceHash = "1".repeat(64),
+  at = START
+} = {}) {
+  return context.repositories.research.importPlan({
+    planId: plan.id,
+    name: plan.name,
+    description: plan.description ?? null,
+    sourceHash,
+    manifest: plan,
+    versionId,
+    at
+  });
+}
+
+function researchSnapshot({
+  id = "strategy-snapshot",
+  runId = `run-${id}`,
+  planId = "strategy-research",
+  planVersionId = `${planId}-v1`,
+  symbol = "AAPL",
+  availableAt
+}) {
+  return ResearchSnapshotSchema.parse({
+    id,
+    runId,
+    planId,
+    planVersionId,
+    schemaVersion: 1,
+    symbol,
+    asOf: availableAt,
+    availableAt,
+    expiresAt: null,
+    summary: {
+      overview: "Validated strategy research fixture.",
+      keyDrivers: ["Demand"],
+      risks: ["Competition"],
+      opportunities: ["Expansion"],
+      sentiment: "bullish",
+      confidence: 0.9
+    },
+    sources: [{
+      stepId: "page",
+      sourceId: "fixture-source",
+      url: "https://example.com/markets/aapl",
+      title: null,
+      fetchedAt: availableAt,
+      publishedAt: null,
+      contentType: "text/html",
+      contentHash: "a".repeat(64)
+    }],
+    sourceBundleHash: "b".repeat(64),
+    aiInputHash: "e".repeat(64),
+    summarizerConfigHash: "f".repeat(64),
+    inputDocuments: [{
+      stepId: "page",
+      sourceId: "fixture-source",
+      contentHash: "a".repeat(64),
+      sourceBytes: 100,
+      includedBytes: 100,
+      truncated: false
+    }],
+    promptHash: "c".repeat(64),
+    model: "fixture-model",
+    contentHash: "d".repeat(64)
+  });
+}
+
+async function persistResearchSnapshot(context, snapshot) {
+  await context.repositories.research.createRun({
+    id: snapshot.runId,
+    planVersionId: snapshot.planVersionId,
+    symbol: snapshot.symbol,
+    request: {},
+    createdAt: snapshot.availableAt
+  });
+  await context.repositories.research.startRun(snapshot.runId, { at: snapshot.availableAt });
+  return context.repositories.research.publishSnapshot({
+    runId: snapshot.runId,
+    completedAt: snapshot.availableAt,
+    result: { snapshotId: snapshot.id },
+    snapshot: {
+      id: snapshot.id,
+      runId: snapshot.runId,
+      planVersionId: snapshot.planVersionId,
+      symbol: snapshot.symbol,
+      availableAt: snapshot.availableAt,
+      summaryText: snapshot.summary.overview,
+      snapshot,
+      sourceHash: snapshot.sourceBundleHash,
+      provenance: { sources: snapshot.sources },
+      createdAt: snapshot.availableAt
+    }
+  });
+}
+
 test("backtests persist durable results and expose route-facing query APIs", async (t) => {
   const context = await harness(t);
   const boot = await context.supervisor.bootstrap();
@@ -209,6 +348,172 @@ test("backtests persist durable results and expose route-facing query APIs", asy
   assert.ok(comparison.configDiff.paramsJson);
   assert.ok(comparison.configDiff.fillModelJson);
   assert.ok(comparison.configDiff.riskProfileJson);
+});
+
+test("session research pins resolve once and backtests persist point-in-time provenance", async (t) => {
+  const context = await harness(t);
+  await context.supervisor.bootstrap();
+  const plan = researchPlan();
+  await importResearchPlan(context, { plan, versionId: "strategy-research-v1" });
+  const imported = await importResearchPlan(context, {
+    plan,
+    versionId: "strategy-research-v2",
+    sourceHash: "2".repeat(64),
+    at: START + 1
+  });
+  const snapshot = researchSnapshot({
+    planVersionId: imported.version.id,
+    availableAt: deterministicBars[1].time
+  });
+  const priorSnapshot = researchSnapshot({
+    id: "strategy-snapshot-prior",
+    planVersionId: imported.version.id,
+    availableAt: deterministicBars[0].time - 1
+  });
+  const futureSnapshot = researchSnapshot({
+    id: "strategy-snapshot-future",
+    planVersionId: imported.version.id,
+    availableAt: deterministicBars.at(-1).time + 1
+  });
+  await persistResearchSnapshot(context, priorSnapshot);
+  await persistResearchSnapshot(context, snapshot);
+  await persistResearchSnapshot(context, futureSnapshot);
+  const storedTimeline = await context.repositories.research.timeline({
+    planVersionId: imported.version.id,
+    symbol: "AAPL",
+    afterAvailableAt: deterministicBars[0].time,
+    beforeAvailableAt: deterministicBars.at(-1).time,
+    limit: 5_000
+  });
+  assert.equal(storedTimeline.length, 1);
+
+  const created = await context.supervisor.create(sessionInput("research-backtest", {
+    researchPlanId: imported.plan.id
+  }));
+  assert.equal(created.researchPlanVersionId, imported.version.id);
+  await importResearchPlan(context, {
+    plan,
+    versionId: "strategy-research-v3",
+    sourceHash: "3".repeat(64),
+    at: START + 2
+  });
+  const completed = await context.supervisor.start(created.id);
+  assert.equal(completed.status, "stopped");
+
+  const orders = await context.repositories.orders.list({ sessionId: created.id });
+  const exported = await context.supervisor.exportData(created.id);
+  assert.equal(orders.length, 2, JSON.stringify(exported.backtestConfig));
+  assert.ok(orders.every((order) => order.researchSnapshotId === snapshot.id));
+  assert.equal(exported.session.researchPlanVersionId, imported.version.id);
+  assert.equal(exported.backtestConfig.researchPlanVersionId, imported.version.id);
+  assert.equal(
+    exported.backtestConfig.symbols.AAPL.researchTimelineHash,
+    researchTimelineHash([priorSnapshot, snapshot])
+  );
+
+  await assert.rejects(
+    () => context.supervisor.create(sessionInput("ambiguous-research", {
+      researchPlanId: imported.plan.id,
+      researchPlanVersionId: imported.version.id
+    })),
+    (error) => error.code === "RESEARCH_PIN_AMBIGUOUS"
+  );
+});
+
+test("backtests reject a truncated archived research timeline", async (t) => {
+  const context = await harness(t, {
+    researchOverrides: { countTimeline: async () => 5_001 }
+  });
+  await context.supervisor.bootstrap();
+  const imported = await importResearchPlan(context);
+  const session = await context.supervisor.create(sessionInput("research-timeline-overflow", {
+    researchPlanVersionId: imported.version.id
+  }));
+
+  await assert.rejects(
+    () => context.supervisor.start(session.id),
+    (error) => {
+      assert.equal(error.code, "RESEARCH_TIMELINE_TOO_LARGE");
+      assert.equal(error.status, 422);
+      assert.deepEqual(
+        { count: error.detail.count, limit: error.detail.limit, symbol: error.detail.symbol },
+        { count: 5_001, limit: 5_000, symbol: "AAPL" }
+      );
+      return true;
+    }
+  );
+});
+
+test("required paper research skips unavailable bars and pins the selected snapshot on orders", async (t) => {
+  const context = await harness(t);
+  const signalIndex = 39;
+  const signalAt = Date.UTC(2025, 1, 10, 21, 0, 2);
+  context.setVisibleBars(signalIndex + 1);
+  context.setNow(signalAt);
+  await context.supervisor.bootstrap();
+  const imported = await importResearchPlan(context);
+
+  const unavailable = await context.supervisor.create(sessionInput("required-research-missing", {
+    mode: "paper",
+    params: { entry: signalIndex, exit: signalIndex + 2 },
+    researchPlanVersionId: imported.version.id
+  }));
+  await context.supervisor.start(unavailable.id);
+  const skipped = await context.supervisor.tick(unavailable.id, {
+    kind: "market",
+    phase: "close",
+    interval: "1day",
+    scheduledAt: signalAt
+  });
+  assert.equal(skipped.signals.length, 0);
+  assert.equal(
+    (await context.repositories.orders.list({ sessionId: unavailable.id, status: "pending" })).length,
+    0
+  );
+  assert.ok((await context.supervisor.getEvents(unavailable.id)).some(
+    (event) => event.action === "session_research_unavailable"
+  ));
+
+  const snapshot = researchSnapshot({ availableAt: deterministicBars[signalIndex].time });
+  await persistResearchSnapshot(context, snapshot);
+  assert.ok(await context.repositories.research.latestEligibleSnapshot({
+    planVersionId: imported.version.id,
+    symbol: "AAPL",
+    availableAt: deterministicBars[signalIndex].time
+  }));
+  const available = await context.supervisor.create(sessionInput("required-research-available", {
+    mode: "paper",
+    params: { entry: signalIndex, exit: signalIndex + 2 },
+    researchPlanVersionId: imported.version.id
+  }));
+  await context.supervisor.start(available.id);
+  const evaluated = await context.supervisor.tick(available.id, {
+    kind: "market",
+    phase: "close",
+    interval: "1day",
+    scheduledAt: signalAt
+  });
+  assert.equal(
+    evaluated.signals.length,
+    1,
+    JSON.stringify(await context.supervisor.getEvents(available.id))
+  );
+  assert.equal(evaluated.signals[0].research.snapshot.id, snapshot.id);
+  assert.equal(evaluated.signals[0].order.researchSnapshotId, snapshot.id);
+  const persisted = await context.repositories.orders.getById(evaluated.signals[0].order.id);
+  assert.equal(persisted.researchSnapshotId, snapshot.id);
+
+  const nextOpenAt = Date.UTC(2025, 1, 11, 14, 30, 2);
+  context.setVisibleBars(signalIndex + 2);
+  context.setNow(nextOpenAt);
+  const filled = await context.supervisor.tick(available.id, {
+    kind: "market",
+    phase: "open",
+    interval: "1day",
+    scheduledAt: nextOpenAt
+  });
+  assert.equal(filled.fills.length, 1);
+  assert.equal(filled.fills[0].order.researchSnapshotId, snapshot.id);
 });
 
 test("a paper signal is pending on tick N and fills only on tick N+1", async (t) => {

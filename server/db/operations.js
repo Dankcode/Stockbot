@@ -118,6 +118,11 @@ async function tableCounts(client) {
     "orders",
     "fills",
     "position_lots",
+    "research_plans",
+    "research_plan_versions",
+    "research_runs",
+    "research_documents",
+    "research_snapshots",
     "equity_snapshots",
     "risk_events",
     "audit_log"

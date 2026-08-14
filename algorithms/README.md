@@ -49,6 +49,7 @@ export default {
 | `state` | object | The object returned by `init`; it persists between calls within one run. |
 | `position` | object | `{ qty, entryPrice, entryIndex }`; `qty > 0` means the strategy is long. |
 | `indicators` | object | Cached indicator functions whose returned arrays end at `index`. |
+| `research` | object or null | Frozen point-in-time research frame for a pinned plan, or `null` when the session has no research plan. |
 
 `init(context)` runs once before the first signal and should return a plain state object. It receives `params` and an empty bar/close history so initialization cannot inspect the run's future. Keep both `init` and `signal` deterministic: do not depend on wall-clock time, randomness, network state, or mutable global state.
 
@@ -66,6 +67,51 @@ Indicator arrays align with `bars`; read the current value at `[index]`.
 | `indicators.lowestLow(period)` | Lowest low from the preceding `period` bars; current bar excluded |
 
 Series are computed once per run and cached. The facade still returns only the prefix visible at the current index.
+
+### Point-in-time research
+
+A session may pin one immutable AI research plan version. For a pinned plan, `research` is one of:
+
+```js
+{
+  status: "available",
+  symbol: "AAPL",
+  decisionAt: 1786200000000,
+  snapshot: {
+    id: "snapshot-id",
+    availableAt: 1786190000000,
+    expiresAt: 1786210000000,
+    summary: {
+      overview: "Source-supported summary",
+      keyDrivers: ["Driver"],
+      risks: ["Risk"],
+      opportunities: ["Opportunity"],
+      sentiment: "neutral",
+      confidence: 0.7
+    },
+    sources: [/* immutable source provenance */]
+  }
+}
+```
+
+or `{ status: "unavailable", symbol, decisionAt, reason }`. An unpinned session receives `null`. When the plan declares `delivery.required: true`, the engine skips `signal()` for a bar that has no eligible, unexpired snapshot; an optional plan calls `signal()` with the explicit unavailable frame.
+
+Selection is free of lookahead: a snapshot is visible only when its symbol matches, `availableAt <= decisionAt`, and it has not expired. Although `signal()` evaluates a fully closed bar, `decisionAt` is conservatively the bar's canonical timestamp (`bar.time`, generally its open), not the later callback or close time. Research that arrives during a bar waits until the next bar. Backtests use only previously archived SQL snapshots and never run a scraper or AI model to manufacture historical knowledge. The selected snapshot id is retained on algorithm-generated paper orders and archived backtest trades/fills.
+
+The AI summary is context, not an order. It has no action, quantity, or execution fields. Your reviewed JavaScript remains responsible for returning a signal:
+
+```js
+signal({ research, position }) {
+  if (!research || research.status !== "available") return null;
+  const { sentiment, confidence } = research.snapshot.summary;
+  if (position.qty === 0 && sentiment === "bullish" && confidence >= 0.8) {
+    return { action: "buy", reason: `Archived research ${research.snapshot.id}` };
+  }
+  return null;
+}
+```
+
+See [AI research](../docs/AI_RESEARCH.md) for plan configuration, provenance, and pinning.
 
 ## Fill and portfolio rules
 

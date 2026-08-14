@@ -14,6 +14,10 @@ import { EventHub } from "./http/event-hub.js";
 import { createMarketService } from "./market/chain.js";
 import { createRiskEngine } from "./risk/engine.js";
 import { DEFAULT_RISK_PROFILE } from "./risk/profile.js";
+import { createAiCliAdapter } from "./research/adapters/ai-cli.js";
+import { createResearchAdapterRegistry } from "./research/adapters/registry.js";
+import { createWebPageAdapter } from "./research/adapters/web-page.js";
+import { createResearchService } from "./research/service.js";
 import { SessionScheduler } from "./runtime/scheduler.js";
 import { createSupervisor } from "./runtime/supervisor.js";
 import { createDatabaseSettingsService } from "./settings/database-service.js";
@@ -44,6 +48,7 @@ export async function createStockbot(options = {}) {
   const client = options.client ?? await createClient(config.databaseUrl);
   await migrate(client);
   const repositories = createRepositories(client);
+  await repositories.research.failInterruptedRuns({ at: Date.now() });
   const eventHub = options.eventHub ?? new EventHub();
 
   let market;
@@ -62,6 +67,15 @@ export async function createStockbot(options = {}) {
     market
   });
   await algorithms.refresh(true);
+
+  const researchAdapters = options.researchAdapters ?? createResearchAdapterRegistry([
+    createWebPageAdapter({ sources: config.researchWebSources }),
+    createAiCliAdapter(config.aiCli)
+  ]);
+  const research = options.research ?? createResearchService({
+    repository: repositories.research,
+    registry: researchAdapters
+  });
 
   const ledger = createLedger({ client, repositories });
   const alertEvaluator = createAlertEvaluator(repositories.alerts, createInAppChannel(eventHub));
@@ -108,7 +122,8 @@ export async function createStockbot(options = {}) {
     alertEvaluator,
     restartRunningSessions: config.restartRunningSessions,
     settleDelayMs: config.settleDelayMs,
-    metricsVersion: algorithms.metricsVersion
+    metricsVersion: algorithms.metricsVersion,
+    research
   });
   const startup = await supervisor.bootstrap();
   const accountId = startup.account?.id ?? DEFAULT_ACCOUNT_ID;
@@ -125,6 +140,8 @@ export async function createStockbot(options = {}) {
     settings,
     enginePool,
     algorithms,
+    research,
+    researchAdapters,
     ledger,
     broker,
     supervisor,

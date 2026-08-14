@@ -20,7 +20,7 @@
 
 | Explore | Test | Operate |
 |---|---|---|
-| Real quotes and OHLCV bars from Alpaca, Polygon, or Finnhub | Deterministic next-bar-open backtests | Durable PostgreSQL or SQLite ledger |
+| Real quotes, OHLCV bars, and optional source-pinned AI research | Deterministic next-bar-open, point-in-time backtests | Durable PostgreSQL or SQLite ledger |
 | Searchable equities and interactive charts | Strategy, SPY buy-and-hold, and Cash controls | Loopback-only Express API by default |
 | Indicators, market diagnostics, and provider health | Sharpe, drawdown, return, trades, exposure, and more | Risk events, audit history, exports, and recovery |
 
@@ -80,6 +80,17 @@ export default {
 ```
 
 See the complete [algorithm contract](./algorithms/README.md) before sharing or installing untrusted code.
+
+### 5. Add optional AI research
+
+Stockbot can run strict JSON research plans through two code-owned adapters: a registered-origin HTTPS reader and an operator-configured JSON-in/JSON-out AI CLI. Plans cannot name executables, inject arguments or environment variables, or fetch arbitrary origins. The resulting summaries and source provenance are immutable SQL snapshots that a strategy can read only when they existed by that bar's canonical decision timestamp (`bar.time`).
+
+```bash
+npm run research -- adapters
+npm run research -- validate --file research-plans/example-market-summary.json
+```
+
+Research is disabled until the server operator configures at least one exact HTTPS origin and an AI CLI. See [AI research](./docs/AI_RESEARCH.md) for the protocol, configuration, import/run commands, and session pinning.
 
 ## Tested methods
 
@@ -149,6 +160,10 @@ This maps only Stockbot's loopback HTTP service through private Tailscale Serve.
 flowchart LR
   Browser["Browser dashboard"] -->|"loopback HTTP"| API["Stockbot API"]
   Providers["Alpaca / Polygon / Finnhub"] -->|"quotes + bars"| API
+  Sources["Registered HTTPS origins"] -->|"bounded documents"| Research["Research pipeline"]
+  AI["Operator-owned AI CLI"] <-->|"JSON over stdin/stdout"| Research
+  Research -->|"immutable snapshots"| Repo
+  Research -->|"point-in-time context"| Broker
   API --> Broker["Paper broker + backtest engine"]
   API --> Repo["Portable repository layer"]
   Repo --> SQLite["SQLite (development)"]
@@ -168,6 +183,9 @@ flowchart LR
 | `STOCKBOT_SETTINGS_KEY` | 32+ character key used to encrypt provider secrets stored in SQL. |
 | `ENGINE_WORKERS`, `ENGINE_TIMEOUT_MS` | Strategy worker concurrency and deadline. |
 | `QUOTE_FRESHNESS_MS` | Maximum quote age accepted by paper risk checks. |
+| `RESEARCH_WEB_SOURCES_JSON` | Code-owned source ids mapped to exact credential-free HTTPS origins. |
+| `AI_CLI_COMMAND`, `AI_CLI_ARGS_JSON`, `AI_CLI_MODEL` | Server-owned summarizer executable, fixed argv, and provenance label. |
+| `AI_CLI_MAX_INPUT_BYTES`, `AI_CLI_MAX_OUTPUT_BYTES`, `AI_CLI_TIMEOUT_MS`, `AI_CLI_ENV_ALLOWLIST_JSON` | Server-side input/output/deadline caps and explicit credential-name allowlist. |
 | `ALPACA_API_KEY`, `ALPACA_API_SECRET` | Alpaca catalogue, quote, and bar access. |
 | `POLYGON_API_KEY`, `FINNHUB_API_KEY` | Quote/bar fallbacks. |
 | `STOCKBOT_MODE` | Runtime label; production uses `local-paper`. |
@@ -180,6 +198,7 @@ Bootstrap values come from the protected env. Provider settings saved in the das
 npm run check
 npm run db:status -- --env-file "$HOME/.config/stockbot/stockbot.env"
 npm run db:trades -- --env-file "$HOME/.config/stockbot/stockbot.env" --account default-paper
+npm run research -- adapters --env-file "$HOME/.config/stockbot/stockbot.env"
 npm run laptop:status
 tail -f "$HOME/Library/Logs/Stockbot/stockbot.error.log"
 ```
@@ -195,6 +214,7 @@ All routes live under `/api/v1` and use validated `{ data, meta }` or `{ error }
 | `/health`, `/overview` | Runtime, database/provider health, portfolio, sessions, and risk summary |
 | `/market/*` | Search, movers, quotes, provider health, and real bars |
 | `/algorithms/*` | Uploads, versions, enablement, and benchmarked backtests |
+| `/research/*` | Protected adapter inventory, plan validation/versioning, runs, snapshots, and provenance |
 | `/sessions/*` | Draft, start, pause, resume, stop, halt, compare, and export |
 | `/accounts/*` | Paper portfolio, simulated orders, liquidation, and account halt |
 | `/risk/*`, `/alerts/*` | Risk profiles/events and alert lifecycle |
@@ -208,11 +228,13 @@ All routes live under `/api/v1` and use validated `{ data, meta }` or `{ error }
 - API and Vite bind to loopback by default.
 - Secrets never belong in source control, frontend code, logs, URLs shown to users, or `VITE_*` values.
 - Uploaded strategies are constrained and validated, but you should still review code from other people.
+- Imported research plans are data, never executable code. The AI CLI emits an inert summary; only a reviewed strategy can convert context into a simulated signal, which still passes through normal risk and fill handling.
 - Stockbot is research software, not financial advice.
 
 ## Deeper documentation
 
 - [Algorithm format](./algorithms/README.md)
+- [AI research pipeline](./docs/AI_RESEARCH.md)
 - [Laptop deployment](./docs/LAPTOP_DEPLOYMENT.md)
 - [Database operations](./docs/DATABASE_OPERATIONS.md)
 - [Revision plan and architecture decisions](./docs/plan/00-README.md)

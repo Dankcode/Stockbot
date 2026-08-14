@@ -31,7 +31,8 @@ test("database initialization is idempotent and validates the durable ledger", a
     assert.deepEqual(first.migrations.applied, [
       "0001_init",
       "0002_order_signal_bar",
-      "0003_trade_tracker_indexes"
+      "0003_trade_tracker_indexes",
+      "0004_ai_research"
     ]);
     assert.deepEqual(second.migrations.applied, []);
     assert.equal(second.account.id, "default-paper");
@@ -40,6 +41,18 @@ test("database initialization is idempotent and validates the durable ledger", a
     assert.equal(second.status.healthy, true);
     assert.equal(second.status.sqlite.journalMode, "wal");
     assert.equal(second.status.sqlite.synchronous, 2);
+    assert.deepEqual(
+      Object.fromEntries(
+        Object.entries(second.status.counts).filter(([table]) => table.startsWith("research_"))
+      ),
+      {
+        research_plans: 0,
+        research_plan_versions: 0,
+        research_runs: 0,
+        research_documents: 0,
+        research_snapshots: 0
+      }
+    );
     assert.deepEqual(second.status.invariants, {
       negativeAccountCash: 0,
       invalidLotQuantity: 0,
@@ -172,7 +185,8 @@ test("SQLite online backup is verified, atomic, and refuses unsafe destinations"
     assert.deepEqual(result.verification.migrations.map((migration) => migration.version), [
       "0001_init",
       "0002_order_signal_bar",
-      "0003_trade_tracker_indexes"
+      "0003_trade_tracker_indexes",
+      "0004_ai_research"
     ]);
     await access(backupPath);
     await assert.rejects(

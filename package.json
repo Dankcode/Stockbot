@@ -11,6 +11,7 @@
     "db:status": "node scripts/database.js status",
     "db:backup": "node scripts/database.js backup",
     "db:trades": "node scripts/database.js trades",
+    "research": "node scripts/research.js",
     "laptop:init": "./scripts/laptop/init-config.sh",
     "laptop:install": "./scripts/laptop/install.sh",
     "laptop:tailscale": "./scripts/laptop/configure-tailscale.sh",

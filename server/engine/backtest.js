@@ -2,6 +2,11 @@ import { createHash } from "node:crypto";
 import { createIndicators } from "./indicators.js";
 import { affordableQuantity, calculateFill, normalizeFillModel } from "./fill-model.js";
 import { computeMetrics } from "./metrics.js";
+import {
+  normalizeResearchTimeline,
+  researchTimelineHash as hashResearchTimeline,
+  selectResearchFrame
+} from "../research/timeline.js";
 
 function round(value, precision = 10) {
   return Number(value.toFixed(precision));
@@ -88,7 +93,10 @@ export function runBacktest({
   assetClass = "equity",
   windowStart,
   windowEnd,
-  barsHash
+  barsHash,
+  researchTimeline: researchTimelineInput = [],
+  symbol,
+  researchRequired = false
 }) {
   if (!algorithm || typeof algorithm !== "object" || typeof algorithm.signal !== "function") {
     throw new TypeError("algorithm must be an object with a signal() function.");
@@ -117,6 +125,15 @@ export function runBacktest({
   if (barsHash !== undefined && barsHash !== computedBarsHash) {
     throw new TypeError("barsHash does not match the supplied backtest window.");
   }
+  const researchTimeline = normalizeResearchTimeline(researchTimelineInput);
+  const researchSymbol = symbol == null ? null : String(symbol).trim().toUpperCase();
+  if (typeof researchRequired !== "boolean") {
+    throw new TypeError("researchRequired must be a boolean.");
+  }
+  if ((researchTimeline.length > 0 || researchRequired) && !researchSymbol) {
+    throw new TypeError("symbol is required when research is configured for a backtest.");
+  }
+  const computedResearchTimelineHash = hashResearchTimeline(researchTimeline);
   const indicatorSet = createIndicators(bars);
   const fillModel = normalizeFillModel(fillModelInput);
   const params = cloneAndFreeze({ ...(algorithm.params ?? {}), ...(parameterOverrides ?? {}) });
@@ -128,7 +145,8 @@ export function runBacktest({
       bars: emptyBars,
       closes: emptyCloses,
       params,
-      indicators: indicatorSet.at(-1)
+      indicators: indicatorSet.at(-1),
+      research: null
     }) ?? {};
   }
 
@@ -175,6 +193,7 @@ export function runBacktest({
           notional: fill.grossNotional,
           rule: pending.reason ?? `${algorithm.name ?? "Algorithm"} entry signal`,
           confidence: pending.confidence,
+          researchSnapshotId: pending.researchSnapshotId ?? null,
           realizedPnl: 0,
           pnlPercent: 0
         })
@@ -199,6 +218,7 @@ export function runBacktest({
         notional: fill.grossNotional,
         rule: pending.reason ?? `${algorithm.name ?? "Algorithm"} exit signal`,
         confidence: pending.confidence,
+        researchSnapshotId: pending.researchSnapshotId ?? null,
         realizedPnl,
         pnlPercent
       })
@@ -217,18 +237,24 @@ export function runBacktest({
 
     const boundedBars = Object.freeze(bars.slice(0, index + 1));
     const boundedCloses = Object.freeze(indicatorSet.closes.slice(0, index + 1));
-    const signal = normalizeSignal(
-      algorithm.signal({
-        index,
-        bar: bars[index],
-        bars: boundedBars,
-        closes: boundedCloses,
-        state,
-        params,
-        indicators: indicatorSet.at(index),
-        position: Object.freeze({ qty: quantity, entryPrice, entryIndex })
-      })
-    );
+    const research = researchSymbol
+      ? selectResearchFrame({ timeline: researchTimeline, symbol: researchSymbol, decisionAt: bars[index].time })
+      : null;
+    const signal = researchRequired && research?.status !== "available"
+      ? null
+      : normalizeSignal(
+          algorithm.signal({
+            index,
+            bar: bars[index],
+            bars: boundedBars,
+            closes: boundedCloses,
+            state,
+            params,
+            indicators: indicatorSet.at(index),
+            position: Object.freeze({ qty: quantity, entryPrice, entryIndex }),
+            research
+          })
+        );
 
     if (index === bars.length - 1) {
       lastSignal = signal?.action ?? null;
@@ -238,7 +264,8 @@ export function runBacktest({
       const candidate = Object.freeze({
         ...signal,
         signalIndex: index,
-        signalTime: bars[index].time
+        signalTime: bars[index].time,
+        researchSnapshotId: research?.status === "available" ? research.snapshot.id : null
       });
       if (index < bars.length - 1) pendingSignal = candidate;
       else pendingSignal = candidate;
@@ -275,6 +302,7 @@ export function runBacktest({
     lastSignal,
     lastSignalDetail,
     unfilledSignal,
+    researchTimelineHash: computedResearchTimelineHash,
     metrics,
     endingState: Object.freeze({
       cash: round(cash),
@@ -288,7 +316,9 @@ export function runBacktest({
       fillModel,
       windowStart: requestedWindowStart ?? bars[0].time,
       windowEnd: requestedWindowEnd ?? bars.at(-1).time,
-      barsHash: computedBarsHash
+      barsHash: computedBarsHash,
+      researchTimelineHash: computedResearchTimelineHash,
+      researchRequired
     })
   });
 }

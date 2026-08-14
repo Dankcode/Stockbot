@@ -1,4 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
+import {
+  ResearchPlanSchema,
+  ResearchSnapshotSchema
+} from "../../packages/shared/research.js";
 import { createRepositories } from "../db/repositories/index.js";
 import { computeMetrics } from "../engine/metrics.js";
 import { AppError } from "../http/errors.js";
@@ -14,6 +18,10 @@ import {
 import { transitionSession } from "./state-machine.js";
 import { DEFAULT_ACCOUNT_ID, dollarsToCents, notionalCents } from "../broker/ledger.js";
 import { isCryptoSymbol } from "../market/catalog.js";
+import {
+  normalizeResearchTimeline,
+  selectResearchFrame
+} from "../research/timeline.js";
 
 const ACTIVE_STATUSES = Object.freeze(["arming", "running", "paused", "stopping"]);
 const METRIC_KEYS = Object.freeze([
@@ -30,6 +38,7 @@ const METRIC_KEYS = Object.freeze([
 ]);
 const CONFIG_KEYS = Object.freeze([
   "algorithmVersionId",
+  "researchPlanVersionId",
   "paramsJson",
   "symbolsJson",
   "barInterval",
@@ -211,6 +220,182 @@ export function createSupervisor({
   const algorithmStates = new Map();
   const lastSignalBars = new Map();
 
+  function parseResearchVersion(version, symbols) {
+    let plan;
+    try {
+      plan = ResearchPlanSchema.parse(version.manifestJson);
+    } catch (cause) {
+      throw new AppError(
+        "RESEARCH_PLAN_INVALID",
+        `Stored research plan version ${version.id} is invalid.`,
+        500,
+        { planVersionId: version.id, cause: cause.message }
+      );
+    }
+    if (plan.id !== version.planId) {
+      throw new AppError(
+        "RESEARCH_PLAN_INVALID",
+        `Stored research plan version ${version.id} does not match its plan.`,
+        500,
+        { planVersionId: version.id, planId: version.planId, manifestPlanId: plan.id }
+      );
+    }
+    if (!plan.delivery.strategy) {
+      throw new AppError(
+        "RESEARCH_STRATEGY_DISABLED",
+        `Research plan ${plan.id} is not enabled for strategy evaluation.`,
+        422,
+        { planId: plan.id, planVersionId: version.id }
+      );
+    }
+    const unsupported = symbols.filter((symbol) =>
+      !plan.symbols.includes("*") && !plan.symbols.includes(symbol)
+    );
+    if (unsupported.length > 0) {
+      throw new AppError(
+        "RESEARCH_SYMBOL_NOT_ALLOWED",
+        `Research plan ${plan.id} does not allow every session symbol.`,
+        422,
+        { planId: plan.id, planVersionId: version.id, symbols: unsupported }
+      );
+    }
+    return Object.freeze({
+      version,
+      plan,
+      required: plan.delivery.required
+    });
+  }
+
+  async function resolveResearchPin(input, symbols) {
+    if (input.researchPlanId && input.researchPlanVersionId) {
+      throw new AppError(
+        "RESEARCH_PIN_AMBIGUOUS",
+        "Choose either researchPlanId or researchPlanVersionId, not both.",
+        400
+      );
+    }
+    if (!input.researchPlanId && !input.researchPlanVersionId) return null;
+    const version = input.researchPlanVersionId
+      ? await repositories.research.getPlanVersion(input.researchPlanVersionId)
+      : await repositories.research.latestPlanVersion(input.researchPlanId);
+    if (!version) {
+      throw new AppError(
+        "RESEARCH_PLAN_VERSION_NOT_FOUND",
+        "Research plan version was not found.",
+        404,
+        {
+          researchPlanId: input.researchPlanId ?? null,
+          researchPlanVersionId: input.researchPlanVersionId ?? null
+        }
+      );
+    }
+    return parseResearchVersion(version, symbols);
+  }
+
+  async function sessionResearch(session) {
+    if (!session.researchPlanVersionId) return null;
+    const version = await repositories.research.getPlanVersion(session.researchPlanVersionId);
+    if (!version) {
+      throw new AppError(
+        "RESEARCH_PLAN_VERSION_NOT_FOUND",
+        `Pinned research plan version ${session.researchPlanVersionId} no longer exists.`,
+        404,
+        { researchPlanVersionId: session.researchPlanVersionId }
+      );
+    }
+    return parseResearchVersion(version, session.symbolsJson);
+  }
+
+  function storedResearchSnapshot(row, research, symbol) {
+    let snapshot;
+    try {
+      snapshot = ResearchSnapshotSchema.parse(row.snapshotJson);
+    } catch (cause) {
+      throw new AppError(
+        "RESEARCH_SNAPSHOT_INVALID",
+        `Stored research snapshot ${row.id} is invalid.`,
+        500,
+        { snapshotId: row.id, cause: cause.message }
+      );
+    }
+    const expected = {
+      id: row.id,
+      runId: row.runId,
+      planVersionId: research.version.id,
+      planId: research.plan.id,
+      symbol,
+      availableAt: Number(row.availableAt)
+    };
+    const mismatch = Object.entries(expected).find(([key, value]) => snapshot[key] !== value);
+    if (mismatch) {
+      throw new AppError(
+        "RESEARCH_SNAPSHOT_INVALID",
+        `Stored research snapshot ${row.id} has inconsistent provenance.`,
+        500,
+        { snapshotId: row.id, field: mismatch[0] }
+      );
+    }
+    return snapshot;
+  }
+
+  async function researchTimelineFor(research, symbol, windowStart, windowEnd) {
+    const limit = 5_000;
+    const [prior, rows, count] = await Promise.all([
+      repositories.research.latestEligibleSnapshot({
+        planVersionId: research.version.id,
+        symbol,
+        availableAt: windowStart
+      }),
+      repositories.research.timeline({
+        planVersionId: research.version.id,
+        symbol,
+        afterAvailableAt: windowStart,
+        beforeAvailableAt: windowEnd,
+        limit
+      }),
+      repositories.research.countTimeline({
+        planVersionId: research.version.id,
+        symbol,
+        afterAvailableAt: windowStart,
+        beforeAvailableAt: windowEnd
+      })
+    ]);
+    if (count > rows.length) {
+      throw new AppError(
+        "RESEARCH_TIMELINE_TOO_LARGE",
+        `Research timeline for ${symbol} exceeds the backtest limit.`,
+        422,
+        {
+          planVersionId: research.version.id,
+          symbol,
+          windowStart,
+          windowEnd,
+          count,
+          limit
+        }
+      );
+    }
+    const byId = new Map();
+    for (const row of [prior, ...rows]) {
+      if (row) byId.set(row.id, storedResearchSnapshot(row, research, symbol));
+    }
+    return normalizeResearchTimeline([...byId.values()]);
+  }
+
+  async function researchFrameAt(research, symbol, decisionAt) {
+    if (!research) return null;
+    const row = await repositories.research.latestEligibleSnapshot({
+      planVersionId: research.version.id,
+      symbol,
+      availableAt: decisionAt
+    });
+    return selectResearchFrame({
+      timeline: row ? [storedResearchSnapshot(row, research, symbol)] : [],
+      symbol,
+      decisionAt
+    });
+  }
+
   async function evaluateAlert(event, sessionId) {
     if (!alertEvaluator) return [];
     try {
@@ -334,12 +519,32 @@ export function createSupervisor({
 
   async function exportData(id) {
     const value = await detail(id);
-    const [equity, orders, events] = await Promise.all([getEquity(id, {}), getOrders(id), getEvents(id)]);
-    return { ...value, equity, orders, events, exportedAt: clock(), formatVersion: 1 };
+    const [equity, orders, events, completionEntries] = await Promise.all([
+      getEquity(id, {}),
+      getOrders(id),
+      getEvents(id),
+      repositories.audit.list({
+        action: "session_complete",
+        entity: "session",
+        entityId: id,
+        limit: 1
+      })
+    ]);
+    const completion = completionEntries[0];
+    return {
+      ...value,
+      equity,
+      orders,
+      events,
+      backtestConfig: completion?.detailJson?.backtestConfig ?? null,
+      exportedAt: clock(),
+      formatVersion: 1
+    };
   }
 
   async function create(input) {
     const schedule = validateSchedule(input.schedule ?? { type: "manual", timezone: "UTC" });
+    const research = await resolveResearchPin(input, input.symbols);
     const accountId = input.accountId ?? DEFAULT_ACCOUNT_ID;
     if (accountId === DEFAULT_ACCOUNT_ID) await broker.ensureDefaultAccount();
     const account = await repositories.accounts.getById(accountId);
@@ -352,6 +557,7 @@ export function createSupervisor({
       mode: input.mode,
       status: "draft",
       algorithmVersionId: input.algorithmVersionId ?? null,
+      researchPlanVersionId: research?.version.id ?? null,
       params: input.params ?? {},
       symbols: input.symbols,
       barInterval: input.barInterval,
@@ -363,7 +569,11 @@ export function createSupervisor({
       startingEquity: input.startingEquity ?? accountPortfolio.equity ?? account.cash,
       createdAt: input.createdAt ?? clock()
     });
-    await appendAudit("session_created", session, { mode: session.mode, symbols: session.symbolsJson }, "user");
+    await appendAudit("session_created", session, {
+      mode: session.mode,
+      symbols: session.symbolsJson,
+      researchPlanVersionId: session.researchPlanVersionId
+    }, "user");
     return session;
   }
 
@@ -388,6 +598,7 @@ export function createSupervisor({
     await enginePool.validateAlgorithm({ algorithmSource: version.sourceCode, filename: `${version.algorithmId}.js` });
     createRiskEngine(session.riskProfileJson);
     validateSchedule(session.scheduleJson);
+    const research = await sessionResearch(session);
     const range = rangeForInterval(session.barInterval);
     if (!range) throw new AppError("INVALID_BAR_INTERVAL", `Unsupported interval: ${session.barInterval}`, 400);
     const marketData = await Promise.all(
@@ -408,16 +619,25 @@ export function createSupervisor({
             windowEnd: session.windowEnd
           });
         }
+        const researchTimeline = session.mode === "backtest" && research
+          ? await researchTimelineFor(
+              research,
+              symbol,
+              barTime(filteredBars[0]),
+              barTime(filteredBars.at(-1))
+            )
+          : Object.freeze([]);
         return {
           symbol,
           historical: { ...historical, bars: filteredBars },
           windowStart: barTime(filteredBars[0]),
           windowEnd: barTime(filteredBars.at(-1)),
-          barsHash: barsHash(filteredBars)
+          barsHash: barsHash(filteredBars),
+          researchTimeline
         };
       })
     );
-    return { version, marketData };
+    return { version, marketData, research };
   }
 
   function combineBacktests(results, startingCash) {
@@ -446,7 +666,14 @@ export function createSupervisor({
   async function runBacktest(session, prepared) {
     const allocation = Number(session.startingEquity) / 100 / prepared.marketData.length;
     const results = [];
-    for (const { symbol, historical, windowStart, windowEnd, barsHash: historicalHash } of prepared.marketData) {
+    for (const {
+      symbol,
+      historical,
+      windowStart,
+      windowEnd,
+      barsHash: historicalHash,
+      researchTimeline
+    } of prepared.marketData) {
       const result = await enginePool.runBacktest({
         algorithmSource: prepared.version.sourceCode,
         filename: `${prepared.version.algorithmId}.js`,
@@ -457,9 +684,12 @@ export function createSupervisor({
         interval: session.barInterval,
         windowStart: session.windowStart ?? windowStart,
         windowEnd: session.windowEnd ?? windowEnd,
-        barsHash: historicalHash
+        barsHash: historicalHash,
+        researchTimeline: prepared.research ? researchTimeline : undefined,
+        symbol: prepared.research ? symbol : undefined,
+        researchRequired: prepared.research?.required ?? false
       });
-      results.push({ symbol, interval: session.barInterval, result });
+      results.push({ symbol, interval: session.barInterval, result, barsHash: historicalHash });
     }
     const combined = combineBacktests(results, Number(session.startingEquity) / 100);
     const peak = { value: Number(session.startingEquity) };
@@ -484,6 +714,7 @@ export function createSupervisor({
             id: orderId,
             clientOrderId: `backtest:${session.id}:${symbol}:${trade.id}`,
             sessionId: session.id,
+            researchSnapshotId: trade.researchSnapshotId ?? null,
             accountId: session.accountId,
             symbol,
             side: trade.side,
@@ -514,7 +745,7 @@ export function createSupervisor({
       finalEquity: Math.round(Number(combined.metrics.finalEquity) * 100),
       sortino: combined.metrics.sortino ?? null
     };
-    return ledger.persistBacktestResult({
+    const persisted = await ledger.persistBacktestResult({
       sessionId: session.id,
       equity,
       executions,
@@ -529,6 +760,20 @@ export function createSupervisor({
         }
       }
     });
+    return {
+      ...persisted,
+      backtestConfig: {
+        algorithmVersionId: session.algorithmVersionId,
+        researchPlanVersionId: session.researchPlanVersionId ?? null,
+        symbols: Object.fromEntries(results.map(({ symbol, result, barsHash: historicalHash }) => [
+          symbol,
+          {
+            barsHash: historicalHash,
+            researchTimelineHash: result.researchTimelineHash
+          }
+        ]))
+      }
+    };
   }
 
   async function finalizePaperMetrics(sessionId, endingEquity) {
@@ -628,8 +873,9 @@ export function createSupervisor({
       const prepared = await preflight(session);
       if (session.mode === "backtest") {
         const completed = await runBacktest(session, prepared);
-        await addSessionEvent(completed.session, "state_transition", { mode: "backtest" }, "arming", "stopped");
-        await appendAudit("session_complete", completed.session, { mode: "backtest" }, "engine");
+        const completionDetail = { mode: "backtest", backtestConfig: completed.backtestConfig };
+        await addSessionEvent(completed.session, "state_transition", completionDetail, "arming", "stopped");
+        await appendAudit("session_complete", completed.session, completionDetail, "engine");
         eventHub?.publish("session.state", { session: completed.session });
         await evaluateAlert({ type: "session_state", status: "stopped", previousStatus: "arming", sessionId: id }, id);
         return completed.session;
@@ -849,6 +1095,7 @@ export function createSupervisor({
       const execution = await broker.submitOrder({
         clientOrderId: order.clientOrderId,
         sessionId: session.id,
+        researchSnapshotId: order.researchSnapshotId ?? null,
         accountId: session.accountId,
         symbol: order.symbol,
         side: order.side,
@@ -906,6 +1153,7 @@ export function createSupervisor({
       (await ledger.listOpenPositions(session.accountId, { sessionId: session.id })).map((position) => [position.symbol, position])
     );
     const riskEngine = createRiskEngine(session.riskProfileJson);
+    const research = await sessionResearch(session);
     const queued = [];
 
     for (const symbol of session.symbolsJson) {
@@ -930,13 +1178,28 @@ export function createSupervisor({
       const stateKey = `${session.id}:${symbol}`;
       const latestBarAt = barTime(bars.at(-1));
       if (lastSignalBars.get(stateKey) === latestBarAt) continue;
+      const researchFrame = await researchFrameAt(research, symbol, latestBarAt);
+      if (research?.required && researchFrame?.status !== "available") {
+        lastSignalBars.set(stateKey, latestBarAt);
+        const detail = {
+          symbol,
+          barTime: latestBarAt,
+          researchPlanVersionId: research.version.id,
+          reason: researchFrame?.reason ?? "no_eligible_snapshot"
+        };
+        await addSessionEvent(session, "research_unavailable", detail);
+        await appendAudit("session_research_unavailable", session, detail, "engine");
+        eventHub?.publish("session.idle", { sessionId: session.id, ...detail });
+        continue;
+      }
       const evaluated = await enginePool.evaluateSignal({
         algorithmSource: version.sourceCode,
         filename: `${version.algorithmId}.js`,
         bars,
         params: session.paramsJson,
         position: enginePosition(position, bars),
-        state: algorithmStates.get(stateKey)
+        state: algorithmStates.get(stateKey),
+        research: researchFrame
       });
       algorithmStates.set(stateKey, evaluated.state);
       lastSignalBars.set(stateKey, latestBarAt);
@@ -962,6 +1225,7 @@ export function createSupervisor({
       const execution = await broker.queueOrder({
         clientOrderId,
         sessionId: session.id,
+        researchSnapshotId: researchFrame?.status === "available" ? researchFrame.snapshot.id : null,
         accountId: session.accountId,
         symbol,
         side: signal.action,
@@ -978,13 +1242,21 @@ export function createSupervisor({
           confidence: signal.confidence,
           barTime: evaluated.barTime,
           orderId: execution.order.id,
+          researchSnapshotId: execution.order.researchSnapshotId ?? null,
           sizing
         };
         await addSessionEvent(session, "signal", event);
         await appendAudit("session_signal", session, event, "engine");
         await evaluateAlert(event, session.id);
       }
-      queued.push({ symbol, signal, sizing, order: execution.order, idempotent: execution.idempotent });
+      queued.push({
+        symbol,
+        signal,
+        sizing,
+        research: researchFrame,
+        order: execution.order,
+        idempotent: execution.idempotent
+      });
     }
     return queued;
   }

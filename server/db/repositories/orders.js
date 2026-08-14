@@ -12,15 +12,16 @@ export function createOrdersRepository(client) {
       );
       await client.execute(
         `INSERT INTO orders (
-          id, client_order_id, session_id, account_id, symbol, side, order_type,
+          id, client_order_id, session_id, research_snapshot_id, account_id, symbol, side, order_type,
           qty, limit_price, status, reject_reason, signal_reason, signal_bar_at,
           submitted_at, resolved_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (client_order_id) DO NOTHING`,
         [
           input.id,
           input.clientOrderId,
           input.sessionId ?? null,
+          input.researchSnapshotId ?? null,
           input.accountId,
           input.symbol,
           input.side,
@@ -52,6 +53,7 @@ export function createOrdersRepository(client) {
       for (const [option, column] of [
         ["accountId", "account_id"],
         ["sessionId", "session_id"],
+        ["researchSnapshotId", "research_snapshot_id"],
         ["symbol", "symbol"],
         ["status", "status"]
       ]) {

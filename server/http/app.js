@@ -7,6 +7,7 @@ import { algorithmsRouter } from "./routes/algorithms.js";
 import { marketRouter } from "./routes/market.js";
 import { overviewRouter } from "./routes/overview.js";
 import { riskRouter } from "./routes/risk.js";
+import { researchRouter } from "./routes/research.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { settingsRouter } from "./routes/settings.js";
 import { systemRouter } from "./routes/system.js";
@@ -61,6 +62,7 @@ export function createHttpApp(context) {
   api.use("/sessions", sessionsRouter(context.supervisor));
   api.use("/accounts", accountsRouter(context));
   api.use("/risk", riskRouter(context.repositories.risk, context.accountId));
+  if (context.research) api.use("/research", researchRouter(context.research, context.config));
   api.use("/alerts", alertsRouter(context.repositories.alerts, context.accountId));
   api.use("/settings", settingsRouter(context.settings, context.market, context.databaseSettings));
   api.use("/overview", overviewRouter(context));

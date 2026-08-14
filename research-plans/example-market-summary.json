@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "example-market-summary",
+  "name": "Example market news summary",
+  "description": "Fetches one registered public market-news page and produces a bounded point-in-time summary.",
+  "symbols": [
+    "*"
+  ],
+  "steps": [
+    {
+      "id": "market-news",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "nasdaq-news",
+        "pathTemplate": "/market-activity/stocks/{{symbol}}/news-headlines",
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 10000,
+        "maxBytes": 750000
+      }
+    },
+    {
+      "id": "market-summary",
+      "kind": "summarize",
+      "adapter": "ai.cli.summary.v1",
+      "dependsOn": [
+        "market-news"
+      ],
+      "promptTemplate": "market-summary.v1",
+      "responseSchema": "market-summary.v1",
+      "limits": {
+        "timeoutMs": 60000,
+        "maxInputBytes": 500000
+      }
+    }
+  ],
+  "outputStep": "market-summary",
+  "delivery": {
+    "strategy": true,
+    "required": false,
+    "maxAgeMs": 21600000
+  }
+}

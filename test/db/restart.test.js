@@ -26,16 +26,52 @@ test("SQLite data and migration state survive a client restart", async () => {
       createdAt: 1_000
     });
     await repositories.settings.set({ key: "restart_marker", value: "present", updatedAt: 1_001 });
+    await repositories.research.importPlan({
+      planId: "restart-plan",
+      name: "Restart research",
+      description: null,
+      sourceHash: "restart-plan-hash",
+      manifest: { steps: [{ type: "web_page" }] },
+      versionId: "restart-plan-version",
+      at: 1_002
+    });
+    await repositories.research.createRun({
+      id: "restart-research-run",
+      planVersionId: "restart-plan-version",
+      symbol: "AAPL",
+      createdAt: 1_003
+    });
+    await repositories.research.startRun("restart-research-run", { at: 1_004 });
+    await repositories.research.publishSnapshot({
+      runId: "restart-research-run",
+      completedAt: 1_006,
+      result: { persisted: true },
+      snapshot: {
+        id: "restart-research-snapshot",
+        availableAt: 1_005,
+        contentHash: "restart-snapshot-hash",
+        snapshot: { summary: { headline: "Persistence works" } },
+        provenance: { provider: "restart-test" },
+        createdAt: 1_005
+      }
+    });
     await client.close();
 
     client = await createClient(databaseUrl);
     assert.deepEqual(await migrate(client), {
       applied: [],
-      skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes"]
+      skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research"]
     });
     repositories = createRepositories(client);
     assert.equal((await repositories.accounts.getById("account-restart")).cash, 1_000_000);
     assert.equal((await repositories.settings.get("restart_marker")).value, "present");
+    assert.deepEqual((await repositories.research.getPlanVersion("restart-plan-version")).manifestJson, {
+      steps: [{ type: "web_page" }]
+    });
+    const persistedSnapshot = await repositories.research.getSnapshotByRun("restart-research-run");
+    assert.deepEqual(persistedSnapshot.snapshotJson, { summary: { headline: "Persistence works" } });
+    assert.deepEqual(persistedSnapshot.provenanceJson, { provider: "restart-test" });
+    assert.equal(persistedSnapshot.eligible, true);
 
     await assert.rejects(
       client.transaction(async (transaction) => {

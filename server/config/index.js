@@ -37,6 +37,32 @@ function secret(name) {
   return value;
 }
 
+function jsonValue(name, fallback) {
+  const raw = process.env[name];
+  if (raw == null || raw === "") return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(`${name} must contain valid JSON.`);
+  }
+}
+
+function stringArray(name) {
+  const value = jsonValue(name, []);
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(`${name} must be a JSON array of strings.`);
+  }
+  return Object.freeze(value.slice());
+}
+
+function record(name) {
+  const value = jsonValue(name, {});
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${name} must be a JSON object.`);
+  }
+  return Object.freeze({ ...value });
+}
+
 export function loadConfig() {
   const host = process.env.HOST || "127.0.0.1";
   const allowRemote = bool("STOCKBOT_ALLOW_REMOTE", false);
@@ -82,6 +108,16 @@ export function loadConfig() {
     settleDelayMs: integer("BAR_SETTLE_DELAY_MS", 2_000, { min: 0, max: 60_000 }),
     restartRunningSessions: bool("RESTART_RUNNING_SESSIONS", false),
     settingsEncryptionKey: secret("STOCKBOT_SETTINGS_KEY"),
+    researchWebSources: record("RESEARCH_WEB_SOURCES_JSON"),
+    aiCli: Object.freeze({
+      command: process.env.AI_CLI_COMMAND || "",
+      args: stringArray("AI_CLI_ARGS_JSON"),
+      model: process.env.AI_CLI_MODEL || "operator-configured-cli",
+      timeoutMs: integer("AI_CLI_TIMEOUT_MS", 60_000, { min: 1_000, max: 600_000 }),
+      maxInputBytes: integer("AI_CLI_MAX_INPUT_BYTES", 500_000, { min: 1_000, max: 5_000_000 }),
+      maxOutputBytes: integer("AI_CLI_MAX_OUTPUT_BYTES", 100_000, { min: 1_000, max: 1_000_000 }),
+      envAllowlist: stringArray("AI_CLI_ENV_ALLOWLIST_JSON")
+    }),
     alpaca: {
       key: process.env.ALPACA_API_KEY || "",
       secret: process.env.ALPACA_API_SECRET || "",

@@ -65,6 +65,28 @@ test("repositories persist and hydrate the core trading records", async () => {
     assert.equal(duplicateVersion.id, version.id);
     assert.deepEqual(version.paramsJson, { fast: 9, slow: 21 });
 
+    const importedPlan = await repositories.research.importPlan({
+      planId: "research-plan-1",
+      name: "Daily market brief",
+      description: "Web research plus an AI summary",
+      sourceHash: "research-plan-sha256-one",
+      manifest: { steps: [{ type: "web_page", url: "https://example.test/markets" }] },
+      versionId: "research-version-1",
+      at: 125
+    });
+    const duplicatePlan = await repositories.research.importPlan({
+      planId: "research-plan-1",
+      name: "Daily market brief",
+      description: "Web research plus an AI summary",
+      sourceHash: "research-plan-sha256-one",
+      manifest: { steps: [{ type: "web_page", url: "https://example.test/markets" }] },
+      versionId: "research-version-duplicate",
+      at: 126
+    });
+    assert.equal(duplicatePlan.version.id, importedPlan.version.id);
+    assert.equal((await repositories.research.latestPlanVersion("research-plan-1")).id, "research-version-1");
+    assert.deepEqual((await repositories.research.listPlans())[0], importedPlan.plan);
+
     const session = await repositories.sessions.create({
       id: "session-1",
       accountId: "account-1",
@@ -72,6 +94,7 @@ test("repositories persist and hydrate the core trading records", async () => {
       mode: "paper",
       status: "draft",
       algorithmVersionId: "version-1",
+      researchPlanVersionId: "research-version-1",
       params: { fast: 9, slow: 21 },
       symbols: ["NVDA"],
       barInterval: "5min",
@@ -82,6 +105,8 @@ test("repositories persist and hydrate the core trading records", async () => {
     });
     assert.deepEqual(session.symbolsJson, ["NVDA"]);
     assert.deepEqual(session.fillModelJson, { rule: "next_open", slippageBps: 5 });
+    assert.equal(session.researchPlanVersionId, "research-version-1");
+    assert.equal((await repositories.sessions.list({ researchPlanVersionId: "research-version-1" })).length, 1);
     assert.equal(
       (await repositories.sessions.transition("session-1", "running", { from: "draft", startedAt: 131 })).status,
       "running"
@@ -121,10 +146,51 @@ test("repositories persist and hydrate the core trading records", async () => {
     });
     assert.equal((await repositories.sessions.getEquity("session-1"))[0].equity, 10_010_000);
 
+    await repositories.research.createRun({
+      id: "research-run-1",
+      planVersionId: "research-version-1",
+      symbol: "nvda",
+      request: { reason: "scheduled" },
+      createdAt: 151
+    });
+    assert.equal((await repositories.research.startRun("research-run-1", { at: 152 })).status, "running");
+    await repositories.research.addDocument({
+      id: "research-document-1",
+      runId: "research-run-1",
+      provider: "web",
+      sourceUrl: "https://example.test/markets",
+      retrievedAt: 153,
+      contentHash: "document-sha256-one",
+      contentText: "Markets advanced.",
+      metadata: { status: 200 }
+    });
+    const published = await repositories.research.publishSnapshot({
+      runId: "research-run-1",
+      completedAt: 155,
+      result: { documents: 1 },
+      snapshot: {
+        id: "research-snapshot-1",
+        planVersionId: "research-version-1",
+        symbol: "NVDA",
+        availableAt: 154,
+        contentHash: "snapshot-sha256-one",
+        summary: { headline: "Markets advanced", confidence: 0.8 },
+        sources: [{ documentId: "research-document-1" }],
+        provenance: { model: "local-test" },
+        createdAt: 154
+      }
+    });
+    assert.equal(published.run.status, "completed");
+    assert.equal(published.snapshot.eligible, true);
+    assert.deepEqual((await repositories.research.listDocuments("research-run-1"))[0].metadataJson, {
+      status: 200
+    });
+
     const order = await repositories.orders.create({
       id: "order-1",
       clientOrderId: "client-order-1",
       sessionId: "session-1",
+      researchSnapshotId: "research-snapshot-1",
       accountId: "account-1",
       symbol: "NVDA",
       side: "buy",
@@ -144,6 +210,8 @@ test("repositories persist and hydrate the core trading records", async () => {
       submittedAt: 161
     });
     assert.equal(duplicateOrder.id, order.id);
+    assert.equal(order.researchSnapshotId, "research-snapshot-1");
+    assert.equal((await repositories.orders.list({ researchSnapshotId: "research-snapshot-1" })).length, 1);
 
     const recorded = await repositories.orders.recordFill(
       {
@@ -252,4 +320,3 @@ test("repositories persist and hydrate the core trading records", async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
-

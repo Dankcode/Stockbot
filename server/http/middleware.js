@@ -13,10 +13,30 @@ export function mutationAuth(config) {
   return (request, _response, next) => {
     if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return next();
     if (!config.apiToken) return next();
-    const supplied = request.get("x-stockbot-token") || "";
-    const expectedBuffer = Buffer.from(config.apiToken);
-    const suppliedBuffer = Buffer.from(supplied);
-    if (expectedBuffer.length !== suppliedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, suppliedBuffer)) {
+    if (!validToken(config.apiToken, request.get("x-stockbot-token") || "")) {
+      return next(new AppError("AUTH_REQUIRED", "A valid Stockbot API token is required.", 401));
+    }
+    next();
+  };
+}
+
+function validToken(expected, supplied) {
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
+}
+
+/** Always protects sensitive routes, including GET, unlike mutationAuth. */
+export function operatorAuth(config) {
+  return (request, _response, next) => {
+    if (!config.apiToken) {
+      return next(new AppError(
+        "AUTH_NOT_CONFIGURED",
+        "Configure STOCKBOT_API_TOKEN before using the research API.",
+        503
+      ));
+    }
+    if (!validToken(config.apiToken, request.get("x-stockbot-token") || "")) {
       return next(new AppError("AUTH_REQUIRED", "A valid Stockbot API token is required.", 401));
     }
     next();
