@@ -34,13 +34,42 @@ cd "$repo_root"
 "$npm_binary" test
 "$npm_binary" run build
 "$node_binary" scripts/database.js init --env-file "$env_file"
-"$npm_binary" prune --omit=dev
+
+# LaunchAgents can be denied background access to source checkouts in macOS
+# privacy-protected folders such as Documents. Install a private runtime copy
+# under Library so the service is independent from the checkout location.
+runtime_root="${HOME}/Library/Application Support/Stockbot/app"
+runtime_parent="$(dirname "$runtime_root")"
+mkdir -p "$runtime_parent"
+chmod 700 "$runtime_parent"
+runtime_tmp="$(mktemp -d "${runtime_parent}/.app.XXXXXX")"
+runtime_backup="${runtime_parent}/.app.previous"
+/bin/cp -R "$repo_root/server" "$runtime_tmp/server"
+/bin/cp -R "$repo_root/packages" "$runtime_tmp/packages"
+/bin/cp -R "$repo_root/algorithms" "$runtime_tmp/algorithms"
+/bin/cp -R "$repo_root/dist" "$runtime_tmp/dist"
+/bin/cp -R "$repo_root/scripts" "$runtime_tmp/scripts"
+/bin/cp "$repo_root/package.json" "$repo_root/package-lock.json" "$runtime_tmp/"
+if [[ -d "$runtime_root/algorithms/uploads" ]]; then
+  /bin/cp -R "$runtime_root/algorithms/uploads/." "$runtime_tmp/algorithms/uploads/"
+fi
+(cd "$runtime_tmp" && "$npm_binary" ci --omit=dev)
+chmod -R u=rwX,go= "$runtime_tmp"
+if [[ -e "$runtime_root" ]]; then
+  /bin/rm -rf "$runtime_backup"
+  /bin/mv "$runtime_root" "$runtime_backup"
+fi
+/bin/mv "$runtime_tmp" "$runtime_root"
+/bin/rm -rf "$runtime_backup"
 
 label="com.stockbot.laptop"
 agents_dir="${HOME}/Library/LaunchAgents"
 logs_dir="${HOME}/Library/Logs/Stockbot"
 plist_path="${agents_dir}/${label}.plist"
 mkdir -p "$agents_dir" "$logs_dir"
+: > "$logs_dir/stockbot.log"
+: > "$logs_dir/stockbot.error.log"
+chmod 600 "$logs_dir/stockbot.log" "$logs_dir/stockbot.error.log"
 
 xml_escape() {
   local value="$1"
@@ -48,10 +77,10 @@ xml_escape() {
   value="${value//\"/&quot;}"; value="${value//\'/&apos;}"
   printf '%s' "$value"
 }
-escaped_repo="$(xml_escape "$repo_root")"
 escaped_env="$(xml_escape "$env_file")"
 escaped_node="$(xml_escape "$node_binary")"
 escaped_logs="$(xml_escape "$logs_dir")"
+escaped_runtime="$(xml_escape "$runtime_root")"
 
 plist_tmp="$(mktemp "${TMPDIR:-/tmp}/stockbot-launchagent.XXXXXX")"
 cleanup() { /bin/rm -f "$plist_tmp"; }
@@ -63,11 +92,12 @@ cat > "$plist_tmp" <<PLIST
   <key>Label</key><string>${label}</string>
   <key>ProgramArguments</key><array>
     <string>/bin/bash</string>
-    <string>${escaped_repo}/scripts/laptop/run-stockbot.sh</string>
+    <string>${escaped_runtime}/scripts/laptop/run-stockbot.sh</string>
     <string>${escaped_env}</string>
     <string>${escaped_node}</string>
+    <string>${escaped_runtime}</string>
   </array>
-  <key>WorkingDirectory</key><string>${escaped_repo}</string>
+  <key>WorkingDirectory</key><string>${escaped_runtime}</string>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>10</integer>
@@ -81,11 +111,46 @@ PLIST
 chmod 600 "$plist_path"
 
 domain="gui/$(id -u)"
+
+wait_for_launchagent_unload() {
+  local attempt
+  for (( attempt = 1; attempt <= 10; attempt += 1 )); do
+    if ! /bin/launchctl print "$domain/$label" >/dev/null 2>&1; then
+      return 0
+    fi
+    /bin/sleep 1
+  done
+  if /bin/launchctl print "$domain/$label" >/dev/null 2>&1; then
+    echo "Stockbot LaunchAgent did not finish unloading after 10 seconds." >&2
+    return 1
+  fi
+}
+
+bootstrap_launchagent() {
+  local attempt
+  # launchd may briefly reject bootstrap after bootout even once the job no
+  # longer appears in `launchctl print`. Retry that transient teardown window.
+  for (( attempt = 1; attempt <= 5; attempt += 1 )); do
+    if /bin/launchctl bootstrap "$domain" "$plist_path" >/dev/null 2>&1; then
+      return 0
+    fi
+    if /bin/launchctl print "$domain/$label" >/dev/null 2>&1; then
+      return 0
+    fi
+    /bin/sleep 1
+  done
+  if ! /bin/launchctl bootstrap "$domain" "$plist_path"; then
+    echo "Stockbot LaunchAgent could not be loaded after bounded retries." >&2
+    return 1
+  fi
+}
+
 if /bin/launchctl print "$domain/$label" >/dev/null 2>&1; then
   /bin/launchctl bootout "$domain/$label" || true
+  wait_for_launchagent_unload
 fi
 if (( start_service )); then
-  /bin/launchctl bootstrap "$domain" "$plist_path"
+  bootstrap_launchagent
   /bin/launchctl kickstart -k "$domain/$label"
   echo "Stockbot LaunchAgent installed and started."
 else

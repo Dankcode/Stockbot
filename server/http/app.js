@@ -62,7 +62,7 @@ export function createHttpApp(context) {
   api.use("/accounts", accountsRouter(context));
   api.use("/risk", riskRouter(context.repositories.risk, context.accountId));
   api.use("/alerts", alertsRouter(context.repositories.alerts, context.accountId));
-  api.use("/settings", settingsRouter(context.settings, context.market));
+  api.use("/settings", settingsRouter(context.settings, context.market, context.databaseSettings));
   api.use("/overview", overviewRouter(context));
   api.get("/stream", (request, response) => context.eventHub.attach(response, request.get("last-event-id") || request.query.lastEventId));
   app.use("/api/v1", api);

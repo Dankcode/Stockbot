@@ -1,16 +1,21 @@
-import { ArrowRight, Bot, ToggleLeft, ToggleRight } from "lucide-react";
+import { ArrowRight, Bot, Download, FileUp, ToggleLeft, ToggleRight } from "lucide-react";
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState, StaleBadge } from "../../components/states/DataStates";
 import { api } from "../../lib/api";
 import { invalidateQuery, useQuery } from "../../lib/query";
 import type { Algorithm } from "../../lib/types";
 import { fetchAlgorithms } from "./algorithmData";
+import { readStrategyFile } from "./algorithmFiles";
 
 export function StrategiesPage() {
+  const navigate = useNavigate();
   const algorithms = useQuery("algorithms:list", fetchAlgorithms, { staleAfterMs: 60_000 });
   const [busy, setBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const [overwrite, setOverwrite] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const sorted = React.useMemo(() => [...(algorithms.data ?? [])].sort((left, right) => left.name.localeCompare(right.name)), [algorithms.data]);
 
   const toggle = async (algorithm: Algorithm) => {
@@ -26,9 +31,28 @@ export function StrategiesPage() {
     }
   };
 
+  const upload = async (file?: File) => {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const payload = await readStrategyFile(file);
+      const installed = await api.post<Algorithm>("/algorithms", { ...payload, overwrite });
+      invalidateQuery("algorithms:list");
+      navigate(`/strategies/${encodeURIComponent(installed.id)}`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to upload strategy.");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="strategies-page page-stack">
-      <header className="page-heading"><div><h1>Strategies</h1>{algorithms.isStale ? <StaleBadge updatedAt={algorithms.updatedAt} /> : null}</div></header>
+      <header className="page-heading"><div><h1>Strategies</h1>{algorithms.isStale ? <StaleBadge updatedAt={algorithms.updatedAt} /> : null}</div><div className="page-actions"><a className="button secondary" download href="/stockbot-strategy-template.js"><Download size={14} /> Starter file</a><button className="button primary" type="button" disabled={uploading} onClick={() => inputRef.current?.click()}><FileUp size={14} />{uploading ? "Uploading" : "Upload .js"}</button><input ref={inputRef} className="sr-only" type="file" accept=".js,text/javascript,application/javascript" onChange={(event) => void upload(event.target.files?.[0])} /></div></header>
+      <section className="strategy-onboarding" aria-label="Plug-and-play strategy workflow"><div><span>01</span><strong>Download</strong><small>Start from one documented JavaScript file.</small></div><div><span>02</span><strong>Edit</strong><small>Change parameters and synchronous buy/sell rules.</small></div><div><span>03</span><strong>Upload & test</strong><small>Stockbot validates, versions, and backtests it.</small></div></section>
+      <div className="strategy-upload-options"><p className="strategy-upload-note">Uploads require the API mutation token set in <Link to="/settings">Settings</Link>. Strategies stay long-only and run through the paper/backtest engine.</p><label><input type="checkbox" checked={overwrite} onChange={(event) => setOverwrite(event.target.checked)} /> Replace an uploaded file with the same name</label></div>
       {error ? <p className="inline-error" role="alert">{error}</p> : null}
       {algorithms.isLoading ? <LoadingState title="Loading strategies" /> : null}
       {algorithms.error && !algorithms.data ? <ErrorState title="Strategies unavailable" detail={algorithms.error.message} onRetry={algorithms.refetch} /> : null}

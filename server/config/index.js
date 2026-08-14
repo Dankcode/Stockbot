@@ -41,6 +41,21 @@ export function loadConfig() {
   const host = process.env.HOST || "127.0.0.1";
   const allowRemote = bool("STOCKBOT_ALLOW_REMOTE", false);
   const apiToken = secret("STOCKBOT_API_TOKEN");
+  const databaseUrl = process.env.DATABASE_URL || `file:${path.join(workspaceRoot, "data/stockbot.db")}`;
+  let databaseLocation = process.env.STOCKBOT_DATABASE_LOCATION || "";
+  if (!databaseLocation) {
+    try {
+      const databaseHost = /^postgres(?:ql)?:\/\//i.test(databaseUrl) ? new URL(databaseUrl).hostname : "";
+      databaseLocation = databaseHost && !["localhost", "127.0.0.1", "::1"].includes(databaseHost)
+        ? "remote"
+        : "local";
+    } catch {
+      databaseLocation = "local";
+    }
+  }
+  if (!["local", "remote"].includes(databaseLocation)) {
+    throw new Error("STOCKBOT_DATABASE_LOCATION must be local or remote.");
+  }
   if (!/^(127\.0\.0\.1|localhost|::1)$/.test(host) && !allowRemote) {
     throw new Error("HOST must be loopback unless STOCKBOT_ALLOW_REMOTE=true is explicitly set.");
   }
@@ -50,9 +65,11 @@ export function loadConfig() {
 
   return Object.freeze({
     workspaceRoot,
+    configFile: process.env.STOCKBOT_CONFIG_FILE || "",
     host,
     port: integer("PORT", 4000, { min: 1, max: 65535 }),
-    databaseUrl: process.env.DATABASE_URL || `file:${path.join(workspaceRoot, "data/stockbot.db")}`,
+    databaseUrl,
+    databaseLocation,
     apiToken,
     mode: process.env.STOCKBOT_MODE || "local-paper",
     engineWorkers: integer("ENGINE_WORKERS", Math.max(1, Math.min(4, Number(process.env.UV_THREADPOOL_SIZE) || 2)), { min: 1, max: 16 }),

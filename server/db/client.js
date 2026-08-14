@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import { isIP, Socket } from "node:net";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { backup as sqliteBackup, DatabaseSync } from "node:sqlite";
@@ -349,18 +350,46 @@ async function loadPostgresPool() {
   }
 }
 
+function postgresPoolConfiguration(databaseUrl, options) {
+  const configuration = {
+    connectionString: databaseUrl,
+    max: options.maxConnections ?? 10,
+    idleTimeoutMillis: options.idleTimeoutMs ?? 30_000,
+    connectionTimeoutMillis: options.connectionTimeoutMs ?? 10_000
+  };
+  const url = new URL(databaseUrl);
+  const hostAddress = url.searchParams.get("hostaddr")?.trim();
+  if (!hostAddress) {
+    return configuration;
+  }
+  const family = isIP(hostAddress);
+  if (!family) {
+    throw databaseError("PostgreSQL hostaddr must be an IPv4 or IPv6 address.", "ERR_PG_HOSTADDR");
+  }
+
+  url.searchParams.delete("hostaddr");
+  const createSocket = options.createSocket ?? (() => new Socket());
+  return {
+    ...configuration,
+    connectionString: url.toString(),
+    // Keep the URL hostname for TLS/SNI, but dial the explicit network address.
+    stream: () => {
+      const socket = createSocket();
+      const connect = socket.connect.bind(socket);
+      socket.connect = (port, _hostname, listener) =>
+        connect({ host: hostAddress, port, family }, listener);
+      return socket;
+    }
+  };
+}
+
 async function createPostgresClient(databaseUrl, options = {}) {
   const Pool = options.Pool ?? (await loadPostgresPool());
   if (typeof Pool !== "function") {
     throw databaseError("The loaded PostgreSQL driver does not expose Pool.", "ERR_PG_DRIVER_INVALID");
   }
 
-  const pool = options.pool ?? new Pool({
-    connectionString: databaseUrl,
-    max: options.maxConnections ?? 10,
-    idleTimeoutMillis: options.idleTimeoutMs ?? 30_000,
-    connectionTimeoutMillis: options.connectionTimeoutMs ?? 10_000
-  });
+  const pool = options.pool ?? new Pool(postgresPoolConfiguration(databaseUrl, options));
   let closed = false;
   let savepointSequence = 0;
 

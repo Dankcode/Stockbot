@@ -1,6 +1,6 @@
 # Stockbot Algorithm Format
 
-Stockbot algorithms are small, synchronous JavaScript modules that emit long-only entry and exit signals. Save trusted modules in this folder or upload source from the **Strategies** page. Every accepted source version is hashed and stored so a backtest or paper session remains attributable to the exact code it ran.
+Stockbot algorithms are small, synchronous JavaScript modules that emit long-only entry and exit signals. Download the **Starter file** from the **Strategies** page, edit it, and upload the finished `.js` file from the same page. Trusted local modules may also be saved in this folder. Every accepted source version is hashed and stored so a backtest or paper session remains attributable to the exact code it ran.
 
 Backtests use real historical bars only and include two controls: **S&P 500 Index (SPY) buy-and-hold** and **Cash**.
 
@@ -93,6 +93,8 @@ Every algorithm backtest includes:
 - **S&P 500 Index (SPY) — Control**: buy and hold real SPY bars over the requested range
 - **Cash — Control**: unchanged `$100,000` equity
 
+The result panel shows checked controls for the strategy, SPY, and Cash. Unchecking a method hides its comparison column only; the backend still calculates and records all three methods for a consistent result.
+
 The result includes total return, interval-aware Sharpe and Sortino ratios, positive-magnitude maximum drawdown, profit factor, win rate, trade count, exposure, average trade, and final equity. `profitFactor` is `null` when there are no losses, and `winRate` is `null` when there are no closed trades.
 
 Results are cached by algorithm version, parameters, symbol, interval/window, real-bar hash, and fill-model hash. Changing any of those inputs produces a new run.
@@ -133,7 +135,7 @@ Save reviewed source as `algorithms/my-strategy.js`. Files in this root folder a
 
 ### Browser upload
 
-The **Strategies** upload flow writes accepted files to `algorithms/uploads/`. The equivalent API is `POST /api/v1/algorithms` with `{ filename, source, overwrite? }`.
+Download [`public/stockbot-strategy-template.js`](../public/stockbot-strategy-template.js), edit and rename it, set the API mutation token for the current browser tab, then choose **Strategies → Upload .js**. The upload flow writes accepted files to `algorithms/uploads/`. The equivalent API is `POST /api/v1/algorithms` with `{ filename, source, overwrite? }`.
 
 Uploads are limited to 500,000 bytes, validated in a worker before installation, and moved into place atomically. Overwriting does not erase history: a new `algorithm_versions` row stores the changed source hash and snapshot, while existing sessions remain pinned to their original version.
 

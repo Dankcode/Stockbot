@@ -5,7 +5,7 @@ This path runs one production Stockbot process as the logged-in macOS user. Expr
 ## Host prerequisites
 
 - macOS, Node.js 22 or newer, npm, and this repository
-- A reachable SQLite or PostgreSQL database on the future host, represented by that host's private `DATABASE_URL`
+- A writable database represented by the app host's private `DATABASE_URL`: PostgreSQL for local/private-network deployments, or SQLite for a single-host file-backed install. The dashboard connection editor configures PostgreSQL profiles.
 - Tailscale installed, signed in, and HTTPS enabled for the tailnet
 - A tailnet policy that grants only the intended users/devices access to this laptop
 
@@ -23,7 +23,9 @@ From the cloned repository:
 
 The initializer privately prompts for `DATABASE_URL`, generates separate API and settings-encryption secrets, and writes them without displaying them to `~/.config/stockbot/stockbot.env` with mode `600`. Edit that file to add market-provider credentials. For another protected location, pass `--env-file /absolute/path` to all three commands.
 
-The installer runs `npm ci`, typechecking, tests, the production build, and an idempotent migration/health check against the database selected in the protected config before pruning development-only packages. It then generates `~/Library/LaunchAgents/com.stockbot.laptop.plist` using paths resolved on that host. The LaunchAgent runs at login, restarts after failure, throttles restarts, and writes logs under `~/Library/Logs/Stockbot/`. Its plist and server config are mode `600`; secrets remain only in the server config.
+The installer runs `npm ci`, typechecking, tests, the production build, and an idempotent migration/health check against the database selected in the protected config. It stages a private production copy with production dependencies under `~/Library/Application Support/Stockbot/app` without pruning the developer checkout. It then generates `~/Library/LaunchAgents/com.stockbot.laptop.plist` using paths resolved on that host. The LaunchAgent runs at login, restarts after failure, throttles restarts, and writes logs under `~/Library/Logs/Stockbot/`. Its plist and server config are mode `600`; secrets remain only in the server config.
+
+Once the service is running, **Settings → Database connection** can test and save local or remote/private PostgreSQL profiles. The form supports an optional direct connect IP separate from the logical/TLS hostname. Saving validates the target, applies Stockbot's native migrations/default paper account, and updates the protected host configuration atomically; restart the LaunchAgent to activate it. Switching databases does not copy history, and saving is blocked while a session is active.
 
 If you want to inspect the generated job before starting it:
 

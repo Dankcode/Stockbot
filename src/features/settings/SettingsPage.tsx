@@ -4,6 +4,7 @@ import { api, listFrom } from "../../lib/api";
 import { fetchProviderHealth } from "../../lib/market";
 import { useQuery } from "../../lib/query";
 import type { SystemSettings } from "../../lib/types";
+import { DatabaseConnectionForm, fetchDatabaseSettings } from "./DatabaseConnectionForm";
 import { OperatorTokenForm } from "./OperatorTokenForm";
 import { SettingsGroupForm } from "./SettingsGroupForm";
 
@@ -24,10 +25,11 @@ function settingsFrom(payload: unknown): SystemSettings {
 
 export function SettingsPage() {
   const settings = useQuery("settings", async () => settingsFrom(await api.get<unknown>("/settings")), { staleAfterMs: 60_000 });
+  const database = useQuery("settings:database", fetchDatabaseSettings, { staleAfterMs: 60_000 });
   const providers = useQuery("market:health", fetchProviderHealth, { refreshMs: 30_000, staleAfterMs: 45_000 });
   const risk = useQuery("risk:profiles", async () => listFrom<RiskProfile>(await api.get<unknown>("/risk/profiles"), ["profiles", "items"]), { staleAfterMs: 60_000 });
   const alerts = useQuery("alerts:list", async () => listFrom<Alert>(await api.get<unknown>("/alerts"), ["alerts", "items"]), { staleAfterMs: 60_000 });
-  const refreshAll = () => Promise.all([settings.refetch(), providers.refetch(), risk.refetch(), alerts.refetch()]);
+  const refreshAll = () => Promise.all([settings.refetch(), database.refetch(), providers.refetch(), risk.refetch(), alerts.refetch()]);
 
   return (
     <div className="settings-page page-stack">
@@ -35,6 +37,14 @@ export function SettingsPage() {
       {settings.isLoading ? <LoadingState title="Loading settings" /> : null}
       {settings.error && !settings.data ? <ErrorState title="Settings unavailable" detail={settings.error.message} onRetry={settings.refetch} /> : null}
       <div className="settings-grid">
+        <DatabaseConnectionForm
+          settings={database.data}
+          isLoading={database.isLoading}
+          error={database.error}
+          isStale={database.isStale}
+          updatedAt={database.updatedAt}
+          onRetry={database.refetch}
+        />
         <OperatorTokenForm />
         {settings.data?.groups.map((group) => <SettingsGroupForm key={group.id} group={group} encryptionReady={settings.data!.encryptionReady} onSaved={settings.refetch} />)}
         <section className="panel settings-section"><header className="panel-header"><h2><Server size={17} /> Provider health</h2>{providers.isStale ? <StaleBadge updatedAt={providers.updatedAt} /> : null}</header>{providers.isLoading ? <LoadingState compact title="Loading providers" /> : providers.error ? <ErrorState compact detail={providers.error.message} onRetry={providers.refetch} /> : providers.data?.length ? <ul className="provider-list">{providers.data.map((provider) => <li key={provider.id}><span className={`health-dot health-${provider.status}`} /><div><strong>{provider.name ?? provider.id}</strong><small>{provider.message ?? provider.status}</small></div><span>{provider.latencyMs != null ? `${provider.latencyMs} ms` : "—"}</span></li>)}</ul> : <EmptyState compact title="No provider health" />}</section>

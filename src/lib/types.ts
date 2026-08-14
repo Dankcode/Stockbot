@@ -133,6 +133,49 @@ export type SystemSettings = {
   groups: SettingGroup[];
 };
 
+export type DatabaseLocation = "local" | "remote";
+
+export type DatabaseTlsMode = "disable" | "require" | "verify-full";
+
+export type DatabaseConnectionProfile = {
+  location: DatabaseLocation;
+  hostname: string;
+  connectAddress?: string;
+  port: number;
+  database: string;
+  username: string;
+  sslMode: DatabaseTlsMode;
+  passwordConfigured: boolean;
+};
+
+export type DatabaseConnectionSettings = {
+  configuration: DatabaseConnectionProfile | null;
+  active: {
+    dialect: "postgres";
+    hostname: string;
+    connectAddress?: string;
+    port: number;
+    database: string;
+    username: string;
+    sslMode: DatabaseTlsMode;
+  } | { dialect: "sqlite" };
+  restartRequired: boolean;
+};
+
+export type DatabaseConnectionInput = Omit<DatabaseConnectionProfile, "passwordConfigured"> & {
+  password?: string;
+};
+
+export type DatabaseConnectionTestResult = {
+  ok: boolean;
+  message?: string;
+  user?: string;
+  database?: string;
+  tls?: boolean;
+};
+
+export type DatabaseConnectionSaveResult = DatabaseConnectionSettings;
+
 export type MarketAsset = {
   symbol: string;
   name: string;

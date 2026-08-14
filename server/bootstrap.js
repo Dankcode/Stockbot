@@ -16,6 +16,7 @@ import { createRiskEngine } from "./risk/engine.js";
 import { DEFAULT_RISK_PROFILE } from "./risk/profile.js";
 import { SessionScheduler } from "./runtime/scheduler.js";
 import { createSupervisor } from "./runtime/supervisor.js";
+import { createDatabaseSettingsService } from "./settings/database-service.js";
 import { createSettingsService } from "./settings/service.js";
 
 const STANDARD_FILL_MODEL = Object.freeze({
@@ -112,10 +113,12 @@ export async function createStockbot(options = {}) {
   const startup = await supervisor.bootstrap();
   const accountId = startup.account?.id ?? DEFAULT_ACCOUNT_ID;
   const database = databaseHealth(client);
+  const databaseSettings = options.databaseSettings ?? createDatabaseSettingsService({ config, repositories });
   const context = {
     config,
     client,
     database,
+    databaseSettings,
     repositories,
     eventHub,
     market,

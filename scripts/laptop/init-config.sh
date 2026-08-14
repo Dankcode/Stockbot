@@ -41,6 +41,11 @@ printf '%s\0%s\0%s\0' "$database_url" "$api_token" "$settings_key" | "$node_bina
   process.stdout.write([
     "# Stockbot laptop server configuration. Keep mode 600.",
     `DATABASE_URL=${value(databaseUrl)}`,
+    `STOCKBOT_DATABASE_LOCATION=${value((() => {
+      if (!/^postgres(?:ql)?:\\/\\//i.test(databaseUrl)) return "local";
+      const host = new URL(databaseUrl).hostname;
+      return ["localhost", "127.0.0.1", "::1"].includes(host) ? "local" : "remote";
+    })())}`,
     `STOCKBOT_API_TOKEN=${value(apiToken)}`,
     `STOCKBOT_SETTINGS_KEY=${value(settingsKey)}`,
     "PORT=4000", "HOST=127.0.0.1", "STOCKBOT_MODE=local-paper",

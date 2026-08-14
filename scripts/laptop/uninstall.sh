@@ -8,5 +8,5 @@ if /bin/launchctl print "$domain/$label" >/dev/null 2>&1; then
   /bin/launchctl bootout "$domain/$label"
 fi
 if [[ -f "$plist_path" ]]; then /bin/rm "$plist_path"; fi
-echo "Stockbot LaunchAgent removed. Database, config, logs, and Tailscale Serve configuration were preserved."
+echo "Stockbot LaunchAgent removed. Installed runtime, uploaded algorithms, database, config, logs, and Tailscale Serve configuration were preserved."
 echo "To disable only Stockbot's Tailscale root endpoint, run: tailscale serve --https=443 off"

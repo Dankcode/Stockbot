@@ -196,3 +196,49 @@ test("PostgreSQL adapter rewrites parameters and uses scoped transactional conne
   await client.close();
   assert.equal(poolCalls.at(-1).sql, "END_POOL");
 });
+
+test("PostgreSQL adapter uses hostaddr for TCP while retaining the hostname for TLS", async () => {
+  const socketCalls = [];
+  let poolConfiguration;
+
+  class FakePool {
+    constructor(configuration) {
+      poolConfiguration = configuration;
+    }
+
+    async end() {}
+  }
+
+  const fakeSocket = {
+    connect(...args) {
+      socketCalls.push(args);
+      return this;
+    }
+  };
+  const databaseUrl =
+    "postgresql://stockbot@example.test:5432/stockbot?sslmode=verify-full&hostaddr=fd7a%3A115c%3Aa1e0%3A%3A1";
+  const client = await createClient(databaseUrl, {
+    Pool: FakePool,
+    createSocket: () => fakeSocket
+  });
+
+  const driverUrl = new URL(poolConfiguration.connectionString);
+  assert.equal(driverUrl.hostname, "example.test");
+  assert.equal(driverUrl.searchParams.get("sslmode"), "verify-full");
+  assert.equal(driverUrl.searchParams.has("hostaddr"), false);
+
+  const stream = poolConfiguration.stream();
+  stream.connect(5432, "example.test");
+  assert.deepEqual(socketCalls, [[{ host: "fd7a:115c:a1e0::1", port: 5432, family: 6 }, undefined]]);
+
+  await client.close();
+});
+
+test("PostgreSQL adapter rejects a non-IP hostaddr", async () => {
+  class FakePool {}
+
+  await assert.rejects(
+    createClient("postgresql://stockbot@example.test/stockbot?hostaddr=not-an-ip", { Pool: FakePool }),
+    (error) => error.code === "ERR_PG_HOSTADDR"
+  );
+});

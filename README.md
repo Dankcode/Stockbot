@@ -1,177 +1,226 @@
+<div align="center">
+
 # Stockbot
 
-Stockbot is a local-first paper-trading workbench for testing stock strategies against real market data before considering broker execution. It combines a React dashboard with a durable session runtime, a shared backtest/paper fill model, risk controls, and reproducible strategy versions.
+### A local-first laboratory for strategies, real market data, and auditable paper trading
 
-Stockbot does **not** route live orders. Provider credentials are used for market data; every order and fill produced by the app is simulated and written to Stockbot's local ledger.
+![Paper trading only](https://img.shields.io/badge/execution-paper%20only-2f81f7?style=for-the-badge)
+![Node 22+](https://img.shields.io/badge/node-22%2B-5fa04e?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![React](https://img.shields.io/badge/UI-React%20%2B%20Vite-149eca?style=for-the-badge&logo=react&logoColor=white)
+![PostgreSQL or SQLite](https://img.shields.io/badge/storage-PostgreSQL%20%7C%20SQLite-4169e1?style=for-the-badge&logo=postgresql&logoColor=white)
 
-## What is included
+**Write a strategy → upload one JavaScript file → test it against real bars → compare it with SPY and Cash.**
 
-- React, TypeScript, Vite, and a routed five-destination dashboard
-- Express API under `/api/v1` with validated success and error envelopes
-- Real provider data only: Alpaca, then Polygon, then Finnhub
-- A `$100,000` default paper account with durable orders, fills, positions, and equity history
-- SQLite persistence by default, with the same repository layer available through a PostgreSQL URL
-- Backtests and paper execution using one auditable slippage/commission fill model
-- Next-bar-open backtest fills, so a signal cannot fill on the bar that produced it
-- Versioned algorithms, cached backtests, worker timeouts, and constrained uploads
-- Paper-session lifecycle controls, schedules, risk events, alerts, SSE updates, and JSON/CSV exports
-- Canvas/SVG market charts with pan, zoom, overlays, and session replay
+</div>
 
-The implementation follows the decisions in [the revision plan](./docs/plan/00-README.md). Strategy authors should also read [the algorithm format](./algorithms/README.md).
+> [!IMPORTANT]
+> Stockbot never routes live brokerage orders. Provider credentials retrieve market data only; every order and fill is simulated by the local paper/backtest engine.
 
-## Requirements
+## What Stockbot gives you
 
-- Node.js 22 or newer (`node:sqlite` is used by the default database adapter)
-- npm
-- At least one configured market-data provider for quotes and historical bars
+| Explore | Test | Operate |
+|---|---|---|
+| Real quotes and OHLCV bars from Alpaca, Polygon, or Finnhub | Deterministic next-bar-open backtests | Durable PostgreSQL or SQLite ledger |
+| Searchable equities and interactive charts | Strategy, SPY buy-and-hold, and Cash controls | Loopback-only Express API by default |
+| Indicators, market diagnostics, and provider health | Sharpe, drawdown, return, trades, exposure, and more | Risk events, audit history, exports, and recovery |
 
-Without provider credentials, Stockbot still starts and exposes its local symbol metadata, but prices, charts, backtests, and paper fills report an explicit unavailable state. It never substitutes generated prices or candles.
+The same fill model powers backtests and paper sessions. Strategy versions, parameters, bar hashes, slippage, commissions, results, and session events stay attributable and reproducible.
 
-## Quick start
+## The five-minute path
+
+### 1. Run Stockbot
+
+Requirements: Node.js 22+, npm, and at least one market-data provider for prices and charts.
 
 ```bash
-npm install
+git clone https://github.com/Dankcode/Stockbot.git
+cd Stockbot
+npm ci
 cp .env.example .env
 npm run dev
 ```
 
-Add at least one provider key to `.env`, then open `http://127.0.0.1:5173`. The development command starts both services:
+Open `http://127.0.0.1:5173`. Development uses SQLite unless `DATABASE_URL` selects PostgreSQL.
 
-- web: `http://127.0.0.1:5173`
-- API: `http://127.0.0.1:4000`
+### 2. Authorize this browser tab
 
-Useful commands:
+Generate/configure a 32+ character `STOCKBOT_API_TOKEN`, then paste that same value into **Settings → API mutation token → Set for session**. It stays in that tab's `sessionStorage`, is sent only on mutations, and is never compiled into the frontend.
 
-```bash
-npm run client   # Vite only
-npm run server   # Express API only
-npm test         # Node test suite
-npm run lint     # TypeScript check
-npm run build    # Typecheck and production web build
-npm run check    # lint, tests, and build
+### 3. Add real market data
+
+In **Settings → Data providers**, configure at least one provider and click **Save group**:
+
+- Alpaca: API key + secret; keep data URL `https://data.alpaca.markets` and feed `iex`
+- Polygon: API key
+- Finnhub: API key
+
+Stockbot tries **Alpaca → Polygon → Finnhub**. Without credentials, symbol metadata still works, but charts, prices, backtests, and paper fills remain explicitly unavailable—Stockbot never invents candles.
+
+### 4. Plug in a strategy file
+
+1. Open **Strategies** and download **Starter file** (or use [`public/stockbot-strategy-template.js`](./public/stockbot-strategy-template.js)).
+2. Rename it and edit its metadata, parameters, and synchronous `signal()` rules.
+3. Click **Upload .js**. Stockbot validates the file in a bounded worker, installs it atomically, and stores a source-hashed version.
+4. Open the strategy and run a backtest.
+
+No ORM, plugin SDK, package install, or server restart is needed. A strategy is one default-exported JavaScript object:
+
+```js
+export default {
+  name: "My Strategy",
+  params: { period: 20 },
+  signal({ index, params, indicators, position }) {
+    const average = indicators.sma(params.period);
+    if (index < params.period) return null;
+    if (position.qty === 0 && average[index] < 100) return "buy";
+    if (position.qty > 0 && average[index] >= 100) return "sell";
+    return null;
+  }
+};
 ```
 
-## Install on a user's laptop
+See the complete [algorithm contract](./algorithms/README.md) before sharing or installing untrusted code.
 
-The production package connects only to the database selected by that host user's private `DATABASE_URL`; no database address or credential is compiled into the dashboard. It accepts either a PostgreSQL URL or a file-backed SQLite URL.
+## Tested methods
+
+Every ad-hoc strategy backtest calculates all three methods from real provider bars. Checkmarks in the result panel choose what is visible in the comparison; they do not skip or alter the benchmark calculation.
+
+| Method | Tested by default | Purpose |
+|---|:---:|---|
+| Uploaded strategy | ✅ | Your exact source version and parameter overrides |
+| SPY buy-and-hold | ✅ | Real S&P 500 ETF control over the same requested range |
+| Cash | ✅ | Flat `$100,000` control with no market exposure |
+
+Signals are evaluated after bar `N` closes and can fill only at bar `N+1`'s open. A final-bar signal remains unfilled instead of receiving a fabricated price.
+
+## Choose where data lives
+
+Stockbot uses one repository/migration layer for SQLite and PostgreSQL.
+
+| Deployment | Recommended use | Connection |
+|---|---|---|
+| SQLite | Fast local development | `file:./data/stockbot.db` |
+| Local PostgreSQL | Database on the app machine | `127.0.0.1:5432` |
+| Remote/private PostgreSQL | Database on a LAN or private VPN host | Server hostname plus optional direct connect IP |
+
+The dashboard's **Database connection** panel supports:
+
+- Local or remote/private PostgreSQL
+- Hostname, port, database, role, and write-only password
+- Optional distinct connect address/IP while retaining the hostname for TLS identity
+- TLS disabled, required, or certificate-and-hostname verified
+- A non-mutating **Test connection** action
+- **Save connection**, which validates identity, applies native forward-only migrations, creates the default paper account, and atomically updates the protected host configuration
+
+Saving a new profile does not copy history and requires a Stockbot service restart. Saves are blocked while trading sessions are active.
+
+## Production service on macOS
 
 ```bash
-npm run laptop:init       # create a protected host config and enter DATABASE_URL
-npm run laptop:install    # build and install the per-user macOS service
-npm run laptop:tailscale  # expose only the loopback app through private HTTPS
+npm run laptop:init
+npm run laptop:install
+npm run laptop:status
 ```
 
-`laptop:install` migrates and validates the selected database before starting the service. Automated orders, fills, session-owned lots, equity, risk events, and audit records are written to SQL. Inspect or export them with `npm run db:status -- --env-file "$HOME/.config/stockbot/stockbot.env"` and `npm run db:trades -- --env-file "$HOME/.config/stockbot/stockbot.env"`. See [Laptop deployment](./docs/LAPTOP_DEPLOYMENT.md) and [Database operations](./docs/DATABASE_OPERATIONS.md) before installing. The scripts are portable and do not install or configure anything until run on the future host.
+The initializer creates `~/.config/stockbot/stockbot.env` as mode `0600` without printing generated secrets. The installer runs `npm ci`, lint, tests, build, and database initialization, then stages a private production runtime under:
 
-## Configuration
+```text
+~/Library/Application Support/Stockbot/app
+```
 
-`.env` is for bootstrap configuration. Settings saved from the dashboard are persisted in the database; Stockbot does not rewrite `.env`.
+A per-user LaunchAgent keeps the API on `127.0.0.1:4000`. After saving a database profile in Settings, activate it with:
+
+```bash
+launchctl kickstart -k "gui/$(id -u)/com.stockbot.laptop"
+npm run laptop:status
+```
+
+Optional private web/API access can be configured separately:
+
+```bash
+npm run laptop:tailscale
+```
+
+This maps only Stockbot's loopback HTTP service through private Tailscale Serve. It does not configure, proxy, or publicly expose PostgreSQL, and it never uses Funnel. See [Laptop deployment](./docs/LAPTOP_DEPLOYMENT.md).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser["Browser dashboard"] -->|"loopback HTTP"| API["Stockbot API"]
+  Providers["Alpaca / Polygon / Finnhub"] -->|"quotes + bars"| API
+  API --> Broker["Paper broker + backtest engine"]
+  API --> Repo["Portable repository layer"]
+  Repo --> SQLite["SQLite (development)"]
+  Repo --> Postgres["PostgreSQL (local or private remote)"]
+  Broker --> Repo
+```
+
+## Configuration map
 
 | Variable | Purpose |
 |---|---|
-| `HOST` | API bind address. Defaults to `127.0.0.1`; non-loopback hosts require `STOCKBOT_ALLOW_REMOTE=true`. |
-| `PORT` | API port. Defaults to `4000`. |
-| `DATABASE_URL` | `file:./data/stockbot.db` for SQLite or a `postgres://...` / `postgresql://...` URL. |
-| `STOCKBOT_API_TOKEN` | Server-side shared secret required by every `POST`, `PUT`, `PATCH`, and `DELETE` request when configured; enter it per browser session in Settings. |
-| `STOCKBOT_SETTINGS_KEY` | Encryption key required before provider secrets can be saved through Settings. |
-| `ENGINE_WORKERS` | Number of strategy workers. Defaults to `2` and is limited to `1`–`16`. |
-| `ENGINE_TIMEOUT_MS` | Hard deadline for one strategy task. Defaults to `10000`. |
-| `QUOTE_FRESHNESS_MS` | Maximum quote age accepted by paper-order risk checks. Defaults to `5000`. |
-| `ALPACA_API_KEY`, `ALPACA_API_SECRET` | Alpaca asset catalogue, quote, and bar access. |
-| `POLYGON_API_KEY` | Polygon quote/bar fallback. |
-| `FINNHUB_API_KEY` | Finnhub quote/bar fallback. |
+| `HOST`, `PORT` | API bind address and port; production forces `127.0.0.1`. |
+| `DATABASE_URL` | SQLite file URL or PostgreSQL connection URL. |
+| `STOCKBOT_DATABASE_LOCATION` | UI classification: `local` or `remote`. |
+| `STOCKBOT_CONFIG_FILE` | Protected writable host env used by the service's database-settings save flow. |
+| `STOCKBOT_API_TOKEN` | 32+ character mutation secret entered once per browser tab. Never use `VITE_*`. |
+| `STOCKBOT_SETTINGS_KEY` | 32+ character key used to encrypt provider secrets stored in SQL. |
+| `ENGINE_WORKERS`, `ENGINE_TIMEOUT_MS` | Strategy worker concurrency and deadline. |
+| `QUOTE_FRESHNESS_MS` | Maximum quote age accepted by paper risk checks. |
+| `ALPACA_API_KEY`, `ALPACA_API_SECRET` | Alpaca catalogue, quote, and bar access. |
+| `POLYGON_API_KEY`, `FINNHUB_API_KEY` | Quote/bar fallbacks. |
+| `STOCKBOT_MODE` | Runtime label; production uses `local-paper`. |
 
-See [`.env.example`](./.env.example) for the complete set of URLs, cache durations, feed selection, and runtime defaults.
+Bootstrap values come from the protected env. Provider settings saved in the dashboard are encrypted in SQL. The production database panel atomically updates only its database fields in the protected host env and preserves unrelated secrets.
 
-### Provider behavior
+## Useful operations
 
-Quotes and bars follow one ordered path: **Alpaca → Polygon → Finnhub**. A provider is skipped when it is not configured and marked degraded when a request fails. Short-lived server caches reduce rate-limit pressure, and `/api/v1/market/health` exposes current provider state.
-
-The bundled asset catalogue is metadata for search only. It is not a source of prices, volumes, bars, indicators, signals, or P&L. Chart diagnostics are computed from the same real bars shown on screen.
-
-## Persistence
-
-The default database is `data/stockbot.db`. Forward-only migrations run at startup, and repositories own all SQL. Sessions, algorithm versions, backtest cache entries, schedules, orders, fills, position lots, equity snapshots, risk events, alerts, settings, and audit events survive a restart.
-
-The storage contract is deliberately portable:
-
-- timestamps are UTC epoch milliseconds
-- money is stored as integer cents
-- quantities are stored as integer micro-shares
-- IDs are generated by the application
-- JSON values are serialized at the repository boundary
-
-To use PostgreSQL, install dependencies normally and set `DATABASE_URL` to a PostgreSQL connection string. The adapter rewrites portable `?` placeholders to PostgreSQL parameters; services and routes do not change.
-
-## Trading semantics
-
-Backtests evaluate a strategy only with bars through the current closed bar. A signal on bar `N` becomes a pending order and may fill only at bar `N+1`'s open. A final-bar signal is returned as unfilled instead of being fabricated into a trade.
-
-The shared fill model records the reference price, directional slippage, commission, actual fill price, quantity, and slippage cost. Session configuration freezes that model and the exact algorithm version so results remain explainable later. Strategy comparisons include SPY buy-and-hold and Cash controls.
-
-Paper orders use the same fill economics but must also pass live safety gates such as market hours, quote freshness, price sanity, exposure, order-rate, and available-funds checks. They remain local simulations; Alpaca paper-order routing is not enabled.
-
-## Sessions, risk, and recovery
-
-A session follows an explicit lifecycle:
-
-```text
-draft → arming → running ⇄ paused → stopping → stopped
-                    └──────────────→ halted
-                    └──────────────→ errored
+```bash
+npm run check
+npm run db:status -- --env-file "$HOME/.config/stockbot/stockbot.env"
+npm run db:trades -- --env-file "$HOME/.config/stockbot/stockbot.env" --account default-paper
+npm run laptop:status
+tail -f "$HOME/Library/Logs/Stockbot/stockbot.error.log"
 ```
 
-Backtests normally complete from `arming` to `stopped`. Paper sessions can be manual, market-hours, fixed-window, cron, or continuous schedules. Stop, per-session halt, account-wide halt, and optional liquidation operations are recorded with their reasons. Rejected orders and triggered guardrails remain visible rather than disappearing.
+Forward migrations run at startup and through `db:init`. The database stores accounts, sessions, algorithm versions, cached backtests, schedules, simulated orders/fills, position lots, equity snapshots, risk events, alerts, settings, and audit events. Market candles are fetched from providers and held only in short-lived server caches.
 
-If the server exits while a session is active, startup reconciliation marks that ambiguous run `errored` and records a restart event; it does not silently backfill missed trades. A stopped, halted, or errored session is a durable historical record.
+## API at a glance
 
-## API contract
+All routes live under `/api/v1` and use validated `{ data, meta }` or `{ error }` envelopes.
 
-All new routes are rooted at `/api/v1`. Successful JSON responses use:
-
-```json
-{ "data": {}, "meta": {} }
-```
-
-Errors use a stable code and message:
-
-```json
-{ "error": { "code": "VALIDATION_ERROR", "message": "Request validation failed.", "detail": {} } }
-```
-
-Each response includes an `x-request-id` header. When `STOCKBOT_API_TOKEN` is set, mutating requests must include:
-
-```http
-x-stockbot-token: your-token
-```
-
-The token is server configuration, not a Vite environment variable. After opening the dashboard, enter the same value under **Settings → API mutation token**. The dashboard keeps it in the current tab's session storage, sends it only with mutating requests, never echoes it after entry, and removes it when you clear the control or end the tab session. Do not create a `VITE_STOCKBOT_API_TOKEN`: `VITE_*` values are embedded in the browser bundle.
-
-Main route groups:
-
-| Route | Responsibility |
+| Route group | Responsibility |
 |---|---|
-| `GET /api/v1/health` | Service mode, bind address, database health, and provider health |
-| `/api/v1/overview` | Aggregate account/session/risk/alert summary |
-| `/api/v1/market/*` | Search, movers, provider health, quotes, and real bars |
-| `/api/v1/algorithms/*` | Algorithms, versions, uploads, enablement, and backtests |
-| `/api/v1/sessions/*` | Create, list, run, pause, resume, stop, halt, compare, and export sessions |
-| `/api/v1/accounts/*` | Portfolio, paper orders, liquidation, and account-wide halt |
-| `/api/v1/risk/*` | Risk profiles and event history |
-| `/api/v1/alerts/*` | Alert rules, delivery feed, and acknowledgements |
-| `/api/v1/settings/*` | Public settings state, encrypted updates, and provider tests |
-| `GET /api/v1/stream` | Server-sent session, risk, alert, and market events |
+| `/health`, `/overview` | Runtime, database/provider health, portfolio, sessions, and risk summary |
+| `/market/*` | Search, movers, quotes, provider health, and real bars |
+| `/algorithms/*` | Uploads, versions, enablement, and benchmarked backtests |
+| `/sessions/*` | Draft, start, pause, resume, stop, halt, compare, and export |
+| `/accounts/*` | Paper portfolio, simulated orders, liquidation, and account halt |
+| `/risk/*`, `/alerts/*` | Risk profiles/events and alert lifecycle |
+| `/settings/*` | Provider settings/tests and PostgreSQL profile read/test/save |
+| `/stream` | Server-sent session, risk, alert, and market events |
 
-`GET /api/health` remains only as a compatibility redirect to `/api/v1/health`.
+## Guardrails
 
-## Local security model
+- The executable broker is the in-process paper broker; no live brokerage order route exists.
+- Session modes are restricted to `backtest` and `paper`.
+- API and Vite bind to loopback by default.
+- Secrets never belong in source control, frontend code, logs, URLs shown to users, or `VITE_*` values.
+- Uploaded strategies are constrained and validated, but you should still review code from other people.
+- Stockbot is research software, not financial advice.
 
-- The API and Vite bind to loopback by default, and browser CORS accepts local origins only.
-- Set `STOCKBOT_API_TOKEN` before allowing any other process or machine to reach the API.
-- Enter that token through Settings for each operator browser session; it is not compiled into the frontend or stored in local storage or cookies.
-- Read-only routes, including SSE, do not require that token in the local security model. Remote binding is therefore an explicit opt-in and should sit behind network-level access control.
-- Settings secrets are encrypted with AES-256-GCM in SQL and are never returned to the browser. Losing `STOCKBOT_SETTINGS_KEY` makes stored secrets unreadable.
-- Uploaded strategies are validated and run in bounded workers, but JavaScript sandboxing is defense in depth, not permission to execute unknown hostile code. Review every strategy you install.
-- Manual files in `algorithms/` are treated as trusted local source; browser uploads are isolated under `algorithms/uploads/`.
+## Deeper documentation
 
-Stockbot is research software, not financial advice or a live brokerage system.
+- [Algorithm format](./algorithms/README.md)
+- [Laptop deployment](./docs/LAPTOP_DEPLOYMENT.md)
+- [Database operations](./docs/DATABASE_OPERATIONS.md)
+- [Revision plan and architecture decisions](./docs/plan/00-README.md)
+
+---
+
+<div align="center">
+
+Built for experimentation, reproducibility, and the healthy suspicion that every strategy deserves a benchmark.
+
+</div>
