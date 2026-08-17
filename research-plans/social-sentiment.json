@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "id": "social-sentiment",
+  "name": "Retail social sentiment",
+  "description": "Reads public social posts about the symbol from Bluesky, StockTwits, and Reddit, then produces a bounded point-in-time sentiment summary. Social text is the most injection-prone input in the pipeline and is treated strictly as untrusted evidence.",
+  "symbols": [
+    "*"
+  ],
+  "steps": [
+    {
+      "id": "bluesky-cashtag",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "bluesky",
+        "pathTemplate": "/xrpc/app.bsky.feed.searchPosts",
+        "query": {
+          "q": "${{symbol}}",
+          "sort": "latest",
+          "limit": "100"
+        },
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "bluesky-mentions",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "bluesky",
+        "pathTemplate": "/xrpc/app.bsky.feed.searchPosts",
+        "query": {
+          "q": "{{symbol}} stock",
+          "sort": "latest",
+          "limit": "100"
+        },
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "stocktwits-stream",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "stocktwits",
+        "pathTemplate": "/api/2/streams/symbol/{{symbol}}.json",
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 750000
+      }
+    },
+    {
+      "id": "reddit-stocks",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "reddit",
+        "pathTemplate": "/r/stocks/search.json",
+        "query": {
+          "q": "{{symbol}}",
+          "restrict_sr": "1",
+          "sort": "new",
+          "limit": "50"
+        },
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "reddit-wallstreetbets",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "reddit",
+        "pathTemplate": "/r/wallstreetbets/search.json",
+        "query": {
+          "q": "{{symbol}}",
+          "restrict_sr": "1",
+          "sort": "new",
+          "limit": "50"
+        },
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "social-summary",
+      "kind": "summarize",
+      "adapter": "ai.cli.summary.v1",
+      "dependsOn": [
+        "bluesky-cashtag",
+        "bluesky-mentions",
+        "stocktwits-stream",
+        "reddit-stocks",
+        "reddit-wallstreetbets"
+      ],
+      "promptTemplate": "market-summary.v1",
+      "responseSchema": "market-summary.v1",
+      "limits": {
+        "timeoutMs": 120000,
+        "maxInputBytes": 2000000
+      }
+    }
+  ],
+  "outputStep": "social-summary",
+  "delivery": {
+    "strategy": true,
+    "required": false,
+    "maxAgeMs": 14400000
+  }
+}

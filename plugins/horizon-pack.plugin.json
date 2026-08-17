@@ -1,0 +1,1880 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "horizon-pack",
+  "name": "Horizon pack",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "Three methods across four holding-period horizons, each paired with turnover-matched controls. Every variant reads the same 1day bars; the horizon is the target holding period, because the engine has no yearly interval and resampling would change the data as well as the horizon.",
+  "requires": {
+    "capabilities": [
+      "backtest"
+    ],
+    "sources": [],
+    "secrets": [],
+    "promptTemplates": [],
+    "aiCli": false,
+    "notes": "Requires core-controls for the passive buy-and-hold benchmark. Yearly variants need a multi-year window: on 400 bars they take 0-3 trades, on 1500 they take 6-11."
+  },
+  "methods": [
+    {
+      "id": "daily-ema",
+      "name": "EMA Momentum — Daily",
+      "role": "strategy",
+      "horizon": "daily",
+      "description": "EMA Momentum scaled to a ~2-bar holding period on daily bars.",
+      "params": {
+        "fast": 3,
+        "slow": 8,
+        "stopLossPercent": 3
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "div": [
+                            {
+                              "param": "stopLossPercent"
+                            },
+                            100
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Protective stop"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "daily-rsi",
+      "name": "RSI Mean Reversion — Daily",
+      "role": "strategy",
+      "horizon": "daily",
+      "description": "RSI Mean Reversion scaled to a ~2-bar holding period on daily bars.",
+      "params": {
+        "period": 3,
+        "oversold": 25,
+        "exitLevel": 55,
+        "maxHoldBars": 3
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "add": [
+            {
+              "param": "period"
+            },
+            1
+          ]
+        },
+        "indicators": {
+          "rsi": {
+            "fn": "rsi",
+            "period": {
+              "param": "period"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "lt": [
+                    {
+                      "series": {
+                        "name": "rsi",
+                        "offset": 1
+                      }
+                    },
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                },
+                {
+                  "gte": [
+                    "rsi",
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "RSI recovered up through the oversold threshold"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                "rsi",
+                {
+                  "param": "exitLevel"
+                }
+              ]
+            },
+            "reason": "RSI reverted to the exit level"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Time stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "daily-donchian",
+      "name": "Donchian Breakout — Daily",
+      "role": "strategy",
+      "horizon": "daily",
+      "description": "Donchian Breakout scaled to a ~2-bar holding period on daily bars.",
+      "params": {
+        "entryPeriod": 5,
+        "exitPeriod": 3,
+        "atrPeriod": 7,
+        "atrStopMultiple": 1.5
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "entryPeriod"
+        },
+        "indicators": {
+          "channelHigh": {
+            "fn": "highestHigh",
+            "period": {
+              "param": "entryPeriod"
+            }
+          },
+          "channelLow": {
+            "fn": "lowestLow",
+            "period": {
+              "param": "exitPeriod"
+            }
+          },
+          "atr": {
+            "fn": "atr",
+            "period": {
+              "param": "atrPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                "channelHigh"
+              ]
+            },
+            "reason": "Close cleared the prior channel high"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "channelLow"
+              ]
+            },
+            "reason": "Close broke the prior channel low"
+          },
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "sub": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "mul": [
+                        "atr",
+                        {
+                          "param": "atrStopMultiple"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "ATR stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "weekly-ema",
+      "name": "EMA Momentum — Weekly",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "EMA Momentum scaled to a ~5-bar holding period on daily bars.",
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "div": [
+                            {
+                              "param": "stopLossPercent"
+                            },
+                            100
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Protective stop"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "weekly-rsi",
+      "name": "RSI Mean Reversion — Weekly",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "RSI Mean Reversion scaled to a ~5-bar holding period on daily bars.",
+      "params": {
+        "period": 7,
+        "oversold": 30,
+        "exitLevel": 55,
+        "maxHoldBars": 10
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "add": [
+            {
+              "param": "period"
+            },
+            1
+          ]
+        },
+        "indicators": {
+          "rsi": {
+            "fn": "rsi",
+            "period": {
+              "param": "period"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "lt": [
+                    {
+                      "series": {
+                        "name": "rsi",
+                        "offset": 1
+                      }
+                    },
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                },
+                {
+                  "gte": [
+                    "rsi",
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "RSI recovered up through the oversold threshold"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                "rsi",
+                {
+                  "param": "exitLevel"
+                }
+              ]
+            },
+            "reason": "RSI reverted to the exit level"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Time stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "weekly-donchian",
+      "name": "Donchian Breakout — Weekly",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Donchian Breakout scaled to a ~5-bar holding period on daily bars.",
+      "params": {
+        "entryPeriod": 20,
+        "exitPeriod": 10,
+        "atrPeriod": 14,
+        "atrStopMultiple": 2
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "entryPeriod"
+        },
+        "indicators": {
+          "channelHigh": {
+            "fn": "highestHigh",
+            "period": {
+              "param": "entryPeriod"
+            }
+          },
+          "channelLow": {
+            "fn": "lowestLow",
+            "period": {
+              "param": "exitPeriod"
+            }
+          },
+          "atr": {
+            "fn": "atr",
+            "period": {
+              "param": "atrPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                "channelHigh"
+              ]
+            },
+            "reason": "Close cleared the prior channel high"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "channelLow"
+              ]
+            },
+            "reason": "Close broke the prior channel low"
+          },
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "sub": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "mul": [
+                        "atr",
+                        {
+                          "param": "atrStopMultiple"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "ATR stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "monthly-ema",
+      "name": "EMA Momentum — Monthly",
+      "role": "strategy",
+      "horizon": "monthly",
+      "description": "EMA Momentum scaled to a ~21-bar holding period on daily bars.",
+      "params": {
+        "fast": 21,
+        "slow": 55,
+        "stopLossPercent": 15
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "div": [
+                            {
+                              "param": "stopLossPercent"
+                            },
+                            100
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Protective stop"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "monthly-rsi",
+      "name": "RSI Mean Reversion — Monthly",
+      "role": "strategy",
+      "horizon": "monthly",
+      "description": "RSI Mean Reversion scaled to a ~21-bar holding period on daily bars.",
+      "params": {
+        "period": 21,
+        "oversold": 40,
+        "exitLevel": 55,
+        "maxHoldBars": 21
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "add": [
+            {
+              "param": "period"
+            },
+            1
+          ]
+        },
+        "indicators": {
+          "rsi": {
+            "fn": "rsi",
+            "period": {
+              "param": "period"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "lt": [
+                    {
+                      "series": {
+                        "name": "rsi",
+                        "offset": 1
+                      }
+                    },
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                },
+                {
+                  "gte": [
+                    "rsi",
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "RSI recovered up through the oversold threshold"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                "rsi",
+                {
+                  "param": "exitLevel"
+                }
+              ]
+            },
+            "reason": "RSI reverted to the exit level"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Time stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "monthly-donchian",
+      "name": "Donchian Breakout — Monthly",
+      "role": "strategy",
+      "horizon": "monthly",
+      "description": "Donchian Breakout scaled to a ~21-bar holding period on daily bars.",
+      "params": {
+        "entryPeriod": 55,
+        "exitPeriod": 20,
+        "atrPeriod": 20,
+        "atrStopMultiple": 3
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "entryPeriod"
+        },
+        "indicators": {
+          "channelHigh": {
+            "fn": "highestHigh",
+            "period": {
+              "param": "entryPeriod"
+            }
+          },
+          "channelLow": {
+            "fn": "lowestLow",
+            "period": {
+              "param": "exitPeriod"
+            }
+          },
+          "atr": {
+            "fn": "atr",
+            "period": {
+              "param": "atrPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                "channelHigh"
+              ]
+            },
+            "reason": "Close cleared the prior channel high"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "channelLow"
+              ]
+            },
+            "reason": "Close broke the prior channel low"
+          },
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "sub": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "mul": [
+                        "atr",
+                        {
+                          "param": "atrStopMultiple"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "ATR stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "yearly-ema",
+      "name": "EMA Momentum — Yearly",
+      "role": "strategy",
+      "horizon": "yearly",
+      "description": "EMA Momentum scaled to a ~252-bar holding period on daily bars.",
+      "params": {
+        "fast": 50,
+        "slow": 200,
+        "stopLossPercent": 30
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "div": [
+                            {
+                              "param": "stopLossPercent"
+                            },
+                            100
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Protective stop"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "yearly-rsi",
+      "name": "RSI Mean Reversion — Yearly",
+      "role": "strategy",
+      "horizon": "yearly",
+      "description": "RSI Mean Reversion scaled to a ~252-bar holding period on daily bars.",
+      "params": {
+        "period": 50,
+        "oversold": 45,
+        "exitLevel": 55,
+        "maxHoldBars": 252
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "add": [
+            {
+              "param": "period"
+            },
+            1
+          ]
+        },
+        "indicators": {
+          "rsi": {
+            "fn": "rsi",
+            "period": {
+              "param": "period"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "lt": [
+                    {
+                      "series": {
+                        "name": "rsi",
+                        "offset": 1
+                      }
+                    },
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                },
+                {
+                  "gte": [
+                    "rsi",
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "RSI recovered up through the oversold threshold"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                "rsi",
+                {
+                  "param": "exitLevel"
+                }
+              ]
+            },
+            "reason": "RSI reverted to the exit level"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Time stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "yearly-donchian",
+      "name": "Donchian Breakout — Yearly",
+      "role": "strategy",
+      "horizon": "yearly",
+      "description": "Donchian Breakout scaled to a ~252-bar holding period on daily bars.",
+      "params": {
+        "entryPeriod": 252,
+        "exitPeriod": 126,
+        "atrPeriod": 50,
+        "atrStopMultiple": 4
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "entryPeriod"
+        },
+        "indicators": {
+          "channelHigh": {
+            "fn": "highestHigh",
+            "period": {
+              "param": "entryPeriod"
+            }
+          },
+          "channelLow": {
+            "fn": "lowestLow",
+            "period": {
+              "param": "exitPeriod"
+            }
+          },
+          "atr": {
+            "fn": "atr",
+            "period": {
+              "param": "atrPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                "channelHigh"
+              ]
+            },
+            "reason": "Close cleared the prior channel high"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "channelLow"
+              ]
+            },
+            "reason": "Close broke the prior channel low"
+          },
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "sub": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "mul": [
+                        "atr",
+                        {
+                          "param": "atrStopMultiple"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "ATR stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "horizon-fixed",
+      "name": "Control — Horizon Fixed Interval",
+      "role": "control",
+      "horizon": "none",
+      "controlFor": "any horizon-pack strategy sharing the same horizon param",
+      "description": "Exposure-matched horizon control: buys on a cadence derived from the horizon band and dutyCycle, holds the band span, and ignores price.",
+      "params": {
+        "horizon": "weekly",
+        "dutyCycle": 0.4,
+        "warmupBars": 1
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "const": "warmup"
+        },
+        "derived": {
+          "warmup": {
+            "max": [
+              1,
+              {
+                "trunc": {
+                  "param": "warmupBars"
+                }
+              }
+            ]
+          },
+          "hold": {
+            "lookup": {
+              "map": {
+                "daily": 2,
+                "weekly": 5,
+                "monthly": 21,
+                "yearly": 252
+              },
+              "key": {
+                "param": "horizon"
+              },
+              "default": 5
+            }
+          },
+          "duty": {
+            "min": [
+              0.95,
+              {
+                "max": [
+                  0.05,
+                  {
+                    "param": "dutyCycle"
+                  }
+                ]
+              }
+            ]
+          },
+          "cadence": {
+            "max": [
+              1,
+              {
+                "round": {
+                  "div": [
+                    {
+                      "lookup": {
+                        "map": {
+                          "daily": 2,
+                          "weekly": 5,
+                          "monthly": 21,
+                          "yearly": 252
+                        },
+                        "key": {
+                          "param": "horizon"
+                        },
+                        "default": 5
+                      }
+                    },
+                    {
+                      "min": [
+                        0.95,
+                        {
+                          "max": [
+                            0.05,
+                            {
+                              "param": "dutyCycle"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "state": {
+          "holdUntil": -1
+        },
+        "entry": [
+          {
+            "when": {
+              "eq": [
+                {
+                  "mod": [
+                    {
+                      "sub": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "const": "warmup"
+                        }
+                      ]
+                    },
+                    {
+                      "const": "cadence"
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            "set": {
+              "holdUntil": {
+                "add": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "const": "hold"
+                  }
+                ]
+              }
+            },
+            "reason": "Horizon control entry on the band cadence"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "index"
+                },
+                {
+                  "state": "holdUntil"
+                }
+              ]
+            },
+            "reason": "Horizon control exit after the band hold"
+          }
+        ]
+      }
+    },
+    {
+      "id": "horizon-random",
+      "name": "Control — Horizon Random Entry",
+      "role": "control",
+      "horizon": "none",
+      "controlFor": "any horizon-pack strategy sharing the same horizon param",
+      "description": "Turnover-matched horizon control: seeded pseudo-random entries whose rate and hold bounds derive from the horizon band. Vary seed to build a per-band null distribution.",
+      "params": {
+        "horizon": "weekly",
+        "seed": 1,
+        "dutyCycle": 0.4,
+        "warmupBars": 1
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "warmupBars"
+        },
+        "seed": {
+          "param": "seed"
+        },
+        "derived": {
+          "hold": {
+            "lookup": {
+              "map": {
+                "daily": 2,
+                "weekly": 5,
+                "monthly": 21,
+                "yearly": 252
+              },
+              "key": {
+                "param": "horizon"
+              },
+              "default": 5
+            }
+          },
+          "duty": {
+            "min": [
+              0.95,
+              {
+                "max": [
+                  0.05,
+                  {
+                    "param": "dutyCycle"
+                  }
+                ]
+              }
+            ]
+          },
+          "flatBars": {
+            "max": [
+              1,
+              {
+                "mul": [
+                  {
+                    "lookup": {
+                      "map": {
+                        "daily": 2,
+                        "weekly": 5,
+                        "monthly": 21,
+                        "yearly": 252
+                      },
+                      "key": {
+                        "param": "horizon"
+                      },
+                      "default": 5
+                    }
+                  },
+                  {
+                    "sub": [
+                      {
+                        "div": [
+                          1,
+                          {
+                            "min": [
+                              0.95,
+                              {
+                                "max": [
+                                  0.05,
+                                  {
+                                    "param": "dutyCycle"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "probability": {
+            "min": [
+              1,
+              {
+                "div": [
+                  1,
+                  {
+                    "max": [
+                      1,
+                      {
+                        "mul": [
+                          {
+                            "lookup": {
+                              "map": {
+                                "daily": 2,
+                                "weekly": 5,
+                                "monthly": 21,
+                                "yearly": 252
+                              },
+                              "key": {
+                                "param": "horizon"
+                              },
+                              "default": 5
+                            }
+                          },
+                          {
+                            "sub": [
+                              {
+                                "div": [
+                                  1,
+                                  {
+                                    "min": [
+                                      0.95,
+                                      {
+                                        "max": [
+                                          0.05,
+                                          {
+                                            "param": "dutyCycle"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              1
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "minHold": {
+            "max": [
+              1,
+              {
+                "round": {
+                  "mul": [
+                    {
+                      "lookup": {
+                        "map": {
+                          "daily": 2,
+                          "weekly": 5,
+                          "monthly": 21,
+                          "yearly": 252
+                        },
+                        "key": {
+                          "param": "horizon"
+                        },
+                        "default": 5
+                      }
+                    },
+                    0.5
+                  ]
+                }
+              }
+            ]
+          },
+          "maxHold": {
+            "max": [
+              1,
+              {
+                "round": {
+                  "mul": [
+                    {
+                      "lookup": {
+                        "map": {
+                          "daily": 2,
+                          "weekly": 5,
+                          "monthly": 21,
+                          "yearly": 252
+                        },
+                        "key": {
+                          "param": "horizon"
+                        },
+                        "default": 5
+                      }
+                    },
+                    1.5
+                  ]
+                }
+              }
+            ]
+          },
+          "span": {
+            "add": [
+              {
+                "sub": [
+                  {
+                    "max": [
+                      1,
+                      {
+                        "round": {
+                          "mul": [
+                            {
+                              "lookup": {
+                                "map": {
+                                  "daily": 2,
+                                  "weekly": 5,
+                                  "monthly": 21,
+                                  "yearly": 252
+                                },
+                                "key": {
+                                  "param": "horizon"
+                                },
+                                "default": 5
+                              }
+                            },
+                            1.5
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "max": [
+                      1,
+                      {
+                        "round": {
+                          "mul": [
+                            {
+                              "lookup": {
+                                "map": {
+                                  "daily": 2,
+                                  "weekly": 5,
+                                  "monthly": 21,
+                                  "yearly": 252
+                                },
+                                "key": {
+                                  "param": "horizon"
+                                },
+                                "default": 5
+                              }
+                            },
+                            0.5
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              1
+            ]
+          }
+        },
+        "state": {
+          "holdUntil": -1
+        },
+        "entry": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "var": "random"
+                },
+                {
+                  "const": "probability"
+                }
+              ]
+            },
+            "set": {
+              "holdUntil": {
+                "add": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "const": "minHold"
+                  },
+                  {
+                    "mod": [
+                      {
+                        "floor": {
+                          "mul": [
+                            {
+                              "div": [
+                                {
+                                  "var": "random"
+                                },
+                                {
+                                  "max": [
+                                    {
+                                      "const": "probability"
+                                    },
+                                    1e-12
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "const": "span"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "const": "span"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "reason": "Horizon control entry from a seeded draw"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "index"
+                },
+                {
+                  "state": "holdUntil"
+                }
+              ]
+            },
+            "reason": "Horizon control exit"
+          }
+        ]
+      }
+    }
+  ],
+  "pairings": [
+    {
+      "strategy": "daily-ema",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "daily"
+        },
+        "horizon-random": {
+          "horizon": "daily"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"daily\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "daily-rsi",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "daily"
+        },
+        "horizon-random": {
+          "horizon": "daily"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"daily\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "daily-donchian",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "daily"
+        },
+        "horizon-random": {
+          "horizon": "daily"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"daily\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "weekly-ema",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "weekly"
+        },
+        "horizon-random": {
+          "horizon": "weekly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"weekly\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "weekly-rsi",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "weekly"
+        },
+        "horizon-random": {
+          "horizon": "weekly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"weekly\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "weekly-donchian",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "weekly"
+        },
+        "horizon-random": {
+          "horizon": "weekly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"weekly\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "monthly-ema",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "monthly"
+        },
+        "horizon-random": {
+          "horizon": "monthly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"monthly\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "monthly-rsi",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "monthly"
+        },
+        "horizon-random": {
+          "horizon": "monthly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"monthly\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "monthly-donchian",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "monthly"
+        },
+        "horizon-random": {
+          "horizon": "monthly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"monthly\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "yearly-ema",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "yearly"
+        },
+        "horizon-random": {
+          "horizon": "yearly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"yearly\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "yearly-rsi",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "yearly"
+        },
+        "horizon-random": {
+          "horizon": "yearly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"yearly\". A control tuned to a different band measures turnover, not skill."
+    },
+    {
+      "strategy": "yearly-donchian",
+      "controls": [
+        "horizon-fixed",
+        "horizon-random",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "horizon-fixed": {
+          "horizon": "yearly"
+        },
+        "horizon-random": {
+          "horizon": "yearly"
+        }
+      },
+      "seeds": 20,
+      "notes": "Both controls must run with horizon=\"yearly\". A control tuned to a different band measures turnover, not skill."
+    }
+  ]
+}

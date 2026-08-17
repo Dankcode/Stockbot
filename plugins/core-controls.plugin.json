@@ -1,0 +1,336 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "core-controls",
+  "name": "Core control group",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "The null hypotheses every shared method should be measured against: passive same-asset exposure, an exposure-matched fixed cadence, and a seeded information-free random schedule. Install this before anything else; other plugins reference these controls by id.",
+  "requires": {
+    "capabilities": [
+      "backtest"
+    ],
+    "sources": [],
+    "secrets": [],
+    "promptTemplates": [],
+    "aiCli": false,
+    "notes": "No network, no AI, no credentials. Pure price-series logic that runs anywhere Stockbot has bars."
+  },
+  "methods": [
+    {
+      "id": "buy-and-hold",
+      "name": "Control — Buy and Hold",
+      "role": "benchmark",
+      "horizon": "none",
+      "controlFor": "any strategy, as the passive same-asset upper bound on exposure",
+      "description": "Buys on the first fillable bar and never sells. Usually the hardest benchmark in the set: beating SPY while trading a symbol that tripled is not an achievement.",
+      "params": {
+        "warmupBars": 1
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "warmupBars"
+        },
+        "entry": [
+          {
+            "when": true,
+            "reason": "Passive control entry: buy and hold to end of window"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fixed-interval",
+      "name": "Control — Fixed Interval",
+      "role": "control",
+      "horizon": "none",
+      "controlFor": "any strategy, once entryEveryBars and holdBars are tuned to match its exposure",
+      "description": "Buys every N bars and holds M bars, ignoring price entirely. Separates 'my rules pick good moments' from 'being in the market this often paid off'.",
+      "params": {
+        "entryEveryBars": 20,
+        "holdBars": 8,
+        "warmupBars": 1
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "const": "warmup"
+        },
+        "derived": {
+          "warmup": {
+            "max": [
+              1,
+              {
+                "trunc": {
+                  "param": "warmupBars"
+                }
+              }
+            ]
+          },
+          "cadence": {
+            "max": [
+              1,
+              {
+                "trunc": {
+                  "param": "entryEveryBars"
+                }
+              }
+            ]
+          },
+          "hold": {
+            "max": [
+              1,
+              {
+                "trunc": {
+                  "param": "holdBars"
+                }
+              }
+            ]
+          }
+        },
+        "state": {
+          "holdUntil": -1
+        },
+        "entry": [
+          {
+            "when": {
+              "eq": [
+                {
+                  "mod": [
+                    {
+                      "sub": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "const": "warmup"
+                        }
+                      ]
+                    },
+                    {
+                      "const": "cadence"
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            "set": {
+              "holdUntil": {
+                "add": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "const": "hold"
+                  }
+                ]
+              }
+            },
+            "reason": "Control entry on a fixed cadence"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "index"
+                },
+                {
+                  "state": "holdUntil"
+                }
+              ]
+            },
+            "reason": "Control exit after the fixed hold"
+          }
+        ]
+      }
+    },
+    {
+      "id": "random-entry",
+      "name": "Control — Random Entry",
+      "role": "control",
+      "horizon": "none",
+      "controlFor": "any strategy; vary seed across 10-20 runs to build a null distribution",
+      "description": "Deterministic seeded pseudo-random entries and exits carrying no market information. Judge a strategy against the distribution across seeds, never against one draw.",
+      "params": {
+        "seed": 1,
+        "entryProbability": 0.05,
+        "minHoldBars": 5,
+        "maxHoldBars": 20,
+        "warmupBars": 1
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "warmupBars"
+        },
+        "seed": {
+          "param": "seed"
+        },
+        "derived": {
+          "minHold": {
+            "max": [
+              1,
+              {
+                "trunc": {
+                  "param": "minHoldBars"
+                }
+              }
+            ]
+          },
+          "maxHold": {
+            "max": [
+              {
+                "max": [
+                  1,
+                  {
+                    "trunc": {
+                      "param": "minHoldBars"
+                    }
+                  }
+                ]
+              },
+              {
+                "trunc": {
+                  "param": "maxHoldBars"
+                }
+              }
+            ]
+          },
+          "span": {
+            "add": [
+              {
+                "sub": [
+                  {
+                    "max": [
+                      {
+                        "max": [
+                          1,
+                          {
+                            "trunc": {
+                              "param": "minHoldBars"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "trunc": {
+                          "param": "maxHoldBars"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "max": [
+                      1,
+                      {
+                        "trunc": {
+                          "param": "minHoldBars"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              1
+            ]
+          },
+          "probability": {
+            "min": [
+              1,
+              {
+                "max": [
+                  0,
+                  {
+                    "param": "entryProbability"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "state": {
+          "holdUntil": -1
+        },
+        "entry": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "var": "random"
+                },
+                {
+                  "const": "probability"
+                }
+              ]
+            },
+            "set": {
+              "holdUntil": {
+                "add": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "const": "minHold"
+                  },
+                  {
+                    "mod": [
+                      {
+                        "floor": {
+                          "mul": [
+                            {
+                              "div": [
+                                {
+                                  "var": "random"
+                                },
+                                {
+                                  "max": [
+                                    {
+                                      "const": "probability"
+                                    },
+                                    1e-12
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "const": "span"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "const": "span"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "reason": "Control entry from a seeded draw"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "index"
+                },
+                {
+                  "state": "holdUntil"
+                }
+              ]
+            },
+            "reason": "Control exit after the randomized hold"
+          }
+        ]
+      }
+    }
+  ],
+  "pairings": []
+}

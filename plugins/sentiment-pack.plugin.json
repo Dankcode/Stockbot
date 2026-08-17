@@ -1,0 +1,566 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "sentiment-pack",
+  "name": "News and social sentiment",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "The AI plugin: scrapers, prompt templates, CLI gather skills, and a gated/blind method pair that measures whether any of it is worth anything. X/Twitter is unreachable under this pipeline (paid auth, no credential or header support); Bluesky's keyless public AppView is the substitute.",
+  "requires": {
+    "capabilities": [
+      "backtest",
+      "research.web",
+      "research.ai",
+      "cli"
+    ],
+    "sources": [
+      "bluesky",
+      "stocktwits",
+      "reddit",
+      "nasdaq-news",
+      "sec-edgar"
+    ],
+    "secrets": [
+      "OPENAI_API_KEY"
+    ],
+    "promptTemplates": [
+      "social-sentiment.v1",
+      "catalyst-summary.v1"
+    ],
+    "aiCli": true,
+    "notes": "Secrets are NAMES only. Set the value in the protected env and add the name to AI_CLI_ENV_ALLOWLIST_JSON if the summarizer needs it. Verify stocktwits and reddit with npm run research:probe before relying on them; both block some non-browser clients."
+  },
+  "methods": [
+    {
+      "id": "gated-momentum",
+      "name": "Sentiment-Gated Momentum",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "EMA(9/21) entries permitted only when an archived snapshot is available, bullish, and at or above a confidence floor. Exits are ungated so a fetch failure can never trap capital.",
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8,
+        "minConfidence": 0.6,
+        "allowMixed": 0
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "or": [
+                    {
+                      "crossesAbove": [
+                        "fast",
+                        "slow"
+                      ]
+                    },
+                    {
+                      "and": [
+                        {
+                          "eq": [
+                            {
+                              "var": "index"
+                            },
+                            {
+                              "param": "slow"
+                            }
+                          ]
+                        },
+                        {
+                          "gt": [
+                            "fast",
+                            "slow"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "research": "available"
+                },
+                {
+                  "gte": [
+                    {
+                      "research": "confidence"
+                    },
+                    {
+                      "param": "minConfidence"
+                    }
+                  ]
+                },
+                {
+                  "or": [
+                    {
+                      "eq": [
+                        {
+                          "research": "sentiment"
+                        },
+                        {
+                          "value": "bullish"
+                        }
+                      ]
+                    },
+                    {
+                      "and": [
+                        {
+                          "eq": [
+                            {
+                              "param": "allowMixed"
+                            },
+                            1
+                          ]
+                        },
+                        {
+                          "eq": [
+                            {
+                              "research": "sentiment"
+                            },
+                            {
+                              "value": "mixed"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "confidence": {
+              "research": "confidence"
+            },
+            "reason": "EMA cross confirmed by bullish point-in-time research"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "div": [
+                            {
+                              "param": "stopLossPercent"
+                            },
+                            100
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Protective stop"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "blind-momentum",
+      "name": "Control — Sentiment Blind",
+      "role": "control",
+      "horizon": "none",
+      "controlFor": "gated-momentum",
+      "description": "Identical EMA(9/21) rules with the research gate removed. gated minus blind is the measured value of the entire research pipeline.",
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "div": [
+                            {
+                              "param": "stopLossPercent"
+                            },
+                            100
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Protective stop"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    }
+  ],
+  "research": [
+    {
+      "id": "social",
+      "name": "Retail social sentiment",
+      "description": "Public social posts about the symbol from Bluesky, StockTwits, and Reddit.",
+      "symbols": [
+        "*"
+      ],
+      "steps": [
+        {
+          "id": "bluesky-cashtag",
+          "kind": "scrape",
+          "sourceId": "bluesky",
+          "pathTemplate": "/xrpc/app.bsky.feed.searchPosts",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 1000000,
+          "query": {
+            "q": "${{symbol}}",
+            "sort": "latest",
+            "limit": "100"
+          }
+        },
+        {
+          "id": "bluesky-mentions",
+          "kind": "scrape",
+          "sourceId": "bluesky",
+          "pathTemplate": "/xrpc/app.bsky.feed.searchPosts",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 1000000,
+          "query": {
+            "q": "{{symbol}} stock",
+            "sort": "latest",
+            "limit": "100"
+          }
+        },
+        {
+          "id": "stocktwits-stream",
+          "kind": "scrape",
+          "sourceId": "stocktwits",
+          "pathTemplate": "/api/2/streams/symbol/{{symbol}}.json",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 750000
+        },
+        {
+          "id": "reddit-stocks",
+          "kind": "scrape",
+          "sourceId": "reddit",
+          "pathTemplate": "/r/stocks/search.json",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 1000000,
+          "query": {
+            "q": "{{symbol}}",
+            "restrict_sr": "1",
+            "sort": "new",
+            "limit": "50"
+          }
+        },
+        {
+          "id": "reddit-wsb",
+          "kind": "scrape",
+          "sourceId": "reddit",
+          "pathTemplate": "/r/wallstreetbets/search.json",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 1000000,
+          "query": {
+            "q": "{{symbol}}",
+            "restrict_sr": "1",
+            "sort": "new",
+            "limit": "50"
+          }
+        },
+        {
+          "id": "social-summary",
+          "kind": "summarize",
+          "dependsOn": [
+            "bluesky-cashtag",
+            "bluesky-mentions",
+            "stocktwits-stream",
+            "reddit-stocks",
+            "reddit-wsb"
+          ],
+          "template": "social-sentiment.v1",
+          "slots": {
+            "horizon": "weekly",
+            "emphasis": "balanced",
+            "audience": "systematic",
+            "avoid": [
+              "price target screenshots",
+              "unsourced rumour"
+            ]
+          },
+          "timeoutMs": 120000,
+          "maxInputBytes": 2000000
+        }
+      ],
+      "outputStep": "social-summary",
+      "delivery": {
+        "strategy": true,
+        "required": false,
+        "maxAgeMs": 14400000
+      }
+    },
+    {
+      "id": "news-social",
+      "name": "News and social trade analysis",
+      "description": "Recent news, the latest 8-K index, and social chatter as one point-in-time analysis. The plan intended for session pinning.",
+      "symbols": [
+        "*"
+      ],
+      "steps": [
+        {
+          "id": "news-headlines",
+          "kind": "scrape",
+          "sourceId": "nasdaq-news",
+          "pathTemplate": "/market-activity/stocks/{{symbol}}/news-headlines",
+          "format": "html",
+          "timeoutMs": 15000,
+          "maxBytes": 1000000
+        },
+        {
+          "id": "recent-disclosure",
+          "kind": "scrape",
+          "sourceId": "sec-edgar",
+          "pathTemplate": "/cgi-bin/browse-edgar",
+          "format": "html",
+          "timeoutMs": 15000,
+          "maxBytes": 750000,
+          "query": {
+            "action": "getcompany",
+            "ticker": "{{symbol}}",
+            "type": "8-K",
+            "dateb": "",
+            "owner": "include",
+            "count": "20"
+          }
+        },
+        {
+          "id": "bluesky-cashtag",
+          "kind": "scrape",
+          "sourceId": "bluesky",
+          "pathTemplate": "/xrpc/app.bsky.feed.searchPosts",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 1000000,
+          "query": {
+            "q": "${{symbol}}",
+            "sort": "latest",
+            "limit": "100"
+          }
+        },
+        {
+          "id": "stocktwits-stream",
+          "kind": "scrape",
+          "sourceId": "stocktwits",
+          "pathTemplate": "/api/2/streams/symbol/{{symbol}}.json",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 750000
+        },
+        {
+          "id": "reddit-wsb",
+          "kind": "scrape",
+          "sourceId": "reddit",
+          "pathTemplate": "/r/wallstreetbets/search.json",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 1000000,
+          "query": {
+            "q": "{{symbol}}",
+            "restrict_sr": "1",
+            "sort": "new",
+            "limit": "50"
+          }
+        },
+        {
+          "id": "trade-analysis",
+          "kind": "summarize",
+          "dependsOn": [
+            "news-headlines",
+            "recent-disclosure",
+            "bluesky-cashtag",
+            "stocktwits-stream",
+            "reddit-wsb"
+          ],
+          "template": "catalyst-summary.v1",
+          "slots": {
+            "focus": [
+              "8-K catalysts",
+              "guidance changes",
+              "unusual social volume"
+            ],
+            "horizon": "weekly",
+            "emphasis": "balanced"
+          },
+          "timeoutMs": 120000,
+          "maxInputBytes": 2000000
+        }
+      ],
+      "outputStep": "trade-analysis",
+      "delivery": {
+        "strategy": true,
+        "required": false,
+        "maxAgeMs": 21600000
+      }
+    }
+  ],
+  "cli": {
+    "skills": [
+      {
+        "id": "daily-sentiment-sweep",
+        "name": "Daily sentiment sweep",
+        "description": "Runs both research plans for each symbol and reports which produced a snapshot. Build coverage with this before comparing gated against blind, or the comparison measures scraper uptime.",
+        "gather": [
+          "news-social",
+          "social"
+        ],
+        "suggestedCadence": "daily",
+        "minSnapshots": 1
+      },
+      {
+        "id": "catalyst-only",
+        "name": "Catalyst-only gather",
+        "description": "Runs the news and disclosure plan without the social plan, for attributing an edge to primary sources rather than chatter.",
+        "gather": [
+          "news-social"
+        ],
+        "suggestedCadence": "daily",
+        "minSnapshots": 1
+      }
+    ]
+  },
+  "pairings": [
+    {
+      "strategy": "gated-momentum",
+      "controls": [
+        "blind-momentum",
+        "core-controls/random-entry",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "core-controls/random-entry": {
+          "entryProbability": 0.05,
+          "minHoldBars": 5,
+          "maxHoldBars": 20
+        }
+      },
+      "seeds": 20,
+      "notes": "blind-momentum is the counterfactual: identical rules, no research. Compare only over the range your snapshots actually cover."
+    }
+  ]
+}

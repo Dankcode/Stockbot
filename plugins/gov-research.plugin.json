@@ -1,0 +1,211 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "gov-research",
+  "name": "Government and disclosure research",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "Primary-source research: SEC filings and federal contract awards. Higher signal than social because every document is timestamped and attributable. SAM.gov and FPDS are documented dead ends — the first needs an API key in a query parameter, the second serves an unsupported content type.",
+  "requires": {
+    "capabilities": [
+      "research.web",
+      "research.ai",
+      "cli"
+    ],
+    "sources": [
+      "sec-edgar",
+      "sec-edgar-fts",
+      "dod-contracts",
+      "usaspending"
+    ],
+    "secrets": [],
+    "promptTemplates": [
+      "catalyst-summary.v1"
+    ],
+    "aiCli": true,
+    "notes": "SEC requires a contact-bearing User-Agent; the adapter's fixed UA has none, so EDGAR steps may 403. See docs/RESEARCH_SOURCES.md for the one-line fix. Register www.war.gov, not www.defense.gov — the latter 302s cross-host and the adapter blocks that."
+  },
+  "research": [
+    {
+      "id": "edgar",
+      "name": "SEC EDGAR filing catalysts",
+      "description": "8-K index, Form 4 insider activity, and full-text search hits for the symbol.",
+      "symbols": [
+        "*"
+      ],
+      "steps": [
+        {
+          "id": "recent-filings",
+          "kind": "scrape",
+          "sourceId": "sec-edgar",
+          "pathTemplate": "/cgi-bin/browse-edgar",
+          "format": "html",
+          "timeoutMs": 15000,
+          "maxBytes": 750000,
+          "query": {
+            "action": "getcompany",
+            "ticker": "{{symbol}}",
+            "type": "8-K",
+            "dateb": "",
+            "owner": "include",
+            "count": "40"
+          }
+        },
+        {
+          "id": "insider-filings",
+          "kind": "scrape",
+          "sourceId": "sec-edgar",
+          "pathTemplate": "/cgi-bin/browse-edgar",
+          "format": "html",
+          "timeoutMs": 15000,
+          "maxBytes": 750000,
+          "query": {
+            "action": "getcompany",
+            "ticker": "{{symbol}}",
+            "type": "4",
+            "dateb": "",
+            "owner": "only",
+            "count": "40"
+          }
+        },
+        {
+          "id": "full-text",
+          "kind": "scrape",
+          "sourceId": "sec-edgar-fts",
+          "pathTemplate": "/LATEST/search-index",
+          "format": "json",
+          "timeoutMs": 15000,
+          "maxBytes": 1000000,
+          "query": {
+            "q": "\"{{symbol}}\"",
+            "forms": "8-K,10-Q,10-K",
+            "from": "0",
+            "size": "20"
+          }
+        },
+        {
+          "id": "edgar-summary",
+          "kind": "summarize",
+          "dependsOn": [
+            "recent-filings",
+            "insider-filings",
+            "full-text"
+          ],
+          "template": "catalyst-summary.v1",
+          "slots": {
+            "focus": [
+              "material agreements",
+              "insider transactions",
+              "guidance changes"
+            ],
+            "emphasis": "drivers",
+            "horizon": "monthly"
+          },
+          "timeoutMs": 90000,
+          "maxInputBytes": 1500000
+        }
+      ],
+      "outputStep": "edgar-summary",
+      "delivery": {
+        "strategy": true,
+        "required": false,
+        "maxAgeMs": 86400000
+      }
+    },
+    {
+      "id": "contracts",
+      "name": "Federal contract award context",
+      "description": "Daily DoD contract announcements plus USAspending agency-level activity. Real signal for defense and aerospace names, close to noise elsewhere.",
+      "symbols": [
+        "*"
+      ],
+      "steps": [
+        {
+          "id": "dod-today",
+          "kind": "scrape",
+          "sourceId": "dod-contracts",
+          "pathTemplate": "/News/Contracts/",
+          "format": "html",
+          "timeoutMs": 20000,
+          "maxBytes": 1500000
+        },
+        {
+          "id": "dod-prior",
+          "kind": "scrape",
+          "sourceId": "dod-contracts",
+          "pathTemplate": "/News/Contracts/",
+          "format": "html",
+          "timeoutMs": 20000,
+          "maxBytes": 1500000,
+          "query": {
+            "Page": "2"
+          }
+        },
+        {
+          "id": "usaspending-dod",
+          "kind": "scrape",
+          "sourceId": "usaspending",
+          "pathTemplate": "/api/v2/agency/097/awards/",
+          "format": "json",
+          "timeoutMs": 20000,
+          "maxBytes": 500000
+        },
+        {
+          "id": "usaspending-freshness",
+          "kind": "scrape",
+          "sourceId": "usaspending",
+          "pathTemplate": "/api/v2/awards/last_updated/",
+          "format": "json",
+          "timeoutMs": 10000,
+          "maxBytes": 50000
+        },
+        {
+          "id": "contracts-summary",
+          "kind": "summarize",
+          "dependsOn": [
+            "dod-today",
+            "dod-prior",
+            "usaspending-dod",
+            "usaspending-freshness"
+          ],
+          "template": "catalyst-summary.v1",
+          "slots": {
+            "focus": [
+              "award value",
+              "awardee name",
+              "contract ceiling"
+            ],
+            "sector": "defense and aerospace",
+            "emphasis": "drivers",
+            "horizon": "monthly"
+          },
+          "timeoutMs": 90000,
+          "maxInputBytes": 2000000
+        }
+      ],
+      "outputStep": "contracts-summary",
+      "delivery": {
+        "strategy": true,
+        "required": false,
+        "maxAgeMs": 172800000
+      }
+    }
+  ],
+  "cli": {
+    "skills": [
+      {
+        "id": "primary-source-sweep",
+        "name": "Primary-source sweep",
+        "description": "Gathers filings and contract context for each symbol. Schedule from launchd or cron; never put a scheduler command inside plugin data.",
+        "gather": [
+          "edgar",
+          "contracts"
+        ],
+        "suggestedCadence": "daily",
+        "minSnapshots": 1
+      }
+    ]
+  },
+  "pairings": []
+}

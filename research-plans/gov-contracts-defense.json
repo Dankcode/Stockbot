@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "id": "gov-contracts-defense",
+  "name": "Federal contract award context",
+  "description": "Reads the daily Department of Defense contract announcements and USAspending agency-level award activity, then produces a bounded point-in-time summary of federal procurement conditions relevant to the symbol.",
+  "symbols": [
+    "*"
+  ],
+  "steps": [
+    {
+      "id": "dod-contracts-today",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "dod-contracts",
+        "pathTemplate": "/News/Contracts/",
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 20000,
+        "maxBytes": 1500000
+      }
+    },
+    {
+      "id": "dod-contracts-prior",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "dod-contracts",
+        "pathTemplate": "/News/Contracts/",
+        "query": {
+          "Page": "2"
+        },
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 20000,
+        "maxBytes": 1500000
+      }
+    },
+    {
+      "id": "usaspending-dod-awards",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "usaspending",
+        "pathTemplate": "/api/v2/agency/097/awards/",
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 20000,
+        "maxBytes": 500000
+      }
+    },
+    {
+      "id": "usaspending-freshness",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "usaspending",
+        "pathTemplate": "/api/v2/awards/last_updated/",
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 10000,
+        "maxBytes": 50000
+      }
+    },
+    {
+      "id": "contracts-summary",
+      "kind": "summarize",
+      "adapter": "ai.cli.summary.v1",
+      "dependsOn": [
+        "dod-contracts-today",
+        "dod-contracts-prior",
+        "usaspending-dod-awards",
+        "usaspending-freshness"
+      ],
+      "promptTemplate": "market-summary.v1",
+      "responseSchema": "market-summary.v1",
+      "limits": {
+        "timeoutMs": 90000,
+        "maxInputBytes": 2000000
+      }
+    }
+  ],
+  "outputStep": "contracts-summary",
+  "delivery": {
+    "strategy": true,
+    "required": false,
+    "maxAgeMs": 172800000
+  }
+}

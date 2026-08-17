@@ -1,0 +1,390 @@
+{
+  "horizons": {
+    "daily": {
+      "targetHoldBars": 2,
+      "label": "Daily"
+    },
+    "weekly": {
+      "targetHoldBars": 5,
+      "label": "Weekly"
+    },
+    "monthly": {
+      "targetHoldBars": 21,
+      "label": "Monthly"
+    },
+    "yearly": {
+      "targetHoldBars": 252,
+      "label": "Yearly"
+    }
+  },
+  "pairings": [
+    {
+      "horizon": "daily",
+      "method": "ema",
+      "strategy": "horizon-daily-ema.js",
+      "targetHoldBars": 2,
+      "params": {
+        "fast": 3,
+        "slow": 8,
+        "stopLossPercent": 3
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "daily"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "daily",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "daily",
+      "method": "rsi",
+      "strategy": "horizon-daily-rsi.js",
+      "targetHoldBars": 2,
+      "params": {
+        "period": 3,
+        "oversold": 25,
+        "exitLevel": 55,
+        "maxHoldBars": 3
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "daily"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "daily",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "daily",
+      "method": "donchian",
+      "strategy": "horizon-daily-donchian.js",
+      "targetHoldBars": 2,
+      "params": {
+        "entryPeriod": 5,
+        "exitPeriod": 3,
+        "atrPeriod": 7,
+        "atrStopMultiple": 1.5
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "daily"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "daily",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "weekly",
+      "method": "ema",
+      "strategy": "horizon-weekly-ema.js",
+      "targetHoldBars": 5,
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "weekly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "weekly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "weekly",
+      "method": "rsi",
+      "strategy": "horizon-weekly-rsi.js",
+      "targetHoldBars": 5,
+      "params": {
+        "period": 7,
+        "oversold": 30,
+        "exitLevel": 55,
+        "maxHoldBars": 10
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "weekly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "weekly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "weekly",
+      "method": "donchian",
+      "strategy": "horizon-weekly-donchian.js",
+      "targetHoldBars": 5,
+      "params": {
+        "entryPeriod": 20,
+        "exitPeriod": 10,
+        "atrPeriod": 14,
+        "atrStopMultiple": 2
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "weekly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "weekly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "monthly",
+      "method": "ema",
+      "strategy": "horizon-monthly-ema.js",
+      "targetHoldBars": 21,
+      "params": {
+        "fast": 21,
+        "slow": 55,
+        "stopLossPercent": 15
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "monthly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "monthly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "monthly",
+      "method": "rsi",
+      "strategy": "horizon-monthly-rsi.js",
+      "targetHoldBars": 21,
+      "params": {
+        "period": 21,
+        "oversold": 40,
+        "exitLevel": 55,
+        "maxHoldBars": 21
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "monthly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "monthly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "monthly",
+      "method": "donchian",
+      "strategy": "horizon-monthly-donchian.js",
+      "targetHoldBars": 21,
+      "params": {
+        "entryPeriod": 55,
+        "exitPeriod": 20,
+        "atrPeriod": 20,
+        "atrStopMultiple": 3
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "monthly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "monthly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "yearly",
+      "method": "ema",
+      "strategy": "horizon-yearly-ema.js",
+      "targetHoldBars": 252,
+      "params": {
+        "fast": 50,
+        "slow": 200,
+        "stopLossPercent": 30
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "yearly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "yearly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "yearly",
+      "method": "rsi",
+      "strategy": "horizon-yearly-rsi.js",
+      "targetHoldBars": 252,
+      "params": {
+        "period": 50,
+        "oversold": 45,
+        "exitLevel": 55,
+        "maxHoldBars": 252
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "yearly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "yearly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    },
+    {
+      "horizon": "yearly",
+      "method": "donchian",
+      "strategy": "horizon-yearly-donchian.js",
+      "targetHoldBars": 252,
+      "params": {
+        "entryPeriod": 252,
+        "exitPeriod": 126,
+        "atrPeriod": 50,
+        "atrStopMultiple": 4
+      },
+      "controls": {
+        "fixed": {
+          "file": "control-horizon-fixed.js",
+          "params": {
+            "horizon": "yearly"
+          }
+        },
+        "random": {
+          "file": "control-horizon-random.js",
+          "params": {
+            "horizon": "yearly",
+            "seed": "1..20"
+          }
+        },
+        "passive": {
+          "file": "control-buy-and-hold.js",
+          "params": {}
+        }
+      }
+    }
+  ]
+}

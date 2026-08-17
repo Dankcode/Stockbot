@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "id": "sec-edgar-filings",
+  "name": "SEC EDGAR filing catalysts",
+  "description": "Reads the issuer's recent EDGAR filing index and the EDGAR full-text search result set for the symbol, then produces a bounded point-in-time summary of disclosure-driven catalysts and risks.",
+  "symbols": [
+    "*"
+  ],
+  "steps": [
+    {
+      "id": "edgar-recent-filings",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "sec-edgar",
+        "pathTemplate": "/cgi-bin/browse-edgar",
+        "query": {
+          "action": "getcompany",
+          "ticker": "{{symbol}}",
+          "type": "8-K",
+          "dateb": "",
+          "owner": "include",
+          "count": "40"
+        },
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 750000
+      }
+    },
+    {
+      "id": "edgar-insider-filings",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "sec-edgar",
+        "pathTemplate": "/cgi-bin/browse-edgar",
+        "query": {
+          "action": "getcompany",
+          "ticker": "{{symbol}}",
+          "type": "4",
+          "dateb": "",
+          "owner": "only",
+          "count": "40"
+        },
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 750000
+      }
+    },
+    {
+      "id": "edgar-full-text",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "sec-edgar-fts",
+        "pathTemplate": "/LATEST/search-index",
+        "query": {
+          "q": "\"{{symbol}}\"",
+          "forms": "8-K,10-Q,10-K",
+          "from": "0",
+          "size": "20"
+        },
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "edgar-summary",
+      "kind": "summarize",
+      "adapter": "ai.cli.summary.v1",
+      "dependsOn": [
+        "edgar-recent-filings",
+        "edgar-insider-filings",
+        "edgar-full-text"
+      ],
+      "promptTemplate": "market-summary.v1",
+      "responseSchema": "market-summary.v1",
+      "limits": {
+        "timeoutMs": 90000,
+        "maxInputBytes": 1500000
+      }
+    }
+  ],
+  "outputStep": "edgar-summary",
+  "delivery": {
+    "strategy": true,
+    "required": false,
+    "maxAgeMs": 86400000
+  }
+}

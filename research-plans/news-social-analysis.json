@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "id": "news-social-analysis",
+  "name": "News and social trade analysis",
+  "description": "Combines recent market news, the issuer's latest SEC disclosure, and public social chatter into a single bounded point-in-time analysis. This is the plan intended for session pinning by a sentiment-gated strategy.",
+  "symbols": [
+    "*"
+  ],
+  "steps": [
+    {
+      "id": "news-headlines",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "nasdaq-news",
+        "pathTemplate": "/market-activity/stocks/{{symbol}}/news-headlines",
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "recent-disclosure",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "sec-edgar",
+        "pathTemplate": "/cgi-bin/browse-edgar",
+        "query": {
+          "action": "getcompany",
+          "ticker": "{{symbol}}",
+          "type": "8-K",
+          "dateb": "",
+          "owner": "include",
+          "count": "20"
+        },
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 750000
+      }
+    },
+    {
+      "id": "bluesky-cashtag",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "bluesky",
+        "pathTemplate": "/xrpc/app.bsky.feed.searchPosts",
+        "query": {
+          "q": "${{symbol}}",
+          "sort": "latest",
+          "limit": "100"
+        },
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "stocktwits-stream",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "stocktwits",
+        "pathTemplate": "/api/2/streams/symbol/{{symbol}}.json",
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 750000
+      }
+    },
+    {
+      "id": "reddit-wallstreetbets",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "reddit",
+        "pathTemplate": "/r/wallstreetbets/search.json",
+        "query": {
+          "q": "{{symbol}}",
+          "restrict_sr": "1",
+          "sort": "new",
+          "limit": "50"
+        },
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "trade-analysis",
+      "kind": "summarize",
+      "adapter": "ai.cli.summary.v1",
+      "dependsOn": [
+        "news-headlines",
+        "recent-disclosure",
+        "bluesky-cashtag",
+        "stocktwits-stream",
+        "reddit-wallstreetbets"
+      ],
+      "promptTemplate": "market-summary.v1",
+      "responseSchema": "market-summary.v1",
+      "limits": {
+        "timeoutMs": 120000,
+        "maxInputBytes": 2000000
+      }
+    }
+  ],
+  "outputStep": "trade-analysis",
+  "delivery": {
+    "strategy": true,
+    "required": false,
+    "maxAgeMs": 21600000
+  }
+}

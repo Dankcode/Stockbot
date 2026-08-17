@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "id": "catalyst-composite",
+  "name": "Composite catalyst summary",
+  "description": "Combines SEC disclosure, federal contract announcements, and retail market news into a single bounded point-in-time summary. This is the plan intended for session pinning; the single-source plans exist for isolating where a signal comes from.",
+  "symbols": [
+    "*"
+  ],
+  "steps": [
+    {
+      "id": "edgar-recent-filings",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "sec-edgar",
+        "pathTemplate": "/cgi-bin/browse-edgar",
+        "query": {
+          "action": "getcompany",
+          "ticker": "{{symbol}}",
+          "type": "8-K",
+          "dateb": "",
+          "owner": "include",
+          "count": "40"
+        },
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 750000
+      }
+    },
+    {
+      "id": "edgar-full-text",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "sec-edgar-fts",
+        "pathTemplate": "/LATEST/search-index",
+        "query": {
+          "q": "\"{{symbol}}\"",
+          "forms": "8-K",
+          "from": "0",
+          "size": "20"
+        },
+        "format": "json"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 750000
+      }
+    },
+    {
+      "id": "dod-contracts-today",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "dod-contracts",
+        "pathTemplate": "/News/Contracts/",
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 20000,
+        "maxBytes": 1500000
+      }
+    },
+    {
+      "id": "nasdaq-headlines",
+      "kind": "scrape",
+      "adapter": "web.page.v1",
+      "request": {
+        "sourceId": "nasdaq-news",
+        "pathTemplate": "/market-activity/stocks/{{symbol}}/news-headlines",
+        "format": "html"
+      },
+      "limits": {
+        "timeoutMs": 15000,
+        "maxBytes": 1000000
+      }
+    },
+    {
+      "id": "composite-summary",
+      "kind": "summarize",
+      "adapter": "ai.cli.summary.v1",
+      "dependsOn": [
+        "edgar-recent-filings",
+        "edgar-full-text",
+        "dod-contracts-today",
+        "nasdaq-headlines"
+      ],
+      "promptTemplate": "market-summary.v1",
+      "responseSchema": "market-summary.v1",
+      "limits": {
+        "timeoutMs": 120000,
+        "maxInputBytes": 2000000
+      }
+    }
+  ],
+  "outputStep": "composite-summary",
+  "delivery": {
+    "strategy": true,
+    "required": false,
+    "maxAgeMs": 43200000
+  }
+}

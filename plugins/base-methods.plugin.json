@@ -1,0 +1,357 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "base-methods",
+  "name": "Base trading methods",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "The three reference methods as JSON rules: trend-following EMA momentum, RSI mean reversion, and the Donchian turtle breakout. Each pairs with the core control group.",
+  "requires": {
+    "capabilities": [
+      "backtest"
+    ],
+    "sources": [],
+    "secrets": [],
+    "promptTemplates": [],
+    "aiCli": false
+  },
+  "methods": [
+    {
+      "id": "ema-momentum",
+      "name": "EMA Momentum Cross",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Buys when EMA(9) crosses above EMA(21); exits on the cross-down or an 8% protective stop.",
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "div": [
+                            {
+                              "param": "stopLossPercent"
+                            },
+                            100
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Protective stop"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rsi-mean-reversion",
+      "name": "RSI Mean Reversion",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Buys when RSI(14) recovers up through 30; exits when RSI reaches 55 or after 20 bars.",
+      "params": {
+        "period": 14,
+        "oversold": 30,
+        "exitLevel": 55,
+        "maxHoldBars": 20
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "add": [
+            {
+              "param": "period"
+            },
+            1
+          ]
+        },
+        "indicators": {
+          "rsi": {
+            "fn": "rsi",
+            "period": {
+              "param": "period"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "lt": [
+                    {
+                      "series": {
+                        "name": "rsi",
+                        "offset": 1
+                      }
+                    },
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                },
+                {
+                  "gte": [
+                    "rsi",
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "RSI recovered up through the oversold threshold"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                "rsi",
+                {
+                  "param": "exitLevel"
+                }
+              ]
+            },
+            "reason": "RSI reverted to the exit level"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Time stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "donchian-breakout",
+      "name": "Donchian Breakout (Turtle)",
+      "role": "strategy",
+      "horizon": "monthly",
+      "description": "Buys a close above the prior 20-bar high; exits below the prior 10-bar low or a 2x ATR(14) stop.",
+      "params": {
+        "entryPeriod": 20,
+        "exitPeriod": 10,
+        "atrPeriod": 14,
+        "atrStopMultiple": 2
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "entryPeriod"
+        },
+        "indicators": {
+          "channelHigh": {
+            "fn": "highestHigh",
+            "period": {
+              "param": "entryPeriod"
+            }
+          },
+          "channelLow": {
+            "fn": "lowestLow",
+            "period": {
+              "param": "exitPeriod"
+            }
+          },
+          "atr": {
+            "fn": "atr",
+            "period": {
+              "param": "atrPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                "channelHigh"
+              ]
+            },
+            "reason": "Close cleared the prior channel high"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "channelLow"
+              ]
+            },
+            "reason": "Close broke the prior channel low"
+          },
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "sub": [
+                    {
+                      "position": "entryPrice"
+                    },
+                    {
+                      "mul": [
+                        "atr",
+                        {
+                          "param": "atrStopMultiple"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "ATR stop"
+          }
+        ]
+      }
+    }
+  ],
+  "pairings": [
+    {
+      "strategy": "ema-momentum",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20,
+      "notes": "Tune fixed-interval until its exposurePercent matches the strategy's, then compare."
+    },
+    {
+      "strategy": "rsi-mean-reversion",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20,
+      "notes": "Tune fixed-interval until its exposurePercent matches the strategy's, then compare."
+    },
+    {
+      "strategy": "donchian-breakout",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20,
+      "notes": "Tune fixed-interval until its exposurePercent matches the strategy's, then compare."
+    }
+  ]
+}

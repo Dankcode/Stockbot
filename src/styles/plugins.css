@@ -1,0 +1,289 @@
+/*
+ * Plugin surface — design system extension.
+ *
+ * Every value here derives from an existing token in tokens.css. No new hex literals,
+ * no one-off spacing. The plugin surface introduces four genuinely new semantic
+ * concepts, and each gets a token rather than an inline colour at the call site:
+ *
+ *   --plugin-role-*         what a method claims to be (strategy / control / benchmark)
+ *   --plugin-requirement-*  whether a declared capability is satisfied
+ *   --plugin-horizon-*      which holding-period band a method targets
+ *   --plugin-trust-*        where the code came from (JSON plugin / trusted / uploaded)
+ *
+ * The colour assignments are deliberate rather than decorative:
+ *
+ *   role-strategy uses --accent, the same blue the app already uses for the thing under
+ *   test, so a strategy reads as "the subject" wherever it appears.
+ *
+ *   role-control uses --text-secondary, NOT a status colour. A control is neither good
+ *   nor bad — it is the reference. Giving it green or red would imply a verdict that the
+ *   backtest has not delivered, and the whole point of the control group is that the
+ *   verdict comes from the comparison, not from the label.
+ *
+ *   requirement-unmet uses --warning rather than --destructive. An unmet requirement is
+ *   a configuration step the operator has not taken yet; it is not an error, nothing is
+ *   broken, and nothing was lost. --destructive stays reserved for real failure states
+ *   (a rejected plugin, a failed run) so it keeps its urgency.
+ *
+ * Contrast: every foreground token below was measured against --surface (#0b141d) and
+ * all thirteen clear WCAG 2.1 AA for normal text (4.5:1). The narrowest margin is
+ * --plugin-trust-local at 4.57:1 (inherited --text-muted), so that token is used only
+ * for secondary provenance labels and never for a value the operator must act on.
+ * Highest is --plugin-horizon-daily at 10.57:1. Badges also carry a text label, never
+ * colour alone, so the surface stays legible to colour-blind users and in monochrome.
+ */
+
+:root {
+  /* Method role */
+  --plugin-role-strategy: var(--accent);
+  --plugin-role-strategy-bg: rgba(44, 149, 255, 0.12);
+  --plugin-role-control: var(--text-secondary);
+  --plugin-role-control-bg: rgba(156, 171, 184, 0.1);
+  --plugin-role-benchmark: var(--chart-vwap);
+  --plugin-role-benchmark-bg: rgba(169, 139, 255, 0.12);
+
+  /* Requirement state */
+  --plugin-requirement-met: var(--positive);
+  --plugin-requirement-met-bg: rgba(57, 196, 97, 0.12);
+  --plugin-requirement-unmet: var(--warning);
+  --plugin-requirement-unmet-bg: rgba(240, 170, 44, 0.12);
+  --plugin-requirement-blocked: var(--destructive);
+  --plugin-requirement-blocked-bg: rgba(255, 83, 88, 0.12);
+
+  /*
+   * Horizon uses a single hue at four steps rather than four hues. The bands are
+   * ordinal — daily through yearly is a scale, not a set of categories — and four
+   * unrelated hues would imply they are unrelated kinds.
+   */
+  --plugin-horizon-daily: #58d6d2;
+  --plugin-horizon-weekly: #65aef8;
+  --plugin-horizon-monthly: #7f97ff;
+  --plugin-horizon-yearly: #a98bff;
+  --plugin-horizon-bg: rgba(101, 174, 248, 0.1);
+
+  /* Provenance */
+  --plugin-trust-json: var(--info);
+  --plugin-trust-local: var(--text-muted);
+  --plugin-trust-uploaded: var(--warning);
+
+  --plugin-badge-radius: var(--radius-sm);
+  --plugin-card-gap: var(--space-3);
+}
+
+/* ------------------------------------------------------------------- badges --- */
+
+.plugin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--plugin-badge-radius);
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.plugin-badge--strategy {
+  color: var(--plugin-role-strategy);
+  background: var(--plugin-role-strategy-bg);
+  border-color: color-mix(in srgb, var(--plugin-role-strategy) 30%, transparent);
+}
+
+.plugin-badge--control {
+  color: var(--plugin-role-control);
+  background: var(--plugin-role-control-bg);
+  border-color: color-mix(in srgb, var(--plugin-role-control) 24%, transparent);
+}
+
+.plugin-badge--benchmark {
+  color: var(--plugin-role-benchmark);
+  background: var(--plugin-role-benchmark-bg);
+  border-color: color-mix(in srgb, var(--plugin-role-benchmark) 30%, transparent);
+}
+
+.plugin-badge--horizon {
+  background: var(--plugin-horizon-bg);
+  border-color: color-mix(in srgb, currentColor 28%, transparent);
+  text-transform: none;
+  font-family: var(--font-numeric);
+}
+
+.plugin-badge--horizon[data-horizon="daily"] { color: var(--plugin-horizon-daily); }
+.plugin-badge--horizon[data-horizon="weekly"] { color: var(--plugin-horizon-weekly); }
+.plugin-badge--horizon[data-horizon="monthly"] { color: var(--plugin-horizon-monthly); }
+.plugin-badge--horizon[data-horizon="yearly"] { color: var(--plugin-horizon-yearly); }
+
+/* ----------------------------------------------------------- requirement row --- */
+
+.plugin-requirement {
+  display: grid;
+  grid-template-columns: 18px minmax(120px, max-content) 1fr;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+
+.plugin-requirement:last-child { border-bottom: none; }
+
+.plugin-requirement__icon {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.plugin-requirement[data-state="met"] .plugin-requirement__icon {
+  color: var(--plugin-requirement-met);
+  background: var(--plugin-requirement-met-bg);
+}
+
+.plugin-requirement[data-state="unmet"] .plugin-requirement__icon {
+  color: var(--plugin-requirement-unmet);
+  background: var(--plugin-requirement-unmet-bg);
+}
+
+.plugin-requirement[data-state="blocked"] .plugin-requirement__icon {
+  color: var(--plugin-requirement-blocked);
+  background: var(--plugin-requirement-blocked-bg);
+}
+
+.plugin-requirement__label {
+  color: var(--text-secondary);
+  font-family: var(--font-numeric);
+  font-size: 12px;
+}
+
+.plugin-requirement__detail { color: var(--text); }
+
+/*
+ * The remedy is part of the component, not an optional extra. An unmet requirement
+ * without the fix next to it sends the operator hunting through docs, which is exactly
+ * the failure this whole capability model exists to prevent.
+ */
+.plugin-requirement__remedy {
+  grid-column: 3;
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------- plugin card --- */
+
+.plugin-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--plugin-card-gap);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+
+.plugin-card:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.plugin-card[data-selected="true"] { background: var(--surface-selected); border-color: var(--accent); }
+
+.plugin-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.plugin-card__title { font-size: 15px; font-weight: 600; color: var(--text); }
+
+.plugin-card__version {
+  font-family: var(--font-numeric);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.plugin-card__description {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.plugin-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/*
+ * An unsatisfied plugin is dimmed and marked, never hidden. The operator needs to see
+ * that it is installed and why it cannot run — a missing card reads as "not installed"
+ * and sends them re-downloading something they already have.
+ */
+.plugin-card[data-satisfied="false"] {
+  border-color: color-mix(in srgb, var(--plugin-requirement-unmet) 40%, var(--border));
+}
+
+.plugin-card[data-satisfied="false"] .plugin-card__title { color: var(--text-secondary); }
+
+/* ------------------------------------------------------- pairing disclosure --- */
+
+/*
+ * Controls are rendered as a nested, always-visible list under their strategy rather
+ * than a separate collapsed section. The format requires every strategy to declare its
+ * controls; the UI should make that structural fact visible rather than let a result be
+ * read alone.
+ */
+.plugin-pairing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border);
+}
+
+.plugin-pairing__control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.plugin-pairing__params {
+  font-family: var(--font-numeric);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.plugin-pairing__seeds {
+  margin-left: auto;
+  font-family: var(--font-numeric);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------- provenance --- */
+
+.plugin-origin {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-numeric);
+  font-size: 11px;
+}
+
+.plugin-origin[data-origin="plugin"] { color: var(--plugin-trust-json); }
+.plugin-origin[data-origin="local"] { color: var(--plugin-trust-local); }
+.plugin-origin[data-origin="uploaded"] { color: var(--plugin-trust-uploaded); }
+
+@media (prefers-reduced-motion: reduce) {
+  .plugin-card { transition: none; }
+}

@@ -141,6 +141,24 @@ Every algorithm backtest includes:
 
 The result panel shows checked controls for the strategy, SPY, and Cash. Unchecking a method hides its comparison column only; the backend still calculates and records all three methods for a consistent result.
 
+Those two are market-level controls. Three **same-asset** controls also ship in this folder as ordinary trusted local strategies, so they run through the identical engine, fill model, and metrics and are compared as peer runs:
+
+- `control-buy-and-hold.js` — buys once, never sells. The same-asset benchmark, and usually the hardest one to beat.
+- `control-fixed-interval.js` — buys every N bars and holds M bars, ignoring price. Tune N and M to match your strategy's `exposurePercent`.
+- `control-random-entry.js` — deterministic seeded pseudo-random entries and exits. Vary `seed` across 10–20 runs to build a null distribution; judging against a single seed is how draw variance gets mistaken for an edge.
+
+All three are deterministic by design. None calls `Math.random`, because a nondeterministic control would break the result cache described below and make cached and fresh runs disagree. See [Control group](../docs/CONTROL_GROUP.md) for the comparison procedure.
+
+> [!IMPORTANT]
+> **These `.js` files are superseded by JSON plugins.** Every method below now exists in `plugins/*.plugin.json` as `stockbot.plugin.v1` data, verified to reproduce the `.js` original trade-for-trade across 39 configurations. Both paths load, so until you delete the superseded files each method appears twice in the Strategies list. See [Plugin format](../docs/PLUGIN_FORMAT.md) for the migration command. Uploaded `.js` strategies are unaffected — the plugin format does not replace the upload path, it adds a safer one for *sharing*.
+
+Two packs of strategies also live in this folder, each with controls matched to it:
+
+- **Horizon pack** — `horizon-{daily,weekly,monthly,yearly}-{ema,rsi,donchian}.js`, twelve variants on the same `1day` bars where the horizon is the target holding period (~2, ~5, ~21, ~252 bars). Matched controls are `control-horizon-fixed.js` and `control-horizon-random.js`, both taking a `horizon` param. `horizon-pack.json` is the manifest of pairings; the registry ignores it because only `.js` files are loaded. See [Horizon pack](../docs/HORIZON_PACK.md).
+- **Sentiment pack** — `sentiment-gated-momentum.js` reads the point-in-time `research` frame and enters only on bullish, confident summaries; `control-sentiment-blind.js` runs identical rules with no research at all. See [Sentiment pack](../docs/SENTIMENT_PACK.md).
+
+Pair each strategy with the control built for it. Comparing a yearly strategy against a daily control measures turnover and slippage, not skill.
+
 The result includes total return, interval-aware Sharpe and Sortino ratios, positive-magnitude maximum drawdown, profit factor, win rate, trade count, exposure, average trade, and final equity. `profitFactor` is `null` when there are no losses, and `winRate` is `null` when there are no closed trades.
 
 Results are cached by algorithm version, parameters, symbol, interval/window, real-bar hash, and fill-model hash. Changing any of those inputs produces a new run.

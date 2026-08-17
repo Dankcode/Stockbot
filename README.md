@@ -81,16 +81,33 @@ export default {
 
 See the complete [algorithm contract](./algorithms/README.md) before sharing or installing untrusted code.
 
+### Or install a JSON plugin
+
+Uploading `.js` is right for strategies you wrote. For methods **shared between people**, `stockbot.plugin.v1` carries the same logic as data — a frozen rule tree walked by an interpreter with a closed operator set, a node budget, and a nesting cap. No `eval`, no dynamic import, no string ever compiled. The worst a malicious method can do is return a wrong number.
+
+```bash
+npm run plugin -- list
+npm run plugin -- inspect --plugin horizon-pack
+npm run plugin -- requirements --env-file "$HOME/.config/stockbot/stockbot.env"
+```
+
+A plugin **declares** what it needs — source ids, secret NAMES, prompt templates, whether an AI CLI is required — and never supplies any of it. Unmet requirements fail loudly at install with the exact remedy, instead of surfacing weeks later as a research-gated strategy that mysteriously never trades. Every `role: "strategy"` method must name its controls or validation rejects the file.
+
+Five bundles ship in `plugins/`: `core-controls`, `base-methods`, `horizon-pack`, `sentiment-pack`, and `gov-research`. All 39 method configurations were verified to reproduce their `.js` originals trade-for-trade. See [Plugin format](./docs/PLUGIN_FORMAT.md).
+
 ### 5. Add optional AI research
 
 Stockbot can run strict JSON research plans through two code-owned adapters: a registered-origin HTTPS reader and an operator-configured JSON-in/JSON-out AI CLI. Plans cannot name executables, inject arguments or environment variables, or fetch arbitrary origins. The resulting summaries and source provenance are immutable SQL snapshots that a strategy can read only when they existed by that bar's canonical decision timestamp (`bar.time`).
 
 ```bash
 npm run research -- adapters
-npm run research -- validate --file research-plans/example-market-summary.json
+npm run research -- validate --file research-plans/catalyst-composite.json
+npm run research:probe -- --symbol NVDA
 ```
 
 Research is disabled until the server operator configures at least one exact HTTPS origin and an AI CLI. See [AI research](./docs/AI_RESEARCH.md) for the protocol, configuration, import/run commands, and session pinning.
+
+Four plans ship in `research-plans/`: `sec-edgar-filings` (8-K, Form 4, full-text search), `gov-contracts-defense` (daily DoD contract announcements plus USAspending agency activity), `market-news-sentiment` (Nasdaq and Finviz), and `catalyst-composite`, which combines all three and is the one intended for session pinning. The single-source plans exist so you can attribute an edge to a specific source rather than to the bundle. `npm run research:probe` issues one real request per scrape step through the adapter's actual guardrails and names whichever guardrail rejected a source. See [Research sources](./docs/RESEARCH_SOURCES.md) for per-source authorization status and the two documented dead ends — SAM.gov's required API key and FPDS's unsupported content type.
 
 ## Tested methods
 
@@ -103,6 +120,30 @@ Every ad-hoc strategy backtest calculates all three methods from real provider b
 | Cash | ✅ | Flat `$100,000` control with no market exposure |
 
 Signals are evaluated after bar `N` closes and can fill only at bar `N+1`'s open. A final-bar signal remains unfilled instead of receiving a fabricated price.
+
+Beating SPY and Cash is the floor, not the finding. Three **same-asset** controls ship in `algorithms/` and run as ordinary peer strategies through the identical engine, fill model, and metrics:
+
+| Control file | Question it answers |
+|---|---|
+| `control-buy-and-hold.js` | Did the rules beat simply owning the symbol they traded? |
+| `control-fixed-interval.js` | Or did being in the market ~40% of the time do the work? |
+| `control-random-entry.js` | Would *any* information-free schedule have looked the same? |
+
+`control-random-entry.js` is deterministic and seeded, so results stay reproducible and cacheable. Vary `seed` across 10–20 runs and compare the strategy against the resulting distribution rather than one draw — on a 400-bar test series, ten seeds spanned −31% to +160% and one of them beat buy-and-hold outright. See [Control group](./docs/CONTROL_GROUP.md) for the full procedure.
+
+### Horizon pack
+
+Three methods — EMA momentum, RSI mean reversion, Donchian breakout — each scaled to four holding-period horizons, with controls matched to every band:
+
+```bash
+npm run horizon:matrix -- --symbol NVDA --range ALL --seeds 20
+```
+
+All twelve variants read the same `1day` bars; daily/weekly/monthly/yearly is the target holding period (~2, ~5, ~21, ~252 bars), because the engine has no yearly interval and resampling would change the data as well as the horizon. `control-horizon-fixed.js` and `control-horizon-random.js` take the same `horizon` param so turnover and exposure are matched band by band — comparing a yearly strategy against a daily control measures transaction costs, not skill. See [Horizon pack](./docs/HORIZON_PACK.md).
+
+### Sentiment pack
+
+`sentiment-gated-momentum.js` runs EMA(9/21) entries gated on an archived research snapshot being bullish and confident; `control-sentiment-blind.js` runs the identical rules with the gate removed. The difference between them is the measured value of the entire research pipeline. Pin `news-social-analysis` to the gated session and see [Sentiment pack](./docs/SENTIMENT_PACK.md).
 
 ## Choose where data lives
 
@@ -233,8 +274,14 @@ All routes live under `/api/v1` and use validated `{ data, meta }` or `{ error }
 
 ## Deeper documentation
 
+- [Plugin format — stockbot.plugin.v1](./docs/PLUGIN_FORMAT.md)
+- [Plugin surface design system](./docs/PLUGIN_DESIGN_SYSTEM.md)
 - [Algorithm format](./algorithms/README.md)
+- [Control group and how to read a result](./docs/CONTROL_GROUP.md)
+- [Horizon pack — daily/weekly/monthly/yearly with matched controls](./docs/HORIZON_PACK.md)
+- [Sentiment pack — news and social, gated vs blind](./docs/SENTIMENT_PACK.md)
 - [AI research pipeline](./docs/AI_RESEARCH.md)
+- [Research source catalogue](./docs/RESEARCH_SOURCES.md)
 - [Laptop deployment](./docs/LAPTOP_DEPLOYMENT.md)
 - [Database operations](./docs/DATABASE_OPERATIONS.md)
 - [Revision plan and architecture decisions](./docs/plan/00-README.md)
