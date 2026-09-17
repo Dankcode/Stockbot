@@ -154,10 +154,10 @@ test("metrics use positive drawdown, interval-aware Sharpe, and nullable empty r
 test("bundled algorithms load and match the deterministic golden results", async () => {
   const registry = await loadAlgorithmRegistry({ algorithmsDir: new URL("../../algorithms", import.meta.url).pathname });
   assert.deepEqual(registry.errors, []);
-  assert.deepEqual(
-    registry.algorithms.map((algorithm) => algorithm.id),
-    ["donchian-breakout", "ema-momentum", "rsi-mean-reversion"]
-  );
+  const loadedIds = registry.algorithms.map((algorithm) => algorithm.id);
+  // This deliberately fails when a newly bundled algorithm has no reviewed
+  // baseline. A passing registry load alone is not enough for trading code.
+  assert.deepEqual(loadedIds, Object.keys(bundledAlgorithmGolden));
 
   for (const registered of registry.algorithms) {
     const result = runBacktest({ bars: deterministicBars, algorithm: registered.algorithm, interval: "1day" });

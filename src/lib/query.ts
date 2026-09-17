@@ -96,7 +96,15 @@ export function useQuery<T>(key: string, fetcher: () => Promise<T>, options: Que
     React.useCallback(() => entryFor<T>(key), [key])
   );
 
-  const refetch = React.useCallback(() => execute(key, () => fetcherRef.current()).catch(() => undefined), [key]);
+  const enabledRef = React.useRef(enabled);
+  enabledRef.current = enabled;
+
+  const refetch = React.useCallback(async () => {
+    // A disabled query has no valid inputs yet (no symbol selected, empty search box).
+    // Firing it anyway builds a malformed URL and surfaces a 404 as a data error.
+    if (!enabledRef.current) return undefined;
+    return execute(key, () => fetcherRef.current()).catch(() => undefined);
+  }, [key]);
 
   React.useEffect(() => {
     if (!enabled) return;

@@ -29,7 +29,10 @@ test("modular server boots with versioned envelopes and protects mutations", asy
   });
   assert.equal(typeof runtime.app, "function");
   assert.deepEqual(await runtime.database.health(), { ok: true, dialect: "sqlite" });
-  assert.equal((await runtime.algorithms.list()).algorithms.length, 3);
+  const bundledIds = (await runtime.algorithms.list()).algorithms.map((algorithm) => algorithm.id);
+  assert.ok(bundledIds.includes("ema-momentum"));
+  assert.ok(bundledIds.includes("rsi-mean-reversion"));
+  assert.ok(bundledIds.includes("donchian-breakout"));
 
   let denied;
   mutationAuth(config)(

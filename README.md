@@ -26,11 +26,13 @@
 
 The same fill model powers backtests and paper sessions. Strategy versions, parameters, bar hashes, slippage, commissions, results, and session events stay attributable and reproducible.
 
-## The five-minute path
+## Quickstart
 
-### 1. Run Stockbot
+> **New here?** The [usage guide](./docs/USAGE.md) walks the same path with screenshots' worth of detail — including how to read a result without fooling yourself. Every command has a full entry in the [CLI reference](./docs/CLI.md).
 
-Requirements: Node.js 22+, npm, and at least one market-data provider for prices and charts.
+### 1. Install and run
+
+Requires **Node.js 22+** and npm.
 
 ```bash
 git clone https://github.com/Dankcode/Stockbot.git
@@ -40,28 +42,36 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. Development uses SQLite unless `DATABASE_URL` selects PostgreSQL.
+Open **`http://127.0.0.1:5173`** — the dashboard. The API runs alongside it on `127.0.0.1:4000` and Vite proxies to it, so 5173 is the only address you visit. Development uses SQLite unless `DATABASE_URL` selects PostgreSQL; migrations run forward at startup.
 
-### 2. Authorize this browser tab
+### 2. Authorize the browser tab
 
-Generate/configure a 32+ character `STOCKBOT_API_TOKEN`, then paste that same value into **Settings → API mutation token → Set for session**. It stays in that tab's `sessionStorage`, is sent only on mutations, and is never compiled into the frontend.
+Reads work without a token, so an unauthorized tab looks *almost* functional — a failed upload is nearly always this. Put a 32+ character `STOCKBOT_API_TOKEN` in `.env`, restart the API, then paste the same value into **Settings → API mutation token → Set for session**.
 
-### 3. Add real market data
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
 
-In **Settings → Data providers**, configure at least one provider and click **Save group**:
+It lives in that tab's `sessionStorage`, is sent only on mutations, and is never compiled into the frontend. Each new tab authorizes itself. Never use a `VITE_*` name for it — Vite inlines those into the shipped bundle.
 
-- Alpaca: API key + secret; keep data URL `https://data.alpaca.markets` and feed `iex`
-- Polygon: API key
-- Finnhub: API key
+### 3. Connect market data
 
-Stockbot tries **Alpaca → Polygon → Finnhub**. Without credentials, symbol metadata still works, but charts, prices, backtests, and paper fills remain explicitly unavailable—Stockbot never invents candles.
+In **Settings → Data providers**, fill in at least one provider and click **Save group**:
 
-### 4. Plug in a strategy file
+| Provider | Fields |
+|---|---|
+| Alpaca | API key + secret; keep data URL `https://data.alpaca.markets` and feed `iex` |
+| Polygon | API key |
+| Finnhub | API key |
 
-1. Open **Strategies** and download **Starter file** (or use [`public/stockbot-strategy-template.js`](./public/stockbot-strategy-template.js)).
-2. Rename it and edit its metadata, parameters, and synchronous `signal()` rules.
-3. Click **Upload .js**. Stockbot validates the file in a bounded worker, installs it atomically, and stores a source-hashed version.
-4. Open the strategy and run a backtest.
+Stockbot tries **Alpaca → Polygon → Finnhub** and takes the first that answers. Confirm it worked in **Settings → Provider health**. Without credentials, symbol metadata still resolves, but charts, prices, backtests, and paper fills report explicitly unavailable — Stockbot never invents candles.
+
+### 4. Upload a strategy and backtest it
+
+1. On **Strategies**, click **Starter file** (or use [`public/stockbot-strategy-template.js`](./public/stockbot-strategy-template.js)).
+2. Rename it and edit its metadata, `params`, and synchronous `signal()` rules.
+3. Click **Upload .js**. Stockbot validates it in a bounded worker, installs it atomically, and stores a source-hashed version.
+4. Open the strategy, pick a symbol and range, and **Run backtest**.
 
 No ORM, plugin SDK, package install, or server restart is needed. A strategy is one default-exported JavaScript object:
 
@@ -79,7 +89,11 @@ export default {
 };
 ```
 
-See the complete [algorithm contract](./algorithms/README.md) before sharing or installing untrusted code.
+`signal()` runs once per closed bar, sees history through the current index only, and must return synchronously. See the complete [algorithm contract](./algorithms/README.md) before sharing or installing untrusted code.
+
+### 5. Promote it to a session
+
+A backtest is a one-shot calculation; a **session** is a durable run with its own ledger, event timeline, risk events, and export. On **Sessions**, create a draft — name, mode (`paper` or `backtest`), symbols, algorithm, exact version, range, bar interval — then start, pause, resume, stop, or halt it. Those inputs are persisted before the run begins, which is what keeps it reproducible. See [Running a session](./docs/USAGE.md#8-run-a-session).
 
 ### Or install a JSON plugin
 
@@ -95,7 +109,7 @@ A plugin **declares** what it needs — source ids, secret NAMES, prompt templat
 
 Five bundles ship in `plugins/`: `core-controls`, `base-methods`, `horizon-pack`, `sentiment-pack`, and `gov-research`. All 39 method configurations were verified to reproduce their `.js` originals trade-for-trade. See [Plugin format](./docs/PLUGIN_FORMAT.md).
 
-### 5. Add optional AI research
+### 6. Add optional AI research
 
 Stockbot can run strict JSON research plans through two code-owned adapters: a registered-origin HTTPS reader and an operator-configured JSON-in/JSON-out AI CLI. Plans cannot name executables, inject arguments or environment variables, or fetch arbitrary origins. The resulting summaries and source provenance are immutable SQL snapshots that a strategy can read only when they existed by that bar's canonical decision timestamp (`bar.time`).
 
@@ -244,6 +258,8 @@ npm run laptop:status
 tail -f "$HOME/Library/Logs/Stockbot/stockbot.error.log"
 ```
 
+Every command, subcommand, flag, and error code is documented in the [CLI reference](./docs/CLI.md).
+
 Forward migrations run at startup and through `db:init`. The database stores accounts, sessions, algorithm versions, cached backtests, schedules, simulated orders/fills, position lots, equity snapshots, risk events, alerts, settings, and audit events. Market candles are fetched from providers and held only in short-lived server caches.
 
 ## API at a glance
@@ -273,6 +289,13 @@ All routes live under `/api/v1` and use validated `{ data, meta }` or `{ error }
 - Stockbot is research software, not financial advice.
 
 ## Deeper documentation
+
+**Start here**
+
+- [Usage guide](./docs/USAGE.md) — install → token → providers → strategy → backtest → session → reading the result, plus troubleshooting
+- [CLI reference](./docs/CLI.md) — every command and flag: plugins, research, database, horizon matrix, macOS service
+
+**Reference**
 
 - [Plugin format — stockbot.plugin.v1](./docs/PLUGIN_FORMAT.md)
 - [Plugin surface design system](./docs/PLUGIN_DESIGN_SYSTEM.md)

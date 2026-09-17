@@ -1,0 +1,28 @@
+
+Experiment — MEGA over 1W
+9/9 arms executed
+
+── base-methods/ema-momentum  [too few trades] ───────────────
+arm                                          return%   sharpe   maxDD%   expo%  trades   pctile
+base-methods/ema-momentum                       8.98     2.08    13.25    34.6       5      100
+· core-controls/buy-and-hold                  -15.35    -1.67    42.58    99.4       1        —
+· core-controls/fixed-interval#entryEver…     -38.27    -9.07    40.78    40.2      18        —
+· random control (median)                      -6.36        —        —       —       —  5 seeds
+                                                         -17.42 … 8.77   full range across seeds
+  → Cleared every control, but on 2 closed trades. Sharpe, win rate and percentile rank do not mean anything below 5 round trips — widen the window or loosen the entry before reading this as a result.
+  ! Only 5 random seeds — CONTROL_GROUP.md asks for at least 10, ideally 20.
+  ! The strategy ended the window holding a position, marked to the final close rather than sold.
+
+── base-methods/rsi-mean-reversion  [fails floor] ─────────
+arm                                          return%   sharpe   maxDD%   expo%  trades   pctile
+base-methods/rsi-mean-reversion               -10.63    -2.31    19.95    22.3       4       40
+· core-controls/buy-and-hold                  -15.35    -1.67    42.58    99.4       1        —
+· core-controls/fixed-interval#entryEver…     -38.27    -9.07    40.78    40.2      18        —
+· random control (median)                      -6.36        —        —       —       —  5 seeds
+                                                         -17.42 … 8.77   full range across seeds
+  → Lost to cash. Nothing below this line can rescue it.
+  ! Only 5 random seeds — CONTROL_GROUP.md asks for at least 10, ideally 20.
+  ! Exposure gap 17.9pp: strategy 22.3% vs control 40.2%. Tune entryEveryBars/holdBars before believing this row.
+  ! 2 closed trades — too few for the metrics to mean much.
+
+No strategy cleared its own control group. Nothing here is evidence of an edge.

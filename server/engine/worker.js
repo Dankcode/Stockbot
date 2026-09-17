@@ -6,6 +6,8 @@ import {
   validateAlgorithm,
   validateAlgorithmSource
 } from "../algorithms/validator.js";
+import { decodePluginMethodSource } from "../plugins/algorithm-source.js";
+import { compileMethod } from "../plugins/method-engine.js";
 import { ResearchFrameSchema } from "../../packages/shared/research.js";
 import { runBacktest } from "./backtest.js";
 import { createIndicators } from "./indicators.js";
@@ -31,6 +33,18 @@ async function loadSource(source, filename = "algorithm.js") {
   });
   scriptCache.get(hash).runInContext(context);
   return { algorithm: validateAlgorithm(sandbox.__algorithm, { file: filename }), sourceHash: hash };
+}
+
+async function loadAlgorithm(source, filename = "algorithm.js") {
+  const pluginMethod = decodePluginMethodSource(source);
+  if (pluginMethod) {
+    const algorithm = compileMethod(pluginMethod.method, { id: pluginMethod.id });
+    return {
+      algorithm: validateAlgorithm(algorithm, { file: filename }),
+      sourceHash: sourceHash(source)
+    };
+  }
+  return loadSource(source, filename);
 }
 
 function normalizeSignal(rawSignal) {
@@ -122,7 +136,7 @@ export async function executeWorkerTask(kind, payload) {
     error.code = "ENGINE_TASK_UNKNOWN";
     throw error;
   }
-  const { algorithm, sourceHash: hash } = await loadSource(payload.algorithmSource, payload.filename);
+  const { algorithm, sourceHash: hash } = await loadAlgorithm(payload.algorithmSource, payload.filename);
   if (kind === "validate") {
     return Object.freeze({
       ok: true,

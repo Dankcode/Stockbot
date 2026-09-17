@@ -3,6 +3,7 @@ import { ResearchPlanSchema } from "../../packages/shared/research.js";
 import { parseResearchPlan } from "./plan-parser.js";
 import { selectResearchFrame } from "./timeline.js";
 import { createResearchRunner } from "./runner.js";
+import { resolveResearchPrompt } from "./prompts.js";
 
 function serviceError(message, code, detail) {
   const error = new Error(message);
@@ -30,6 +31,13 @@ export function createResearchService({
   }
   const pipeline = runner ?? createResearchRunner({ repository, registry, clock, idFactory });
   let activeRuns = 0;
+
+  function validatePrompts(plan) {
+    for (const step of plan.steps) {
+      if (step.kind === "summarize") resolveResearchPrompt(step);
+    }
+    return plan;
+  }
 
   async function resolveVersion({ planId, planVersionId } = {}) {
     const version = planVersionId
@@ -59,12 +67,14 @@ export function createResearchService({
     validatePlan(source) {
       const parsed = parseResearchPlan(source);
       registry.validatePlan(parsed.plan);
+      validatePrompts(parsed.plan);
       return parsed;
     },
 
     async importPlan({ source, filename = "research-plan.json" }) {
       const parsed = parseResearchPlan(source, { file: filename });
       registry.validatePlan(parsed.plan);
+      validatePrompts(parsed.plan);
       const imported = await repository.importPlan({
         planId: parsed.plan.id,
         name: parsed.plan.name,

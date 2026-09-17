@@ -32,7 +32,8 @@ test("database initialization is idempotent and validates the durable ledger", a
       "0001_init",
       "0002_order_signal_bar",
       "0003_trade_tracker_indexes",
-      "0004_ai_research"
+      "0004_ai_research",
+      "0005_experiments"
     ]);
     assert.deepEqual(second.migrations.applied, []);
     assert.equal(second.account.id, "default-paper");
@@ -186,7 +187,8 @@ test("SQLite online backup is verified, atomic, and refuses unsafe destinations"
       "0001_init",
       "0002_order_signal_bar",
       "0003_trade_tracker_indexes",
-      "0004_ai_research"
+      "0004_ai_research",
+      "0005_experiments"
     ]);
     await access(backupPath);
     await assert.rejects(

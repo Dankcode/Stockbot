@@ -4,6 +4,7 @@ import path from "node:path";
 import { accountsRouter } from "./routes/accounts.js";
 import { alertsRouter } from "./routes/alerts.js";
 import { algorithmsRouter } from "./routes/algorithms.js";
+import { experimentsRouter } from "./routes/experiments.js";
 import { marketRouter } from "./routes/market.js";
 import { overviewRouter } from "./routes/overview.js";
 import { riskRouter } from "./routes/risk.js";
@@ -59,6 +60,7 @@ export function createHttpApp(context) {
   api.use(systemRouter(context));
   api.use("/market", marketRouter(context.market));
   api.use("/algorithms", algorithmsRouter(context.algorithms));
+  api.use("/experiments", experimentsRouter(context.experiments));
   api.use("/sessions", sessionsRouter(context.supervisor));
   api.use("/accounts", accountsRouter(context));
   api.use("/risk", riskRouter(context.repositories.risk, context.accountId));

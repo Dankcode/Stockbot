@@ -9,6 +9,7 @@ import { createClient } from "./db/client.js";
 import { migrate } from "./db/migrate.js";
 import { createRepositories } from "./db/repositories/index.js";
 import { createEnginePool } from "./engine/pool.js";
+import { createExperimentService } from "./experiments/service.js";
 import { createHttpApp } from "./http/app.js";
 import { EventHub } from "./http/event-hub.js";
 import { createMarketService } from "./market/chain.js";
@@ -127,6 +128,7 @@ export async function createStockbot(options = {}) {
   });
   const startup = await supervisor.bootstrap();
   const accountId = startup.account?.id ?? DEFAULT_ACCOUNT_ID;
+  const experiments = createExperimentService({ repositories, algorithms, supervisor, accountId });
   const database = databaseHealth(client);
   const databaseSettings = options.databaseSettings ?? createDatabaseSettingsService({ config, repositories });
   const context = {
@@ -140,6 +142,7 @@ export async function createStockbot(options = {}) {
     settings,
     enginePool,
     algorithms,
+    experiments,
     research,
     researchAdapters,
     ledger,

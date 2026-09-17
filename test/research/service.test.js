@@ -43,7 +43,7 @@ function planSource(symbols = ["AAPL"]) {
   });
 }
 
-function fakeAdapters() {
+function fakeAdapters({ onSummary } = {}) {
   return createResearchAdapterRegistry([
     {
       id: "web.page.v1",
@@ -74,7 +74,8 @@ function fakeAdapters() {
       kind: "summarize",
       version: "test",
       available: true,
-      async execute({ symbol }) {
+      async execute({ symbol, prompt, promptHash }) {
+        onSummary?.({ prompt, promptHash });
         return {
           kind: "summary",
           summary: {
@@ -102,6 +103,46 @@ function fakeAdapters() {
     }
   ]);
 }
+
+test("research runner renders registered template slots and rejects unknown templates at import", async (t) => {
+  const client = await createClient("file::memory:");
+  t.after(() => client.close());
+  await migrate(client);
+  const repositories = createRepositories(client);
+  let sequence = 0;
+  let received;
+  const service = createResearchService({
+    repository: repositories.research,
+    registry: fakeAdapters({ onSummary: (value) => { received = value; } }),
+    clock: () => 1_000 + sequence,
+    idFactory: () => `template-${++sequence}`
+  });
+
+  const plan = JSON.parse(planSource());
+  plan.id = "catalyst-market-brief";
+  plan.steps[1].promptTemplate = "catalyst-summary.v1";
+  plan.steps[1].promptSlots = {
+    focus: ["material contracts"],
+    sector: "defense",
+    horizon: "monthly",
+    emphasis: "drivers"
+  };
+  const imported = await service.importPlan({ source: JSON.stringify(plan) });
+  await service.run({ planId: imported.plan.id, symbol: "AAPL" });
+
+  assert.equal(received.prompt.id, "catalyst-summary.v1");
+  assert.match(received.prompt.instructions, /discrete catalysts/);
+  assert.match(received.prompt.instructions, /material contracts/);
+  assert.match(received.prompt.instructions, /untrusted evidence/);
+  assert.match(received.promptHash, /^[a-f0-9]{64}$/);
+
+  plan.id = "invalid-template-brief";
+  plan.steps[1].promptTemplate = "operator-supplied.v1";
+  assert.throws(
+    () => service.validatePlan(JSON.stringify(plan)),
+    (error) => error.code === "RESEARCH_TEMPLATE_INVALID"
+  );
+});
 
 test("research service imports, executes, persists, and selects immutable point-in-time summaries", async (t) => {
   const client = await createClient("file::memory:");

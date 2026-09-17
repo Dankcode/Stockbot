@@ -94,8 +94,31 @@ export async function politeFetch(url, init = {}, options = {}) {
       return response;
     } catch (error) {
       clearTimeout(timer);
-      lastError = error;
-      const retryable = error.name === "AbortError" || /^HTTP 5|^HTTP 429/.test(error.message);
+
+      // Node's bare "fetch failed" hides the actual cause, which is almost
+      // always DNS or a refused connection. Surfacing it turns ten minutes of
+      // confusion into an obvious diagnosis.
+      const code = error.cause?.code ?? error.code;
+      if (code) {
+        const host = (() => {
+          try { return new URL(url).host; } catch { return url; }
+        })();
+        const explanation = {
+          EAI_AGAIN: `DNS lookup for ${host} failed. Check network access or a proxy/firewall allowlist.`,
+          ENOTFOUND: `${host} could not be resolved.`,
+          ECONNREFUSED: `${host} refused the connection.`,
+          ETIMEDOUT: `${host} timed out.`,
+          CERT_HAS_EXPIRED: `TLS certificate for ${host} has expired.`
+        }[code];
+        lastError = new Error(explanation ?? `${code} contacting ${host}`, { cause: error });
+      } else {
+        lastError = error;
+      }
+
+      const retryable =
+        error.name === "AbortError" ||
+        /^HTTP 5|^HTTP 429/.test(error.message) ||
+        ["ETIMEDOUT", "ECONNRESET", "EAI_AGAIN"].includes(code);
       if (!retryable || attempt === retries) throw lastError;
       await new Promise((resolve) => setTimeout(resolve, Math.min(30000, 500 * 2 ** attempt)));
     }

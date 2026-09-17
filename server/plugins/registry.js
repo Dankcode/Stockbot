@@ -161,6 +161,9 @@ export function loadPluginFromObject(raw, { file } = {}) {
       horizon: definition.horizon ?? "none",
       controlFor: definition.controlFor ?? null,
       params: Object.freeze({ ...definition.params }),
+      // Keep the validated declarative definition so it can be serialized into an
+      // immutable algorithm version and interpreted inside an engine worker later.
+      definition: structuredClone(definition),
       algorithm
     });
   });

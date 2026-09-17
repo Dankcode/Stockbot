@@ -19,12 +19,16 @@ export async function fetchMarketSearch(query: string): Promise<MarketAsset[]> {
 }
 
 export async function fetchMarketQuote(symbol: string): Promise<Quote | UnavailableQuote> {
-  return api.getValidated(`/market/quote/${encodeURIComponent(symbol)}`, MarketQuoteSchema);
+  const normalized = symbol.trim();
+  if (!normalized) throw new Error("No symbol selected.");
+  return api.getValidated(`/market/quote/${encodeURIComponent(normalized)}`, MarketQuoteSchema);
 }
 
 export async function fetchMarketBars(symbol: string, range: string): Promise<MarketBars> {
+  const normalized = symbol.trim();
+  if (!normalized) throw new Error("No symbol selected.");
   return api.getValidated(
-    `/market/bars/${encodeURIComponent(symbol)}?range=${encodeURIComponent(range)}`,
+    `/market/bars/${encodeURIComponent(normalized)}?range=${encodeURIComponent(range)}`,
     MarketBarsSchema
   );
 }

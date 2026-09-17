@@ -70,6 +70,15 @@ function publicAlgorithm(item, version, enabled = true) {
     enabled,
     params: item.params,
     sourceHash: item.sourceHash,
+    // Role, horizon and controlFor are classification, not execution detail. The engine
+    // genuinely does not need to know a method came from a plugin, but every consumer
+    // that has to tell a strategy from its control does — and without this block a
+    // control was indistinguishable from a treatment arm over the API, so an experiment
+    // sweep happily promoted core-controls/buy-and-hold into a strategy slot.
+    role: item.plugin?.role ?? (/(^|\/)control-/.test(item.id) ? "control" : "strategy"),
+    horizon: item.plugin?.horizon ?? null,
+    controlFor: item.plugin?.controlFor ?? null,
+    plugin: item.plugin ? { id: item.plugin.id, version: item.plugin.version, methodId: item.plugin.methodId } : null,
     version: version ? { id: version.id, hash: version.sourceHash, createdAt: version.createdAt } : null
   };
 }
@@ -77,12 +86,13 @@ function publicAlgorithm(item, version, enabled = true) {
 export function createAlgorithmService({ config, enginePool, repository, market }) {
   const algorithmsDir = path.join(config.workspaceRoot, "algorithms");
   const uploadsDir = path.join(algorithmsDir, "uploads");
+  const pluginsDir = path.join(config.workspaceRoot, "plugins");
   let snapshot = { algorithms: [], errors: [] };
   let loadedAt = 0;
 
   async function refresh(force = false) {
     if (!force && Date.now() - loadedAt < 5_000 && snapshot.algorithms.length) return snapshot;
-    snapshot = await loadAlgorithmRegistry({ algorithmsDir, uploadsDir, enginePool });
+    snapshot = await loadAlgorithmRegistry({ algorithmsDir, uploadsDir, pluginsDir, enginePool });
     loadedAt = Date.now();
     for (const item of snapshot.algorithms) {
       const existing = await repository.getById(item.id);

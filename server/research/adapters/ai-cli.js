@@ -5,6 +5,7 @@ import { isAbsolute } from "node:path";
 import { z } from "zod";
 import { MarketResearchSummarySchema } from "../../../packages/shared/research.js";
 import { MARKET_SUMMARY_PROMPT, MARKET_SUMMARY_PROMPT_HASH } from "../prompts.js";
+import { canonicalHash } from "../canonical.js";
 
 const CliResponseSchema = z.object({
   summary: MarketResearchSummarySchema,
@@ -91,7 +92,7 @@ export function createAiCliAdapter({
     kind: "summarize",
     version: "1",
     available: Boolean(configuredCommand),
-    async execute({ step, symbol, inputs, signal }) {
+    async execute({ step, symbol, inputs, signal, prompt = MARKET_SUMMARY_PROMPT, promptHash = MARKET_SUMMARY_PROMPT_HASH }) {
       if (!configuredCommand) {
         throw cliError("AI CLI summarizer is not configured by the server operator.", "AI_CLI_UNCONFIGURED");
       }
@@ -102,7 +103,7 @@ export function createAiCliAdapter({
         protocolVersion: 1,
         task: "market-research-summary",
         symbol,
-        prompt: MARKET_SUMMARY_PROMPT,
+        prompt,
         documents: []
       };
       const envelopeBytes = Buffer.byteLength(JSON.stringify(envelope), "utf8");
@@ -210,7 +211,7 @@ export function createAiCliAdapter({
         kind: "summary",
         summary: parsed.summary,
         model: parsed.model ?? model,
-        promptHash: MARKET_SUMMARY_PROMPT_HASH,
+        promptHash: promptHash ?? canonicalHash(prompt),
         aiInputHash: sha256(encodedPayload),
         summarizerConfigHash,
         inputDocuments: Object.freeze(inputDocuments)

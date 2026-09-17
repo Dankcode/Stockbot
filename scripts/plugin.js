@@ -302,17 +302,48 @@ async function main() {
       throw cliError(`Skill "${ref}" has no defaultSymbols; pass --symbol.`);
     }
 
+    const plans = found.skill.gather.map((planLocalId) => {
+      const compiled = found.entry.research.find((candidate) => candidate.plan.id === `${found.entry.plugin.id}.${planLocalId}`);
+      if (!compiled) {
+        throw cliError(`Skill "${ref}" refers to missing research plan "${planLocalId}".`, "PLUGIN_SKILL_PLAN_MISSING");
+      }
+      return { localId: planLocalId, compiled };
+    });
+
+    // Import first and retain the returned immutable version ids. A skill therefore
+    // never races a later plan edit between gathering two symbols, and the API remains
+    // the single persistence/validation boundary for plans from both files and plugins.
+    const importedPlans = new Map();
+    for (const { compiled } of plans) {
+      const planId = compiled.plan.id;
+      try {
+        const imported = await apiRequest(baseUrl, token, "/api/v1/research/plans", {
+          method: "POST",
+          body: {
+            filename: `${planId}.plugin.json`,
+            source: JSON.stringify(compiled.plan)
+          }
+        });
+        if (!imported?.version?.id) throw cliError(`Plan import returned no immutable version for ${planId}.`, "PLUGIN_API_INVALID_RESPONSE");
+        importedPlans.set(planId, imported.version.id);
+      } catch (cause) {
+        process.stderr.write(`Could not import ${planId}: ${cause.code ?? "PLUGIN_API_ERROR"}: ${cause.message}\n`);
+      }
+    }
+
     let produced = 0;
     let attempted = 0;
     for (const symbol of symbols) {
-      for (const planLocalId of found.skill.gather) {
-        const planId = `${found.entry.plugin.id}.${planLocalId}`;
+      for (const { compiled } of plans) {
+        const planId = compiled.plan.id;
         attempted += 1;
         process.stdout.write(`→ ${symbol} ${planId} … `);
         try {
-          const data = await apiRequest(baseUrl, token, "/api/v1/research/runs", {
+          const planVersionId = importedPlans.get(planId);
+          if (!planVersionId) throw cliError(`Plan ${planId} was not imported.`, "PLUGIN_PLAN_IMPORT_FAILED");
+          const data = await apiRequest(baseUrl, token, `/api/v1/research/plans/${encodeURIComponent(planId)}/runs`, {
             method: "POST",
-            body: { planId, symbol }
+            body: { planVersionId, symbol }
           });
           const snapshotId = data?.snapshotId ?? data?.snapshot?.id ?? null;
           if (snapshotId) { produced += 1; process.stdout.write(`snapshot ${snapshotId}\n`); }

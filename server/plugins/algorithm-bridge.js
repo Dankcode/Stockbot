@@ -7,18 +7,6 @@
  * pool, backtest route, session runner, result cache, and dashboard all treat the two
  * identically.
  *
- * Wiring it in is a three-line change at the end of `loadAlgorithmRegistry` in
- * server/algorithms/registry.js:
- *
- *     import { pluginAlgorithmDescriptors } from "../plugins/algorithm-bridge.js";
- *     ...
- *     const bridged = await pluginAlgorithmDescriptors(options.pluginsDir);
- *     algorithms.push(...bridged.algorithms);
- *     errors.push(...bridged.errors);
- *
- * That patch is deliberately left for the operator to apply rather than made here, since
- * it changes a core load path and this module is independently testable without it.
- *
  * Versioning note: a plugin method's `versionHash` is the SHA-256 of the whole plugin
  * file, not of the individual method. Editing any method in a bundle therefore versions
  * every method in it. That is the conservative choice — an over-invalidated cache costs
@@ -27,14 +15,21 @@
  */
 import { createHash } from "node:crypto";
 import { loadPluginRegistry } from "./registry.js";
+import { encodePluginMethodSource } from "./algorithm-source.js";
 
 function methodVersionHash(pluginSourceHash, methodId) {
   return createHash("sha256").update(`${pluginSourceHash}:${methodId}`, "utf8").digest("hex");
 }
 
 export function descriptorsFromLoadedPlugin(entry) {
-  return entry.methods.map((method) =>
-    Object.freeze({
+  return entry.methods.map((method) => {
+    const source = encodePluginMethodSource({
+      id: method.id,
+      method: method.definition,
+      pluginSourceHash: entry.sourceHash
+    });
+    const versionHash = methodVersionHash(entry.sourceHash ?? entry.plugin.version, method.localId);
+    return Object.freeze({
       // Namespaced with a slash, matching how uploaded algorithms already use
       // "uploads/<name>", so ids stay unambiguous across all three sources.
       id: method.id,
@@ -42,11 +37,11 @@ export function descriptorsFromLoadedPlugin(entry) {
       path: entry.path ?? null,
       uploaded: false,
       trusted: true,
-      // Plugins carry no JavaScript, so there is no source text to hand a worker. The
-      // interpreter is the sandbox, and it runs in-process safely.
-      source: null,
-      sourceHash: entry.sourceHash ?? null,
-      versionHash: methodVersionHash(entry.sourceHash ?? entry.plugin.version, method.localId),
+      // This is a declarative, schema-validated source envelope. Engine workers
+      // recognise it and run the same interpreter there; it is never evaluated as JS.
+      source,
+      sourceHash: versionHash,
+      versionHash,
       name: method.name,
       author: method.author,
       description: method.description,
@@ -62,8 +57,8 @@ export function descriptorsFromLoadedPlugin(entry) {
         horizon: method.horizon,
         controlFor: method.controlFor
       })
-    })
-  );
+    });
+  });
 }
 
 export async function pluginAlgorithmDescriptors(pluginsDir) {

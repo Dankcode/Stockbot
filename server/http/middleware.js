@@ -12,7 +12,18 @@ export function requestContext(request, response, next) {
 export function mutationAuth(config) {
   return (request, _response, next) => {
     if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return next();
-    if (!config.apiToken) return next();
+    // Fail CLOSED when no token is configured, matching operatorAuth below. Passing the
+    // request through here meant an install without STOCKBOT_API_TOKEN accepted
+    // unauthenticated session creation, start, halt and algorithm upload from any local
+    // process. Verified end to end before the fix: POST /api/v1/sessions returned 201
+    // with no auth header and a real session row was written.
+    if (!config.apiToken) {
+      return next(new AppError(
+        "AUTH_NOT_CONFIGURED",
+        "Configure STOCKBOT_API_TOKEN (32+ characters) before making changes.",
+        503
+      ));
+    }
     if (!validToken(config.apiToken, request.get("x-stockbot-token") || "")) {
       return next(new AppError("AUTH_REQUIRED", "A valid Stockbot API token is required.", 401));
     }

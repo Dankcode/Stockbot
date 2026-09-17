@@ -5,6 +5,7 @@ import {
   SymbolOrWildcardSchema
 } from "../../packages/shared/research.js";
 import { canonicalHash } from "./canonical.js";
+import { resolveResearchPrompt } from "./prompts.js";
 
 const MAX_RESEARCH_RUN_DOCUMENT_BYTES = 20 * 1024 * 1024;
 
@@ -77,7 +78,15 @@ export function createResearchRunner({ repository, registry, clock = Date.now, i
           if (signal?.aborted) throw runnerError("Research run was canceled.", "RESEARCH_RUN_ABORTED");
           const adapter = registry.resolve(step.kind, step.adapter);
           const inputs = (step.dependsOn ?? []).map((dependency) => artifacts.get(dependency));
-          const output = await adapter.execute({ step, symbol, inputs, signal, plan });
+          const prompt = step.kind === "summarize" ? resolveResearchPrompt(step) : null;
+          const output = await adapter.execute({
+            step,
+            symbol,
+            inputs,
+            signal,
+            plan,
+            ...(prompt ? { prompt: prompt.prompt, promptHash: prompt.hash } : {})
+          });
           artifacts.set(step.id, output);
           if (output?.kind === "documents") {
             for (const document of output.documents) {

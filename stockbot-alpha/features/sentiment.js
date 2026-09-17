@@ -81,6 +81,35 @@ const WORDS = Object.keys(LEXICON).filter((term) => !term.includes(" "));
 const NEGATORS = ["not", "no", "never", "fails to", "failed to", "unable to", "without", "denies"];
 
 /**
+ * Terms that already encode a negation and must never be flipped.
+ *
+ * Without this, "does not beat estimates, fails to meet targets" scores
+ * POSITIVE: the negator "not" from the first clause reaches forward and flips
+ * "fails to meet" from -0.7 to +0.56. Double negation in financial headlines is
+ * almost always two separate pieces of bad news, not a positive.
+ */
+const SELF_NEGATING = /\b(fails?|failed|misses|miss|not|no|never|unable|without|denies|suspends|cuts|slashes|lowers)\b/;
+
+/**
+ * Normalize text for matching.
+ *
+ * Sentence-ending periods must become spaces or phrase matching breaks at the
+ * end of a sentence — "raises guidance." would not match the phrase " raises
+ * guidance ". But decimal points must survive, because 8-K item codes like
+ * "2.02" are meaningful tokens. Hence the two passes.
+ */
+function normalizeText(text) {
+  return ` ${text
+    .toLowerCase()
+    // Drop periods that are not between digits.
+    .replace(/(?<!\d)\.|\.(?!\d)/g, " ")
+    // Strip remaining punctuation, keeping word chars, protected decimals, % $ -
+    .replace(/[^\w\s.%$-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()} `;
+}
+
+/**
  * Score one piece of text.
  *
  * @param {string} text
@@ -96,20 +125,25 @@ export function scoreHeadline(text) {
     return { score: 0, magnitude: 0, hits: [] };
   }
 
-  const lower = ` ${text.toLowerCase().replace(/[^\w\s.%$-]/g, " ").replace(/\s+/g, " ")} `;
+  const lower = normalizeText(text);
   const hits = [];
   let consumed = lower;
 
-  const isNegated = (haystack, position) => {
-    // Look back ~24 characters for a negator — roughly three or four words.
-    const window = haystack.slice(Math.max(0, position - 24), position);
-    return NEGATORS.some((neg) => window.includes(` ${neg} `) || window.endsWith(` ${neg} `));
+  const isNegated = (haystack, position, term) => {
+    // A term that already carries a negation is not flipped by a nearby one.
+    if (SELF_NEGATING.test(term)) return false;
+
+    // Look back at most ~18 characters (roughly two or three words) and stop at
+    // a clause boundary. A negator in a previous clause does not govern this term.
+    const back = haystack.slice(Math.max(0, position - 18), position);
+    const clause = back.slice(Math.max(back.lastIndexOf(" but "), back.lastIndexOf(" and ")) + 1);
+    return NEGATORS.some((neg) => clause.includes(` ${neg} `) || clause.endsWith(` ${neg} `));
   };
 
   for (const phrase of PHRASES) {
     const at = consumed.indexOf(` ${phrase} `);
     if (at === -1) continue;
-    const negated = isNegated(consumed, at);
+    const negated = isNegated(consumed, at, phrase);
     hits.push({ term: phrase, weight: LEXICON[phrase], negated });
     // Blank out the match so its component words are not counted again.
     consumed = consumed.replace(` ${phrase} `, " ".repeat(phrase.length + 2));
@@ -120,7 +154,7 @@ export function scoreHeadline(text) {
     const pattern = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
     let match;
     while ((match = pattern.exec(consumed)) !== null) {
-      hits.push({ term: word, weight: LEXICON[word], negated: isNegated(consumed, match.index) });
+      hits.push({ term: word, weight: LEXICON[word], negated: isNegated(consumed, match.index, word) });
     }
   }
 

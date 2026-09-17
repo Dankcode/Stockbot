@@ -122,6 +122,20 @@ const ScrapeQuerySchema = z
     });
   });
 
+// Research plans may select a server-registered template and provide only bounded,
+// typed context. They cannot embed model instructions. The runtime resolves the id
+// against its code-owned template registry before a plan is imported or executed.
+export const ResearchPromptSlotsSchema = z
+  .object({
+    focus: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
+    avoid: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
+    sector: z.string().trim().min(1).max(120).optional(),
+    horizon: z.enum(["daily", "weekly", "monthly", "yearly"]).optional(),
+    emphasis: z.enum(["risks", "opportunities", "drivers", "balanced"]).optional(),
+    audience: z.enum(["systematic", "discretionary"]).optional()
+  })
+  .strict();
+
 export const ScrapeResearchStepSchema = z
   .object({
     id: IdSchema,
@@ -155,7 +169,8 @@ export const SummarizeResearchStepSchema = z
     kind: z.literal("summarize"),
     adapter: z.literal("ai.cli.summary.v1"),
     dependsOn: z.array(IdSchema).min(1).max(MAX_LIST_ITEMS),
-    promptTemplate: z.literal("market-summary.v1"),
+    promptTemplate: IdSchema,
+    promptSlots: ResearchPromptSlotsSchema.optional(),
     responseSchema: z.literal("market-summary.v1"),
     limits: z
       .object({

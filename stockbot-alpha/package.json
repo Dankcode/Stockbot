@@ -1,0 +1,13 @@
+{
+  "name": "stockbot-alpha",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "External data feeds, engineered features, and walk-forward validation for Stockbot.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "status": "node cli.js status",
+    "train": "node cli.js train"
+  }
+}

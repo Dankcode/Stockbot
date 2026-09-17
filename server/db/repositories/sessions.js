@@ -37,10 +37,11 @@ export function createSessionsRepository(client) {
       await client.execute(
         `INSERT INTO sessions (
           id, account_id, name, mode, status, algorithm_version_id, research_plan_version_id,
+          experiment_id, experiment_arm, experiment_arm_id,
           params_json, symbols_json, bar_interval, window_start, window_end,
           fill_model_json, risk_profile_json, schedule_json, starting_equity, ending_equity,
           started_at, ended_at, stop_reason, error_detail, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           input.id,
           input.accountId,
@@ -49,6 +50,9 @@ export function createSessionsRepository(client) {
           input.status,
           input.algorithmVersionId ?? null,
           input.researchPlanVersionId ?? null,
+          input.experimentId ?? null,
+          input.experimentArm ?? null,
+          input.experimentArmId ?? null,
           sessionJson(input, "params", "paramsJson", {}),
           sessionJson(input, "symbols", "symbolsJson", []),
           input.barInterval,
@@ -95,6 +99,10 @@ export function createSessionsRepository(client) {
       if (options.researchPlanVersionId) {
         clauses.push("research_plan_version_id = ?");
         params.push(options.researchPlanVersionId);
+      }
+      if (options.experimentId) {
+        clauses.push("experiment_id = ?");
+        params.push(options.experimentId);
       }
       if (options.beforeCreatedAt !== undefined) {
         clauses.push("created_at < ?");

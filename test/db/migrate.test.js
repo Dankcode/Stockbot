@@ -22,12 +22,12 @@ test("initial migration creates the complete schema and is idempotent", async ()
     const second = await migrate(temporary.client, { now: () => 1_800_000_000_000 });
 
     assert.deepEqual(first, {
-      applied: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research"],
+      applied: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research", "0005_experiments"],
       skipped: []
     });
     assert.deepEqual(second, {
       applied: [],
-      skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research"]
+      skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research", "0005_experiments"]
     });
 
     const tables = await temporary.client.query(
@@ -45,6 +45,7 @@ test("initial migration creates the complete schema and is idempotent", async ()
         "audit_log",
         "backtest_runs",
         "equity_snapshots",
+        "experiments",
         "fills",
         "orders",
         "position_lots",
@@ -64,19 +65,23 @@ test("initial migration creates the complete schema and is idempotent", async ()
     );
 
     const applied = await getAppliedMigrations(temporary.client);
-    assert.equal(applied.length, 4);
+    assert.equal(applied.length, 5);
     assert.ok(applied.every((migration) => migration.appliedAt === 1_700_000_000_000));
     assert.ok(applied.every((migration) => migration.checksum.length === 64));
 
     const sessionColumns = await temporary.client.query("PRAGMA table_info(sessions)");
     const orderColumns = await temporary.client.query("PRAGMA table_info(orders)");
     assert.ok(sessionColumns.some((column) => column.name === "research_plan_version_id"));
+    assert.ok(sessionColumns.some((column) => column.name === "experiment_id"));
     assert.ok(orderColumns.some((column) => column.name === "research_snapshot_id"));
 
     const sessionForeignKeys = await temporary.client.query("PRAGMA foreign_key_list(sessions)");
     const orderForeignKeys = await temporary.client.query("PRAGMA foreign_key_list(orders)");
     assert.ok(sessionForeignKeys.some((foreignKey) =>
       foreignKey.from === "research_plan_version_id" && foreignKey.table === "research_plan_versions"
+    ));
+    assert.ok(sessionForeignKeys.some((foreignKey) =>
+      foreignKey.from === "experiment_id" && foreignKey.table === "experiments"
     ));
     assert.ok(orderForeignKeys.some((foreignKey) =>
       foreignKey.from === "research_snapshot_id" && foreignKey.table === "research_snapshots"

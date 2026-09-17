@@ -7,11 +7,8 @@
  * unchanged, and a plugin gains no reach that a hand-written plan did not already have.
  *
  * The one substantive translation is the prompt. A plugin names a registered template
- * and fills typed slots; those are rendered here into server-authored instruction text.
- * Because the existing `promptTemplate` field is a literal (`market-summary.v1`), a
- * slotted template is carried alongside the plan rather than inside it, and the runner
- * passes the rendered prompt to the AI CLI. Plans whose template is the unslotted
- * `market-summary.v1` lower to a byte-identical legacy plan.
+ * and fills typed slots; the persisted plan retains that declarative selection. The
+ * runner renders it with server-authored instructions just before it calls the AI CLI.
  */
 import { renderPrompt } from "./prompt-templates.js";
 
@@ -67,13 +64,13 @@ export function compileResearchPlan(plugin, plan) {
       kind: "summarize",
       adapter: "ai.cli.summary.v1",
       dependsOn: [...step.dependsOn],
-      // The persisted plan keeps the canonical literal the ResearchPlanV1 schema
-      // requires; the rendered instructions travel with the compiled plan and are hashed
-      // into the snapshot's promptHash exactly as before.
-      promptTemplate: "market-summary.v1",
+      promptTemplate: step.template,
       responseSchema: "market-summary.v1",
       limits: { timeoutMs: step.timeoutMs, maxInputBytes: step.maxInputBytes }
     });
+    if (step.slots && Object.keys(step.slots).length > 0) {
+      steps.at(-1).promptSlots = { ...step.slots };
+    }
   }
 
   const compiled = {
@@ -90,8 +87,8 @@ export function compileResearchPlan(plugin, plan) {
   return Object.freeze({
     plan: compiled,
     prompts: Object.freeze(prompts),
-    // Surfaced so `plugin inspect` can show which template each summarize step resolved
-    // to, since the persisted plan alone no longer reveals it.
+    // Surfaced so `plugin inspect` can show the rendered, server-owned prompt alongside
+    // the plan's declarative template selection.
     templates: Object.freeze(
       plan.steps
         .filter((step) => step.kind === "summarize")

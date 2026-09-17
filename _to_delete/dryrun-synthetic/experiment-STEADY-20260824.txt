@@ -1,0 +1,28 @@
+
+Experiment — STEADY over 1W
+9/9 arms executed
+
+── base-methods/ema-momentum  [inside noise] ───────────────
+arm                                          return%   sharpe   maxDD%   expo%  trades   pctile
+base-methods/ema-momentum                       5.80     2.61     3.21    45.3       4       80
+· core-controls/buy-and-hold                   -0.86    -0.09    11.75    99.4       1        —
+· core-controls/fixed-interval#entryEver…      -2.02    -0.82     5.71    40.2      18        —
+· random control (median)                       2.82        —        —       —       —  5 seeds
+                                                          -4.63 … 8.00   full range across seeds
+  → 80th percentile against 5 information-free seeds. Under ~90 is inside the draw variance.
+  ! Only 5 random seeds — CONTROL_GROUP.md asks for at least 10, ideally 20.
+  ! 2 closed trades — too few for the metrics to mean much.
+
+── base-methods/rsi-mean-reversion  [inside noise] ─────────
+arm                                          return%   sharpe   maxDD%   expo%  trades   pctile
+base-methods/rsi-mean-reversion                 4.66     6.02     0.05     2.8       2       80
+· core-controls/buy-and-hold                   -0.86    -0.09    11.75    99.4       1        —
+· core-controls/fixed-interval#entryEver…      -2.02    -0.82     5.71    40.2      18        —
+· random control (median)                       2.82        —        —       —       —  5 seeds
+                                                          -4.63 … 8.00   full range across seeds
+  → 80th percentile against 5 information-free seeds. Under ~90 is inside the draw variance.
+  ! Only 5 random seeds — CONTROL_GROUP.md asks for at least 10, ideally 20.
+  ! Exposure gap 37.4pp: strategy 2.8% vs control 40.2%. Tune entryEveryBars/holdBars before believing this row.
+  ! 1 closed trades — too few for the metrics to mean much.
+
+No strategy cleared its own control group. Nothing here is evidence of an edge.

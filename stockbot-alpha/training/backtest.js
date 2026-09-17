@@ -82,8 +82,84 @@ export function runBacktest({
   const equityCurve = [{ at: times[0], equity: startingCash, cash: startingCash, positionValue: 0 }];
   const rejections = [];
 
-  // Pending order from the previous bar's signal, executed at this bar's open.
-  /** @type {{side: "buy"|"sell", signalIndex: number}|null} */
+  /**
+   * Execute one order. Shared by both fill rules so `next_open` and
+   * `same_close` cannot drift apart in behaviour — only in timing.
+   *
+   * @param {"buy"|"sell"} side
+   * @param {number} signalIndex bar the decision was made on
+   * @param {number} index bar the fill occurs in
+   * @param {number} referencePrice pre-slippage price
+   */
+  function execute(side, signalIndex, index, referencePrice) {
+    const bar = bars[index];
+
+    if (side === "buy" && qty === 0) {
+      const provisional = sizeBuy({ cash, price: referencePrice, model });
+      if (provisional <= 0) {
+        rejections.push({ index, side, reason: "insufficient_cash" });
+        return;
+      }
+      const fill = priceFill({ side: "buy", referencePrice, qty: provisional, bar, model });
+      // Re-size against the slipped price so a wide bar cannot overdraw.
+      const finalQty = sizeBuy({ cash, price: fill.price, model });
+      if (finalQty <= 0) {
+        rejections.push({ index, side, reason: "insufficient_cash_after_slippage" });
+        return;
+      }
+      cash -= finalQty * fill.price + fill.commission;
+      totalCosts += fill.commission + Math.abs(fill.price - fill.referencePrice) * finalQty;
+      qty = finalQty;
+      entryPrice = fill.price;
+      entryIndex = index;
+      trades.push({
+        id: `${index}-buy`,
+        index,
+        at: times[index],
+        side: "buy",
+        qty: finalQty,
+        price: fill.price,
+        referencePrice: fill.referencePrice,
+        commission: fill.commission,
+        signalIndex,
+        rule: `${algorithm.name ?? "algorithm"} entry`,
+        pnl: null,
+        pnlPercent: null
+      });
+      return;
+    }
+
+    if (side === "sell" && qty > 0) {
+      const fill = priceFill({ side: "sell", referencePrice, qty, bar, model });
+      const proceeds = qty * fill.price - fill.commission;
+      const costBasis = qty * entryPrice;
+      const pnl = proceeds - costBasis;
+      cash += proceeds;
+      totalCosts += fill.commission + Math.abs(fill.price - fill.referencePrice) * qty;
+      trades.push({
+        id: `${index}-sell`,
+        index,
+        at: times[index],
+        side: "sell",
+        qty,
+        price: fill.price,
+        referencePrice: fill.referencePrice,
+        commission: fill.commission,
+        signalIndex,
+        rule: `${algorithm.name ?? "algorithm"} exit`,
+        pnl,
+        pnlPercent: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+        heldBars: index - entryIndex
+      });
+      qty = 0;
+      entryPrice = 0;
+      entryIndex = -1;
+    }
+  }
+
+  // Order decided on an earlier bar, awaiting its execution bar. Only used by
+  // the next_open rule; same_close executes inline.
+  /** @type {{side: "buy"|"sell", signalIndex: number, index: number, referencePrice: number}|null} */
   let pending = null;
 
   for (let index = 1; index < bars.length; index += 1) {
@@ -91,83 +167,15 @@ export function runBacktest({
 
     // ─── 1. Execute anything decided on a previous bar ───────────────────
     if (pending) {
-      const execution = resolveExecution(bars, pending.signalIndex, model);
-      if (execution && execution.index === index) {
-        if (pending.side === "buy" && qty === 0) {
-          const provisional = sizeBuy({ cash, price: execution.referencePrice, model });
-          if (provisional > 0) {
-            const fill = priceFill({
-              side: "buy",
-              referencePrice: execution.referencePrice,
-              qty: provisional,
-              bar,
-              model
-            });
-            // Re-size against the slipped price so a wide bar cannot overdraw.
-            const finalQty = sizeBuy({ cash, price: fill.price, model });
-            if (finalQty > 0) {
-              const cost = finalQty * fill.price + fill.commission;
-              cash -= cost;
-              totalCosts += fill.commission + Math.abs(fill.price - fill.referencePrice) * finalQty;
-              qty = finalQty;
-              entryPrice = fill.price;
-              entryIndex = index;
-              trades.push({
-                id: `${index}-buy`,
-                index,
-                at: times[index],
-                side: "buy",
-                qty: finalQty,
-                price: fill.price,
-                referencePrice: fill.referencePrice,
-                commission: fill.commission,
-                signalIndex: pending.signalIndex,
-                rule: `${algorithm.name ?? "algorithm"} entry`,
-                pnl: null,
-                pnlPercent: null
-              });
-            } else {
-              rejections.push({ index, side: "buy", reason: "insufficient_cash_after_slippage" });
-            }
-          } else {
-            rejections.push({ index, side: "buy", reason: "insufficient_cash" });
-          }
-        } else if (pending.side === "sell" && qty > 0) {
-          const fill = priceFill({
-            side: "sell",
-            referencePrice: execution.referencePrice,
-            qty,
-            bar,
-            model
-          });
-          const proceeds = qty * fill.price - fill.commission;
-          const costBasis = qty * entryPrice;
-          const pnl = proceeds - costBasis;
-          cash += proceeds;
-          totalCosts += fill.commission + Math.abs(fill.price - fill.referencePrice) * qty;
-          trades.push({
-            id: `${index}-sell`,
-            index,
-            at: times[index],
-            side: "sell",
-            qty,
-            price: fill.price,
-            referencePrice: fill.referencePrice,
-            commission: fill.commission,
-            signalIndex: pending.signalIndex,
-            rule: `${algorithm.name ?? "algorithm"} exit`,
-            pnl,
-            pnlPercent: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-            heldBars: index - entryIndex
-          });
-          qty = 0;
-          entryPrice = 0;
-          entryIndex = -1;
-        }
+      if (pending.index === index) {
+        execute(pending.side, pending.signalIndex, index, pending.referencePrice);
         pending = null;
-      } else if (!execution) {
-        rejections.push({ index: pending.signalIndex, side: pending.side, reason: "no_next_bar" });
-        pending = null;
+      } else if (pending.index < index) {
+        // Should be unreachable, but a silently stuck pending order would
+        // block every subsequent signal — fail loudly rather than trade nothing.
+        throw new Error(
+          `runBacktest: pending order for bar ${pending.index} was not executed before bar ${index}`
+        );
       }
     }
 
@@ -199,10 +207,23 @@ export function runBacktest({
 
     if (index === bars.length - 1) lastSignal = signal ?? null;
 
-    if (signal === "buy" && qty === 0 && !pending) pending = { side: "buy", signalIndex: index };
-    else if (signal === "sell" && qty > 0 && !pending) pending = { side: "sell", signalIndex: index };
+    // ─── 3. Route the signal to an execution ────────────────────────────
+    const wants = (signal === "buy" && qty === 0) || (signal === "sell" && qty > 0) ? signal : null;
+    if (wants && !pending) {
+      const execution = resolveExecution(bars, index, model);
+      if (!execution) {
+        // No next bar to fill against. Dropping the order is correct; carrying
+        // it to this bar's close would reintroduce the look-ahead.
+        rejections.push({ index, side: wants, reason: "no_next_bar" });
+      } else if (execution.index === index) {
+        // same_close rule: the decision bar IS the execution bar.
+        execute(wants, index, index, execution.referencePrice);
+      } else {
+        pending = { side: wants, signalIndex: index, ...execution };
+      }
+    }
 
-    // ─── 3. Mark to market ──────────────────────────────────────────────
+    // ─── 4. Mark to market ──────────────────────────────────────────────
     if (qty > 0) barsInPosition += 1;
     const positionValue = qty * bar.close;
     equityCurve.push({ at: times[index], equity: cash + positionValue, cash, positionValue });

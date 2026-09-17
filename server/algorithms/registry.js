@@ -4,6 +4,7 @@ import { access, link, mkdir, open, readFile, readdir, rename, stat, unlink } fr
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateAlgorithm, validateAlgorithmSource } from "./validator.js";
+import { pluginAlgorithmDescriptors } from "../plugins/algorithm-bridge.js";
 
 export function hashAlgorithmSource(source) {
   return createHash("sha256").update(source, "utf8").digest("hex");
@@ -131,6 +132,23 @@ export async function loadAlgorithmRegistry(options) {
       );
     }
   }
+  const bridged = await pluginAlgorithmDescriptors(options.pluginsDir);
+  const knownIds = new Set(algorithms.map((algorithm) => algorithm.id));
+  for (const descriptor of bridged.algorithms) {
+    if (knownIds.has(descriptor.id)) {
+      errors.push(Object.freeze({
+        id: descriptor.id,
+        file: descriptor.path,
+        code: "ALGORITHM_DUPLICATE_ID",
+        error: `Plugin algorithm id "${descriptor.id}" collides with an installed algorithm.`
+      }));
+      continue;
+    }
+    knownIds.add(descriptor.id);
+    algorithms.push(descriptor);
+  }
+  errors.push(...bridged.errors);
+  algorithms.sort((left, right) => left.id.localeCompare(right.id));
   return Object.freeze({ algorithms: Object.freeze(algorithms), errors: Object.freeze(errors) });
 }
 
