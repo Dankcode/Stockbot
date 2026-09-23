@@ -96,6 +96,20 @@ test("the API executor posts the arm params and unwraps the envelope", async () 
   assert.equal(calls[0].token.length, 32);
 });
 
+test("the API executor fetches a cross-symbol benchmark on the benchmark symbol", async () => {
+  let body;
+  const executor = createApiExecutor({
+    baseUrl: "http://127.0.0.1:4000/",
+    token: "x".repeat(32),
+    fetchImpl: async (_url, init) => {
+      body = JSON.parse(init.body);
+      return { ok: true, status: 200, json: async () => ({ data: { metrics: { returnPercent: 7 } } }) };
+    }
+  });
+  await executor({ ...plan.arms[1], symbol: "QQQ" }, plan);
+  assert.equal(body.symbol, "QQQ");
+});
+
 test("the API executor turns an error envelope into a coded error", async () => {
   const executor = createApiExecutor({
     baseUrl: "http://127.0.0.1:4000/",

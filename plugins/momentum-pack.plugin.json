@@ -1,0 +1,134 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "momentum-pack",
+  "name": "Time-series momentum",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "Absolute time-series momentum with a parameterised lookback and a long-trend gate. This is a hypothesis for controlled experiments, not a trade recommendation.",
+  "requires": {
+    "capabilities": [
+      "backtest"
+    ],
+    "sources": [],
+    "secrets": [],
+    "promptTemplates": [],
+    "aiCli": false
+  },
+  "methods": [
+    {
+      "id": "time-series-momentum",
+      "name": "Time-Series Momentum",
+      "role": "strategy",
+      "horizon": "monthly",
+      "description": "Enters when price exceeds its parameterised lookback close and long trend average; exits on a trend flip or maximum holding period.",
+      "params": {
+        "lookback": 12,
+        "trendPeriod": 26,
+        "maxHoldBars": 26
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "max": [
+            {
+              "param": "lookback"
+            },
+            {
+              "param": "trendPeriod"
+            }
+          ]
+        },
+        "indicators": {
+          "px": {
+            "fn": "ema",
+            "period": 1
+          },
+          "trend": {
+            "fn": "sma",
+            "period": {
+              "param": "trendPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "gt": [
+                    {
+                      "bar": "close"
+                    },
+                    {
+                      "series": {
+                        "name": "px",
+                        "offset": {
+                          "param": "lookback"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "gt": [
+                    {
+                      "bar": "close"
+                    },
+                    "trend"
+                  ]
+                }
+              ]
+            },
+            "reason": "Price exceeds its lookback close and long trend"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "trend"
+              ]
+            },
+            "reason": "Momentum trend flip"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Time stop"
+          }
+        ]
+      }
+    }
+  ],
+  "pairings": [
+    {
+      "strategy": "time-series-momentum",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "notes": "Tune the fixed-interval cadence to match exposure before interpreting this long-biased method. Random entry added: without a seeded random distribution the report returns `incomplete` and the null is never tested.",
+      "seeds": 20
+    }
+  ]
+}

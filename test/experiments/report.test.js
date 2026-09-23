@@ -50,7 +50,7 @@ test("percentile and quantiles handle empty and non-finite input", () => {
   assert.deepEqual({ ...quantiles([3, 1, 2]) }, { count: 3, min: 1, p25: 2, median: 2, p75: 3, max: 3 });
 });
 
-test("a strategy that loses to cash fails the floor before anything else is considered", () => {
+test("a strategy that fails the minimum-return floor fails before other controls are considered", () => {
   const report = summarizeExperiment({
     plan,
     results: buildResults(plan, {
@@ -63,7 +63,7 @@ test("a strategy that loses to cash fails the floor before anything else is cons
   assert.equal(report.groups[0].verdict, VERDICTS.FAILS_FLOOR);
 });
 
-test("beating cash but not same-asset buy-and-hold on Sharpe is below passive", () => {
+test("a positive strategy below same-asset buy-and-hold on Sharpe is below passive", () => {
   const report = summarizeExperiment({
     plan,
     results: buildResults(plan, {

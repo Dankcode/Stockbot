@@ -48,8 +48,8 @@ function stableParams(params) {
   return JSON.stringify(entries);
 }
 
-function armKey(algorithmId, params) {
-  return `${algorithmId}::${stableParams(params)}`;
+function armKey(algorithmId, params, symbol) {
+  return `${algorithmId}@${symbol}::${stableParams(params)}`;
 }
 
 /**
@@ -57,12 +57,13 @@ function armKey(algorithmId, params) {
  * and CLI output, and an operator reading "random-entry#seed=7" learns more from it than
  * from a UUID.
  */
-function armLabel(algorithmId, params) {
+function armLabel(algorithmId, params, symbol, planSymbol) {
   const tail = Object.entries(params ?? {})
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`)
     .join(",");
-  return tail ? `${algorithmId}#${tail}` : algorithmId;
+  const target = symbol === planSymbol ? "" : `@${symbol}`;
+  return tail ? `${algorithmId}${target}#${tail}` : `${algorithmId}${target}`;
 }
 
 function qualify(reference, pluginId) {
@@ -109,7 +110,10 @@ export function indexPairings(plugins) {
         ...pairing,
         pluginId,
         strategy: qualify(pairing.strategy, pluginId),
-        controls: Object.freeze(pairing.controls.map((control) => qualify(control, pluginId))),
+        controls: Object.freeze(pairing.controls.map((control) => {
+          if (typeof control === "string") return qualify(control, pluginId);
+          return Object.freeze({ ...control, id: qualify(control.id, pluginId) });
+        })),
         controlParams: Object.freeze(
           Object.fromEntries(
             Object.entries(pairing.controlParams ?? {}).map(([key, value]) => [qualify(key, pluginId), value])
@@ -134,7 +138,7 @@ export function resolveControls({ strategyId, explicitControls, pairings, seeds 
       source: "manual",
       seeds,
       controls: explicitControls.map((control) =>
-        typeof control === "string" ? { id: control, params: {} } : { id: control.id, params: control.params ?? {} }
+        typeof control === "string" ? { id: control, params: {} } : { id: control.id, params: control.params ?? {}, symbol: control.symbol }
       ),
       notes: null
     };
@@ -150,7 +154,10 @@ export function resolveControls({ strategyId, explicitControls, pairings, seeds 
   return {
     source: "pairing",
     seeds: seeds ?? pairing.seeds ?? 10,
-    controls: pairing.controls.map((id) => ({ id, params: pairing.controlParams?.[id] ?? {} })),
+    controls: pairing.controls.map((control) => {
+      const id = typeof control === "string" ? control : control.id;
+      return { id, params: control.params ?? pairing.controlParams?.[id] ?? {}, symbol: control.symbol };
+    }),
     notes: pairing.notes ?? null
   };
 }
@@ -200,8 +207,12 @@ export function buildExperimentPlan({
 
   /** Arms are interned here so identical runs across groups execute once. */
   const arms = new Map();
-  const intern = (algorithmId, params, kind) => {
-    const key = armKey(algorithmId, params);
+  const intern = (algorithmId, params, kind, targetSymbol = symbol) => {
+    const normalizedSymbol = String(targetSymbol).trim().toUpperCase();
+    if (!/^[A-Z0-9][A-Z0-9./-]{0,31}$/.test(normalizedSymbol)) {
+      throw new ExperimentPlanError(`Invalid control symbol: ${targetSymbol}`, { code: "EXPERIMENT_SYMBOL_INVALID" });
+    }
+    const key = armKey(algorithmId, params, normalizedSymbol);
     const existing = arms.get(key);
     if (existing) {
       // A method reached as both a strategy and somebody's control stays a strategy —
@@ -218,8 +229,9 @@ export function buildExperimentPlan({
     }
     const arm = Object.freeze({
       key,
-      id: armLabel(algorithmId, params),
+      id: armLabel(algorithmId, params, normalizedSymbol, symbol),
       algorithmId,
+      symbol: normalizedSymbol,
       name: method.name,
       kind,
       role: method.role,
@@ -269,10 +281,10 @@ export function buildExperimentPlan({
       const seedable = Object.hasOwn(controlMethod.params, "seed") && !Object.hasOwn(control.params ?? {}, "seed");
       if (seedable) {
         for (let seed = 1; seed <= resolved.seeds; seed += 1) {
-          controlArms.push(intern(control.id, { ...control.params, seed }, "control"));
+          controlArms.push(intern(control.id, { ...control.params, seed }, "control", control.symbol));
         }
       } else {
-        controlArms.push(intern(control.id, control.params ?? {}, "control"));
+        controlArms.push(intern(control.id, control.params ?? {}, "control", control.symbol));
       }
     }
 

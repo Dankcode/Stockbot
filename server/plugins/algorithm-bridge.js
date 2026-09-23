@@ -92,19 +92,20 @@ export function expandPairing(registryEntries, pluginId, pairing) {
   if (!strategy) return null;
 
   const runs = [{ kind: "strategy", id: strategyId, params: {} }];
-  for (const control of pairing.controls) {
-    const controlId = qualify(control);
+  for (const declaredControl of pairing.controls) {
+    const control = typeof declaredControl === "string" ? { id: declaredControl } : declaredControl;
+    const controlId = qualify(control.id);
     const method = all.get(controlId);
     if (!method) continue;
-    const params = { ...(pairing.controlParams?.[control] ?? pairing.controlParams?.[controlId] ?? {}) };
+    const params = { ...(control.params ?? pairing.controlParams?.[control.id] ?? pairing.controlParams?.[controlId] ?? {}) };
     // A control that reads randomness is only meaningful as a distribution, so it is
     // expanded across the pairing's seed count rather than run once.
     if ("seed" in method.params) {
       for (let seed = 1; seed <= (pairing.seeds ?? 10); seed += 1) {
-        runs.push({ kind: "control", id: controlId, params: { ...params, seed } });
+        runs.push({ kind: "control", id: controlId, params: { ...params, seed }, symbol: control.symbol });
       }
     } else {
-      runs.push({ kind: "control", id: controlId, params });
+      runs.push({ kind: "control", id: controlId, params, symbol: control.symbol });
     }
   }
   return Object.freeze({ strategy: strategyId, runs: Object.freeze(runs) });

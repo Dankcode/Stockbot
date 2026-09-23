@@ -21,7 +21,8 @@ test("modular server boots with versioned envelopes and protects mutations", asy
     async getBars() { throw new Error("No real fixture bars requested."); },
     async getQuote() { throw new Error("No real fixture quote requested."); },
     async search() { return []; },
-    async movers() { return []; }
+    async movers() { return []; },
+    async selectionUniverse() { return { symbols: [], forwardTestOnly: false }; }
   };
   const runtime = await createStockbot({ config, client, market });
   t.after(async () => {

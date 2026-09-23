@@ -1,0 +1,437 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "exit-lab",
+  "name": "Exit laboratory",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "Three methods sharing base-methods/ema-momentum's entry rule exactly, differing only in how they exit. Run them alongside base-methods/ema-momentum and the difference between the arms is attributable to the exit and nothing else.",
+  "requires": {
+    "capabilities": [
+      "backtest"
+    ],
+    "sources": [],
+    "secrets": [],
+    "promptTemplates": [],
+    "aiCli": false
+  },
+  "methods": [
+    {
+      "id": "ema-trail-percent",
+      "name": "EMA cross, ratcheting percent trail",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Identical EMA(9/21) entry to base-methods/ema-momentum. Exits on the cross-down or a trailing stop measured from the highest close since entry, rather than a fixed distance from the entry price. The default trail is 6%, chosen because looser values do not bind on a 9/21 EMA method \u2014 measured on the offline series, 10% fired the trailing stop zero times and the arm silently degenerated into the cross-down exit. It is NOT chosen for return: 10% scored higher.",
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "trailPercent": 6
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "state": {
+          "peak": 0
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "derived": {
+          "trailFrac": {
+            "div": [
+              {
+                "param": "trailPercent"
+              },
+              100
+            ]
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "set": {
+              "peak": {
+                "bar": "close"
+              }
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "state": "peak"
+                }
+              ]
+            },
+            "set": {
+              "peak": {
+                "bar": "close"
+              }
+            },
+            "action": "none",
+            "reason": "New high since entry; ratchet the peak and hold"
+          },
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "state": "peak"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "const": "trailFrac"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Percent trailing stop from peak"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ema-trail-atr",
+      "name": "EMA cross, ATR chandelier trail",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Same EMA(9/21) entry. The trailing stop sits a multiple of ATR(14) below the highest close since entry, so the stop widens in volatile stretches and tightens in quiet ones instead of using one percentage everywhere. The default multiple is 2.0 for the same reason as its percent sibling: at 3.0 the stop never fired on the offline series, which makes the arm untestable rather than conservative.",
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "atrPeriod": 14,
+        "atrMultiple": 2
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "max": [
+            {
+              "param": "slow"
+            },
+            {
+              "param": "atrPeriod"
+            }
+          ]
+        },
+        "state": {
+          "peak": 0
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          },
+          "atr": {
+            "fn": "atr",
+            "period": {
+              "param": "atrPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "set": {
+              "peak": {
+                "bar": "close"
+              }
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "state": "peak"
+                }
+              ]
+            },
+            "set": {
+              "peak": {
+                "bar": "close"
+              }
+            },
+            "action": "none",
+            "reason": "New high since entry; ratchet the peak and hold"
+          },
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "sub": [
+                    {
+                      "state": "peak"
+                    },
+                    {
+                      "mul": [
+                        "atr",
+                        {
+                          "param": "atrMultiple"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "ATR chandelier stop from peak"
+          },
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ema-time-stop",
+      "name": "EMA cross, time stop only",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Same EMA(9/21) entry, exiting only after a fixed number of bars. Deliberately blind to price after entry: if the sibling arms cannot beat this, their exit rules are decoration.",
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "holdBars": 12
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "or": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "and": [
+                    {
+                      "eq": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "param": "slow"
+                        }
+                      ]
+                    },
+                    {
+                      "gt": [
+                        "fast",
+                        "slow"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Fast EMA crossed above slow EMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "holdBars"
+                }
+              ]
+            },
+            "reason": "Fixed holding period elapsed"
+          }
+        ]
+      }
+    }
+  ],
+  "pairings": [
+    {
+      "strategy": "ema-trail-percent",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20,
+      "notes": "Also run base-methods/ema-momentum in the same experiment. It shares this entry exactly, so the gap between the two arms is the exit change and nothing else."
+    },
+    {
+      "strategy": "ema-trail-atr",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20,
+      "notes": "Compare against exit-lab/ema-trail-percent, not only against the controls: the question is whether volatility-scaled trailing beats one fixed percentage."
+    },
+    {
+      "strategy": "ema-time-stop",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 12
+        }
+      },
+      "seeds": 20,
+      "notes": "Match fixed-interval's holdBars to this method's holdBars. This arm is close to a control itself and is meant to be hard to beat."
+    }
+  ]
+}

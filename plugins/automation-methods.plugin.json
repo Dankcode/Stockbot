@@ -1,0 +1,493 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "automation-methods",
+  "name": "Paper automation methods",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "Four distinct, parameterised rules.v1 research methods for controlled paper experiments. They are hypotheses, not trade recommendations or live-trading instructions.",
+  "requires": {
+    "capabilities": [
+      "backtest"
+    ],
+    "sources": [],
+    "secrets": [],
+    "promptTemplates": [],
+    "aiCli": false
+  },
+  "methods": [
+    {
+      "id": "sma-trend-stack",
+      "name": "SMA Trend Stack",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Trend-following entry when the fast simple moving average crosses above the slow average; exits on the inverse cross.",
+      "params": {
+        "fastPeriod": 20,
+        "slowPeriod": 50
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slowPeriod"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "sma",
+            "period": {
+              "param": "fastPeriod"
+            }
+          },
+          "slow": {
+            "fn": "sma",
+            "period": {
+              "param": "slowPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "crossesAbove": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast SMA crossed above slow SMA"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast SMA crossed below slow SMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rsi-trend-rebound",
+      "name": "RSI Trend Rebound",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Buys an RSI rebound only above a long simple moving average, then exits on recovered RSI, a trend break, or a time stop.",
+      "params": {
+        "rsiPeriod": 14,
+        "trendPeriod": 50,
+        "oversold": 35,
+        "exitLevel": 60,
+        "maxHoldBars": 20
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "max": [
+            {
+              "param": "rsiPeriod"
+            },
+            {
+              "param": "trendPeriod"
+            }
+          ]
+        },
+        "indicators": {
+          "rsi": {
+            "fn": "rsi",
+            "period": {
+              "param": "rsiPeriod"
+            }
+          },
+          "trend": {
+            "fn": "sma",
+            "period": {
+              "param": "trendPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "lt": [
+                    {
+                      "series": {
+                        "name": "rsi",
+                        "offset": 1
+                      }
+                    },
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                },
+                {
+                  "gte": [
+                    "rsi",
+                    {
+                      "param": "oversold"
+                    }
+                  ]
+                },
+                {
+                  "gt": [
+                    {
+                      "bar": "close"
+                    },
+                    "trend"
+                  ]
+                }
+              ]
+            },
+            "reason": "RSI recovered through oversold while price remained above trend"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                "rsi",
+                {
+                  "param": "exitLevel"
+                }
+              ]
+            },
+            "reason": "RSI recovered to exit level"
+          },
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "trend"
+              ]
+            },
+            "reason": "Trend break"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Time stop"
+          }
+        ]
+      }
+    },
+    {
+      "id": "donchian-channel",
+      "name": "Donchian Channel",
+      "role": "strategy",
+      "horizon": "monthly",
+      "description": "Long-only breakout through a prior high with an independent, shorter prior-low exit channel.",
+      "params": {
+        "entryPeriod": 20,
+        "exitPeriod": 10
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "max": [
+            {
+              "param": "entryPeriod"
+            },
+            {
+              "param": "exitPeriod"
+            }
+          ]
+        },
+        "indicators": {
+          "entryChannel": {
+            "fn": "highestHigh",
+            "period": {
+              "param": "entryPeriod"
+            }
+          },
+          "exitChannel": {
+            "fn": "lowestLow",
+            "period": {
+              "param": "exitPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                "entryChannel"
+              ]
+            },
+            "reason": "Close cleared prior Donchian high"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "exitChannel"
+              ]
+            },
+            "reason": "Close broke prior Donchian low"
+          }
+        ]
+      }
+    },
+    {
+      "id": "atr-gated-ema",
+      "name": "ATR-Gated EMA Cross",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "EMA trend cross admitted only when ATR as a percent of price is inside a parameterised tradable-volatility band.",
+      "params": {
+        "fastPeriod": 9,
+        "slowPeriod": 21,
+        "atrPeriod": 14,
+        "minAtrPercent": 0.5,
+        "maxAtrPercent": 5
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "max": [
+            {
+              "param": "slowPeriod"
+            },
+            {
+              "param": "atrPeriod"
+            }
+          ]
+        },
+        "indicators": {
+          "fast": {
+            "fn": "ema",
+            "period": {
+              "param": "fastPeriod"
+            }
+          },
+          "slow": {
+            "fn": "ema",
+            "period": {
+              "param": "slowPeriod"
+            }
+          },
+          "atr": {
+            "fn": "atr",
+            "period": {
+              "param": "atrPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "crossesAbove": [
+                    "fast",
+                    "slow"
+                  ]
+                },
+                {
+                  "gte": [
+                    {
+                      "div": [
+                        {
+                          "mul": [
+                            "atr",
+                            100
+                          ]
+                        },
+                        {
+                          "bar": "close"
+                        }
+                      ]
+                    },
+                    {
+                      "param": "minAtrPercent"
+                    }
+                  ]
+                },
+                {
+                  "lte": [
+                    {
+                      "div": [
+                        {
+                          "mul": [
+                            "atr",
+                            100
+                          ]
+                        },
+                        {
+                          "bar": "close"
+                        }
+                      ]
+                    },
+                    {
+                      "param": "maxAtrPercent"
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "EMA trend cross inside ATR volatility band"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Fast EMA crossed below slow EMA"
+          }
+        ]
+      }
+    }
+  ],
+  "pairings": [
+    {
+      "strategy": "sma-trend-stack",
+      "controls": [
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "SPY"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "QQQ"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "IWM"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "DIA"
+        },
+        "core-controls/random-entry",
+        "core-controls/fixed-interval"
+      ],
+      "notes": "The four index-fund benchmarks are the entire control group for this research method. Added random-entry, fixed-interval: cross-symbol buy-and-hold benchmarks answer 'better than which index', not 'better than no information', so without these the percentile column stays empty and the verdict stops at below-passive.",
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20
+    },
+    {
+      "strategy": "rsi-trend-rebound",
+      "controls": [
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "SPY"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "QQQ"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "IWM"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "DIA"
+        },
+        "core-controls/random-entry",
+        "core-controls/fixed-interval"
+      ],
+      "notes": "The four index-fund benchmarks are the entire control group for this research method. Added random-entry, fixed-interval: cross-symbol buy-and-hold benchmarks answer 'better than which index', not 'better than no information', so without these the percentile column stays empty and the verdict stops at below-passive.",
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20
+    },
+    {
+      "strategy": "donchian-channel",
+      "controls": [
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "SPY"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "QQQ"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "IWM"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "DIA"
+        },
+        "core-controls/random-entry",
+        "core-controls/fixed-interval"
+      ],
+      "notes": "The four index-fund benchmarks are the entire control group for this research method. Added random-entry, fixed-interval: cross-symbol buy-and-hold benchmarks answer 'better than which index', not 'better than no information', so without these the percentile column stays empty and the verdict stops at below-passive.",
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20
+    },
+    {
+      "strategy": "atr-gated-ema",
+      "controls": [
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "SPY"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "QQQ"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "IWM"
+        },
+        {
+          "id": "core-controls/buy-and-hold",
+          "symbol": "DIA"
+        },
+        "core-controls/random-entry",
+        "core-controls/fixed-interval"
+      ],
+      "notes": "The four index-fund benchmarks are the entire control group for this research method. Added random-entry, fixed-interval: cross-symbol buy-and-hold benchmarks answer 'better than which index', not 'better than no information', so without these the percentile column stays empty and the verdict stops at below-passive.",
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20
+    }
+  ]
+}

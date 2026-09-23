@@ -30,6 +30,7 @@
  * be reached unless it is registered in RESEARCH_WEB_SOURCES_JSON.
  */
 import { getRangeConfig } from "../../packages/shared/ranges.js";
+import { band, ramp, scoreSeparation, weightedScore } from "../scoring/scale.js";
 
 /**
  * History is gated on *coverage of the requested window*, not on an absolute bar count.
@@ -61,25 +62,8 @@ export const DEFAULT_WEIGHTS = Object.freeze({
   researchCoverage: 0.20
 });
 
-/**
- * `Number(null)` is 0 and `Number.isFinite(0)` is true, so a plain finiteness check
- * silently converts "not measured" into "measured as zero" — the exact failure this
- * module claims not to have. Absence is checked before coercion, deliberately.
- */
 function measured(value) {
   return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
-}
-
-/** Maps a raw value onto 0..1 through a saturating ramp; below `floor` is 0, above `ceiling` is 1. */
-function ramp(value, floor, ceiling) {
-  if (!measured(value) || ceiling === floor) return null;
-  return Math.max(0, Math.min(1, (Number(value) - floor) / (ceiling - floor)));
-}
-
-/** Peaks at `ideal` and falls off linearly to zero at `ideal ± span`. */
-function band(value, ideal, span) {
-  if (!measured(value) || span <= 0) return null;
-  return Math.max(0, 1 - Math.abs(Number(value) - ideal) / span);
 }
 
 /**
@@ -144,11 +128,8 @@ export function scoreCandidate(facts, { weights = DEFAULT_WEIGHTS, gates = DEFAU
     researchCoverage: ramp(facts?.researchDocumentCount, 0, 12)
   };
 
-  const scored = Object.entries(components).filter(([, value]) => value !== null);
-  const denominator = scored.reduce((sum, [key]) => sum + (weights[key] ?? 0), 0);
-  const score = denominator > 0
-    ? scored.reduce((sum, [key, value]) => sum + value * (weights[key] ?? 0), 0) / denominator
-    : 0;
+  const weighted = weightedScore(components, weights);
+  const score = weighted.score ?? 0;
 
   const reasons = [];
   if (components.liquidity !== null) {
@@ -163,7 +144,7 @@ export function scoreCandidate(facts, { weights = DEFAULT_WEIGHTS, gates = DEFAU
   if (components.researchCoverage !== null) {
     reasons.push(`research coverage ${(components.researchCoverage * 100).toFixed(0)}/100 — ${facts.researchDocumentCount ?? 0} archived documents`);
   }
-  const unmeasured = Object.entries(components).filter(([, value]) => value === null).map(([key]) => key);
+  const unmeasured = weighted.unmeasured;
   if (unmeasured.length > 0) {
     reasons.push(`not measured: ${unmeasured.join(", ")} — score computed over the remaining weight only`);
   }
@@ -189,7 +170,7 @@ export function rankCandidates(candidateFacts, { weights, gates, limit = 10 } = 
     eligibleCount: eligible.length,
     excluded: Object.freeze(excluded),
     /** Confidence is a spread, not a feeling: how far the leader is clear of the pack. */
-    separation: eligible.length >= 2 ? Number((eligible[0].score - eligible[1].score).toFixed(4)) : null
+    separation: scoreSeparation(eligible.map((candidate) => candidate.score)).value
   });
 }
 

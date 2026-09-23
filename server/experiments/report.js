@@ -3,8 +3,8 @@
  *
  * The rules here are the procedure in docs/CONTROL_GROUP.md, executed instead of read.
  * They are deliberately ordered as a gauntlet with early exits, because that is how the
- * document says to run it: a strategy that loses to cash is not interesting for having
- * beaten a random control, and reporting both numbers with equal weight invites the
+ * document says to run it: a strategy that fails the minimum-return floor is not
+ * interesting for having beaten a random control, and reporting both numbers with equal weight invites the
  * reader to pick the flattering one.
  *
  * Nothing here is a recommendation to trade. Every verdict is a statement about whether
@@ -104,7 +104,7 @@ export function summarizeGroup({ group, resultsByArm }) {
 
   const controls = [];
   const randomReturns = [];
-  let passive = null;
+  const passiveControls = [];
   let exposureMatched = null;
 
   for (const arm of group.controls) {
@@ -119,7 +119,7 @@ export function summarizeGroup({ group, resultsByArm }) {
       continue;
     }
     controls.push(Object.freeze({ arm, metrics }));
-    if (isPassiveControl(arm)) passive = metrics;
+    if (isPassiveControl(arm)) passiveControls.push({ arm, metrics });
     // The last non-passive, non-random control is treated as the exposure-matched one.
     // In every shipped pairing that is fixed-interval; a custom pairing that names two
     // gets the later one, and the exposure warning below catches a bad choice.
@@ -128,6 +128,9 @@ export function summarizeGroup({ group, resultsByArm }) {
 
   const distribution = quantiles(randomReturns);
   const percentile = percentileOf(Number(strategy.returnPercent), randomReturns);
+  const passive = passiveControls.reduce((strongest, candidate) =>
+    !strongest || Number(candidate.metrics.sharpe) > Number(strongest.metrics.sharpe) ? candidate : strongest,
+  null);
 
   if (failures.length > 0) {
     warnings.push(`${failures.length} control arm(s) failed: ${failures.slice(0, 3).join("; ")}`);
@@ -156,12 +159,12 @@ export function summarizeGroup({ group, resultsByArm }) {
   let reason = "Beat every control it was measured against.";
   if (!(Number(strategy.returnPercent) > 0)) {
     verdict = VERDICTS.FAILS_FLOOR;
-    reason = "Lost to cash. Nothing below this line can rescue it.";
-  } else if (passive && Number(strategy.sharpe) <= Number(passive.sharpe)) {
+    reason = "Failed the minimum-return floor. Nothing below this line can rescue it.";
+  } else if (passive && Number(strategy.sharpe) <= Number(passive.metrics.sharpe)) {
     verdict = VERDICTS.BELOW_PASSIVE;
     reason =
-      `Risk-adjusted return did not beat same-asset buy-and-hold ` +
-      `(Sharpe ${Number(strategy.sharpe).toFixed(2)} vs ${Number(passive.sharpe).toFixed(2)}).`;
+      `Risk-adjusted return did not beat the strongest buy-and-hold benchmark (${passive.arm.symbol}) ` +
+      `(Sharpe ${Number(strategy.sharpe).toFixed(2)} vs ${Number(passive.metrics.sharpe).toFixed(2)}).`;
   } else if (exposureMatched && Number(strategy.returnPercent) <= Number(exposureMatched.returnPercent)) {
     verdict = VERDICTS.NO_TIMING_EDGE;
     reason =
@@ -189,7 +192,7 @@ export function summarizeGroup({ group, resultsByArm }) {
     verdict,
     reason,
     metrics: strategy,
-    passive,
+    passive: passive?.metrics ?? null,
     exposureMatched,
     controls: Object.freeze(controls),
     randomDistribution: distribution,

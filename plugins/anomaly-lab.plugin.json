@@ -1,0 +1,626 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "anomaly-lab",
+  "name": "Anomaly laboratory",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "Five entry families the installed catalogue does not cover: proximity to the rolling annual high, volatility-contraction breakout, distance-from-mean reversion, price/RSI divergence, and a weekday calendar effect. Each names a documented anomaly so the experiment is testing a stated claim rather than a parameter search.",
+  "requires": {
+    "capabilities": [
+      "backtest"
+    ],
+    "sources": [],
+    "secrets": [],
+    "promptTemplates": [],
+    "aiCli": false
+  },
+  "methods": [
+    {
+      "id": "near-annual-high",
+      "name": "Proximity to the rolling annual high",
+      "role": "strategy",
+      "horizon": "monthly",
+      "description": "Buys when the close sits within a small band of its highest high over the trailing lookback window and above its trend average. Tests the documented tendency for names near their rolling high to keep drifting up, which is a different claim from trailing-return momentum. The literature's version uses a 252-bar (52-week) high; RANGE_CONFIG caps every supported range at 180 bars, so a 252-bar warmup can never trade and the defaults here are the longest window that leaves usable bars on the 3M and 1W ranges. Raise highLookback to 252 only once windowed backtests can supply the history.",
+      "params": {
+        "highLookback": 60,
+        "trendPeriod": 50,
+        "proximityPercent": 3,
+        "trailPercent": 15
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "max": [
+            {
+              "param": "highLookback"
+            },
+            {
+              "param": "trendPeriod"
+            }
+          ]
+        },
+        "state": {
+          "peak": 0
+        },
+        "indicators": {
+          "annualHigh": {
+            "fn": "highestHigh",
+            "period": {
+              "param": "highLookback"
+            }
+          },
+          "trend": {
+            "fn": "sma",
+            "period": {
+              "param": "trendPeriod"
+            }
+          }
+        },
+        "derived": {
+          "proximityFloor": {
+            "sub": [
+              1,
+              {
+                "div": [
+                  {
+                    "param": "proximityPercent"
+                  },
+                  100
+                ]
+              }
+            ]
+          },
+          "trailFrac": {
+            "div": [
+              {
+                "param": "trailPercent"
+              },
+              100
+            ]
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "gte": [
+                    {
+                      "bar": "close"
+                    },
+                    {
+                      "mul": [
+                        "annualHigh",
+                        {
+                          "const": "proximityFloor"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "gt": [
+                    {
+                      "bar": "close"
+                    },
+                    "trend"
+                  ]
+                }
+              ]
+            },
+            "set": {
+              "peak": {
+                "bar": "close"
+              }
+            },
+            "reason": "Close within the proximity band of the rolling annual high, above trend"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gt": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "state": "peak"
+                }
+              ]
+            },
+            "set": {
+              "peak": {
+                "bar": "close"
+              }
+            },
+            "action": "none",
+            "reason": "New high since entry; ratchet the peak and hold"
+          },
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    {
+                      "state": "peak"
+                    },
+                    {
+                      "sub": [
+                        1,
+                        {
+                          "const": "trailFrac"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Percent trailing stop from peak"
+          },
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "trend"
+              ]
+            },
+            "reason": "Close fell below the trend average"
+          }
+        ]
+      }
+    },
+    {
+      "id": "squeeze-breakout",
+      "name": "Volatility-contraction breakout",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Requires short-window ATR to have been compressed relative to long-window ATR in the bars BEFORE a channel breakout, then buys the breakout. Reading the ratio on the breakout bar itself is self-defeating \u2014 the breakout expands short-window ATR, so the contraction gate and the breakout are almost never true together (measured: 121 gate bars and 21 breakout bars over 550, overlapping on 1). gateOffset is how far back the gate is read.",
+      "params": {
+        "atrFast": 10,
+        "atrSlow": 50,
+        "contraction": 0.9,
+        "gateOffset": 2,
+        "breakoutPeriod": 20,
+        "exitPeriod": 10
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "max": [
+            {
+              "param": "atrSlow"
+            },
+            {
+              "param": "breakoutPeriod"
+            }
+          ]
+        },
+        "indicators": {
+          "atrFast": {
+            "fn": "atr",
+            "period": {
+              "param": "atrFast"
+            }
+          },
+          "atrSlow": {
+            "fn": "atr",
+            "period": {
+              "param": "atrSlow"
+            }
+          },
+          "channelHigh": {
+            "fn": "highestHigh",
+            "period": {
+              "param": "breakoutPeriod"
+            }
+          },
+          "channelLow": {
+            "fn": "lowestLow",
+            "period": {
+              "param": "exitPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "lte": [
+                    {
+                      "div": [
+                        {
+                          "series": {
+                            "name": "atrFast",
+                            "offset": {
+                              "param": "gateOffset"
+                            }
+                          }
+                        },
+                        {
+                          "series": {
+                            "name": "atrSlow",
+                            "offset": {
+                              "param": "gateOffset"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "param": "contraction"
+                    }
+                  ]
+                },
+                {
+                  "gt": [
+                    {
+                      "bar": "close"
+                    },
+                    "channelHigh"
+                  ]
+                }
+              ]
+            },
+            "reason": "Breakout above the channel after a stretch of compressed volatility"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "lt": [
+                {
+                  "bar": "close"
+                },
+                "channelLow"
+              ]
+            },
+            "reason": "Close below the shorter channel low"
+          }
+        ]
+      }
+    },
+    {
+      "id": "distance-reversion",
+      "name": "Distance-from-mean reversion",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Buys when the close is a set percentage below its simple moving average and exits when it returns to the average or the holding period expires. States the reversion claim in price distance rather than in an oscillator, so it is not a reparameterised RSI method.",
+      "params": {
+        "meanPeriod": 50,
+        "dipPercent": 7,
+        "maxHoldBars": 25
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "meanPeriod"
+        },
+        "indicators": {
+          "mean": {
+            "fn": "sma",
+            "period": {
+              "param": "meanPeriod"
+            }
+          }
+        },
+        "derived": {
+          "dipFloor": {
+            "sub": [
+              1,
+              {
+                "div": [
+                  {
+                    "param": "dipPercent"
+                  },
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "lte": [
+                {
+                  "bar": "close"
+                },
+                {
+                  "mul": [
+                    "mean",
+                    {
+                      "const": "dipFloor"
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Close is the full dip distance below its moving average"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                {
+                  "bar": "close"
+                },
+                "mean"
+              ]
+            },
+            "reason": "Price returned to the moving average"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Holding period expired without reversion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "price-rsi-divergence",
+      "name": "Price/RSI bullish divergence",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "Enters when the close is lower than it was `lookback` bars ago while RSI over the same span is higher \u2014 falling price on strengthening momentum. Uses an ema period 1 series as the close series, which is exact, so the comparison is against real prior price rather than a smoothed proxy.",
+      "params": {
+        "lookback": 20,
+        "rsiPeriod": 14,
+        "exitRsi": 55,
+        "maxHoldBars": 30
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "add": [
+            {
+              "param": "lookback"
+            },
+            {
+              "param": "rsiPeriod"
+            }
+          ]
+        },
+        "indicators": {
+          "px": {
+            "fn": "ema",
+            "period": 1
+          },
+          "rsi": {
+            "fn": "rsi",
+            "period": {
+              "param": "rsiPeriod"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "and": [
+                {
+                  "lt": [
+                    {
+                      "bar": "close"
+                    },
+                    {
+                      "series": {
+                        "name": "px",
+                        "offset": {
+                          "param": "lookback"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "gt": [
+                    "rsi",
+                    {
+                      "series": {
+                        "name": "rsi",
+                        "offset": {
+                          "param": "lookback"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "reason": "Price below its level a lookback ago while RSI is above its own"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                "rsi",
+                {
+                  "param": "exitRsi"
+                }
+              ]
+            },
+            "reason": "RSI recovered to the exit level"
+          },
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "maxHoldBars"
+                }
+              ]
+            },
+            "reason": "Holding period expired"
+          }
+        ]
+      }
+    },
+    {
+      "id": "weekday-effect",
+      "name": "Weekday calendar effect",
+      "role": "strategy",
+      "horizon": "daily",
+      "description": "Buys on a chosen weekday and holds a fixed span, reading the day of week from the bar timestamp and ignoring price entirely. Included as a near-null arm: it makes a real published claim, carries no price information, and any method that cannot beat it is not using price either.",
+      "params": {
+        "entryDay": 1,
+        "holdBars": 4
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": 1,
+        "entry": [
+          {
+            "when": {
+              "eq": [
+                {
+                  "mod": [
+                    {
+                      "add": [
+                        {
+                          "floor": [
+                            {
+                              "div": [
+                                {
+                                  "bar": "time"
+                                },
+                                86400000
+                              ]
+                            }
+                          ]
+                        },
+                        4
+                      ]
+                    },
+                    7
+                  ]
+                },
+                {
+                  "param": "entryDay"
+                }
+              ]
+            },
+            "reason": "Entry weekday reached"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "gte": [
+                {
+                  "var": "barsSinceEntry"
+                },
+                {
+                  "param": "holdBars"
+                }
+              ]
+            },
+            "reason": "Fixed holding period elapsed"
+          }
+        ]
+      }
+    }
+  ],
+  "pairings": [
+    {
+      "strategy": "near-annual-high",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 30,
+          "holdBars": 25
+        }
+      },
+      "seeds": 20,
+      "notes": "Long-biased and high exposure by construction, so buy-and-hold is the binding control. Also run momentum-pack/time-series-momentum alongside: if the two agree everywhere, this is not a separate claim."
+    },
+    {
+      "strategy": "squeeze-breakout",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 10
+        }
+      },
+      "seeds": 20,
+      "notes": "The honest control is base-methods/donchian-breakout with the same channel period. Run it in the same experiment: the contraction filter earns its place only if it beats the unfiltered breakout."
+    },
+    {
+      "strategy": "distance-reversion",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 25,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20,
+      "notes": "Low exposure by construction. Tune fixed-interval down until exposure matches before reading the comparison, or the report will flag the gap."
+    },
+    {
+      "strategy": "price-rsi-divergence",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 25,
+          "holdBars": 10
+        }
+      },
+      "seeds": 20,
+      "notes": "Divergence methods are prone to very few trades. Check the closed round-trip count before reading any metric; under five the report withholds a positive verdict outright."
+    },
+    {
+      "strategy": "weekday-effect",
+      "controls": [
+        "core-controls/fixed-interval",
+        "core-controls/random-entry",
+        "core-controls/buy-and-hold"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 5,
+          "holdBars": 4
+        }
+      },
+      "seeds": 20,
+      "notes": "Exposure-matched fixed-interval is the control that matters here, since both ignore price. A win over random entry alone means nothing."
+    }
+  ]
+}

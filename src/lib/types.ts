@@ -87,6 +87,9 @@ export type Algorithm = {
   sourceHash?: string;
   file?: string;
   uploaded?: boolean;
+  role?: "strategy" | "control" | "benchmark";
+  horizon?: "daily" | "weekly" | "monthly" | "yearly" | "none" | null;
+  plugin?: { id: string; version: string; methodId: string } | null;
 };
 
 export type AlgorithmVersion = {
@@ -200,6 +203,40 @@ export type MarketBars = {
   source: string;
   bars: Bar[];
   diagnostics: MarketDiagnostics;
+};
+
+export type SymbolSelectionCandidate = {
+  symbol: string;
+  eligible: boolean;
+  blockers: string[];
+  score: number;
+  components: Record<string, number | null>;
+  reasons: string[];
+  evidence: unknown[];
+  forwardTestOnly: boolean;
+  board: {
+    score: number | null;
+    confidence: "low" | "medium" | "high";
+    reasons: string[];
+  };
+};
+
+export type SymbolSelection = {
+  recommended: SymbolSelectionCandidate[];
+  excluded: SymbolSelectionCandidate[];
+  requested: number;
+  scored: number;
+  eligibleCount: number;
+  separation: number | null;
+  errors: { symbol: string; stage: string; message: string }[];
+  caption: string;
+  universe: {
+    source: string;
+    forwardTestOnly: boolean;
+    fallback: boolean;
+    survivorshipWarning: string | null;
+    size: number;
+  };
 };
 
 export type OverviewAggregate = {

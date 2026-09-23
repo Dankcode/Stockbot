@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Local guardrail: blocks a commit whose staged diff looks like it introduces
+# a real secret. This repo is public on GitHub, so anything committed here is
+# public the moment it's pushed -- real credentials (the Postgres role
+# password, API tokens, TLS keys) belong only in an owner-only file outside
+# this working tree (see docs/DATABASE_OPERATIONS.md and the oldlaptop/
+# Tailscale plan docs), never in a commit.
+#
+# This is a best-effort local check, not a substitute for GitHub's own
+# secret scanning + push protection (repo Settings -> Code security) -- those
+# catch what a contributor's own hooksPath isn't configured to run.
+set -euo pipefail
+
+staged_diff="$(git diff --cached -U0 --no-color)"
+
+# A real-looking assignment to one of Stockbot's own secret env vars, a URL
+# with embedded user:password credentials, or PEM/OpenSSH private key
+# material. Documented placeholders are allowed through.
+pattern='(STOCKBOT_API_TOKEN|STOCKBOT_SETTINGS_KEY|ALPACA_API_SECRET|ALPACA_API_KEY|POLYGON_API_KEY|FINNHUB_API_KEY|OPENAI_API_KEY|DATABASE_URL)=[A-Za-z0-9+/=_.-]{16,}|://[A-Za-z0-9._%+-]+:[^/[:space:]"'"'"'@]{6,}@|BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY'
+allowlist='replace-me|replace-with|example\.test|paste-at-this-prompt|URL_ENCODED_PASSWORD|your-|operator-configured|localhost|127\.0\.0\.1'
+
+hits="$(printf '%s\n' "$staged_diff" | grep -E '^\+' | grep -Ev "$allowlist" | grep -E "$pattern" || true)"
+
+if [[ -n "$hits" ]]; then
+  echo "pre-commit: this commit looks like it contains a real secret:" >&2
+  echo "$hits" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "Move the real value to an owner-only file outside the repo instead." >&2
+  echo "If this is genuinely a false positive: git commit --no-verify" >&2
+  exit 1
+fi

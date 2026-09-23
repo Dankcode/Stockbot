@@ -212,7 +212,8 @@ async function main() {
     if (entry.pairings.length) {
       process.stdout.write("\nPairings (every strategy ships its controls)\n");
       for (const pairing of entry.pairings) {
-        process.stdout.write(`  ${pairing.strategy}\n    vs ${pairing.controls.join(", ")}  (${pairing.seeds} seeds)\n`);
+        const labels = pairing.controls.map((control) => typeof control === "string" ? control : `${control.id}@${control.symbol}`);
+        process.stdout.write(`  ${pairing.strategy}\n    vs ${labels.join(", ")}  (${pairing.seeds} seeds)\n`);
         for (const [control, params] of Object.entries(pairing.controlParams ?? {})) {
           process.stdout.write(`       ${control} ${JSON.stringify(params)}\n`);
         }

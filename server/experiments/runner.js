@@ -75,7 +75,7 @@ export function createApiExecutor({ baseUrl, token, timeoutMs = 180_000, fetchIm
       method: "POST",
       headers: { accept: "application/json", "content-type": "application/json", "x-stockbot-token": token },
       body: JSON.stringify({
-        symbol: plan.symbol,
+        symbol: arm.symbol ?? plan.symbol,
         range: plan.range,
         ...(Object.keys(arm.params).length > 0 ? { params: arm.params } : {}),
         ...(Object.keys(plan.fillModel ?? {}).length > 0 ? { fillModel: plan.fillModel } : {})

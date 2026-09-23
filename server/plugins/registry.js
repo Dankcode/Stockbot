@@ -239,12 +239,13 @@ export async function loadPluginRegistry(pluginsDir) {
   for (const entry of plugins) {
     for (const pairing of entry.pairings) {
       for (const control of pairing.controls) {
-        const qualified = control.includes("/") ? control : `${entry.plugin.id}/${control}`;
+        const reference = typeof control === "string" ? control : control.id;
+        const qualified = reference.includes("/") ? reference : `${entry.plugin.id}/${reference}`;
         if (!allMethodIds.has(qualified)) {
           errors.push({
             file: path.basename(entry.path),
             code: "PLUGIN_CONTROL_MISSING",
-            message: `${entry.plugin.id}: pairing for "${pairing.strategy}" references control "${control}", which no installed plugin provides.`
+            message: `${entry.plugin.id}: pairing for "${pairing.strategy}" references control "${reference}", which no installed plugin provides.`
           });
         }
       }

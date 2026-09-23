@@ -4,8 +4,23 @@ data
 algorithms/uploads
 algorithms/params.json
 .env
+*.env
 .DS_Store
 npm-debug.log*
 *.tsbuildinfo
 vite.config.d.ts
 vite.config.js
+
+# Defense-in-depth: nothing matching these should ever be intentionally
+# tracked. Real credentials live in an owner-only file outside this repo
+# (see docs/DATABASE_OPERATIONS.md).
+*.pem
+*.key
+id_rsa*
+stockbot.env
+*.env.local
+*.env.*.local
+
+# Local deployment transfers; the private configuration archive contains credentials.
+Stockbot-private-config-*.zip
+Stockbot-homelab-*.zip

@@ -35,6 +35,17 @@ export function alpacaProvider(config) {
         tradable: Boolean(asset.tradable)
       }));
     },
+    async mostActives({ limit = 100 } = {}) {
+      const url = new URL("/v1beta1/screener/stocks/most-actives", config.alpaca.dataBaseUrl);
+      url.searchParams.set("by", "volume");
+      url.searchParams.set("top", String(Math.max(1, Math.min(100, Number(limit) || 100))));
+      const payload = await json(await fetch(url, { headers: headers(config), signal: AbortSignal.timeout(12_000) }), "Alpaca most-actives screener");
+      const entries = Array.isArray(payload) ? payload : payload.most_actives ?? payload.mostActives ?? payload.data ?? [];
+      if (!Array.isArray(entries)) throw new Error("Alpaca most-actives response was not a list.");
+      return entries
+        .map((entry) => String(entry?.symbol ?? entry?.ticker ?? "").trim().toUpperCase())
+        .filter(Boolean);
+    },
     async quote(symbol) {
       const crypto = isCryptoSymbol(symbol);
       const url = crypto

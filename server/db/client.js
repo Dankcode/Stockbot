@@ -390,6 +390,21 @@ async function createPostgresClient(databaseUrl, options = {}) {
   }
 
   const pool = options.pool ?? new Pool(postgresPoolConfiguration(databaseUrl, options));
+
+  // A pooled client can emit "error" when an idle connection is dropped by
+  // the network or the backend (a Tailscale blip, the remote Postgres process
+  // restarting or rebooting). node-postgres documents this as expected
+  // background noise, but an EventEmitter "error" with no listener is fatal
+  // in Node and would otherwise crash the whole Stockbot process on a
+  // transient network hiccup. Log it and let the pool open a fresh
+  // connection on the next query instead of dying.
+  // Not every injected test double implements EventEmitter, so guard the
+  // call rather than assuming a real pg.Pool (which always does).
+  if (typeof pool.on === "function") {
+    pool.on("error", (error) => {
+      console.error("PostgreSQL pool error (idle client):", error);
+    });
+  }
   let closed = false;
   let savepointSequence = 0;
 

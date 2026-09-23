@@ -36,6 +36,8 @@ export function createMarketService(config) {
   const quoteCache = new TtlCache();
   const barsCache = new TtlCache();
   const catalogCache = new TtlCache();
+  const selectionUniverseCache = new TtlCache();
+  const forwardTestOnlySymbols = new Set();
   const health = new Map(providers.map((provider) => [provider.id, {
     id: provider.id,
     configured: provider.configured(),
@@ -130,6 +132,59 @@ export function createMarketService(config) {
     return assets.sort((a, b) => Math.abs(b.quote?.changePercent || 0) - Math.abs(a.quote?.changePercent || 0));
   }
 
+  async function selectionUniverse({ source = "auto", limit = 100 } = {}) {
+    const requested = String(source).toLowerCase();
+    const cappedLimit = Math.max(1, Math.min(100, Number(limit) || 100));
+    const cacheKey = `${requested}:${cappedLimit}`;
+    const cached = selectionUniverseCache.get(cacheKey);
+    if (cached) return cached;
+
+    const local = async (fallback = false) => {
+      const assets = await catalog();
+      return selectionUniverseCache.set(cacheKey, {
+        symbols: assets.slice(0, cappedLimit).map((asset) => asset.symbol),
+        source: "local-catalogue",
+        forwardTestOnly: false,
+        fallback,
+        survivorshipWarning: null
+      }, 5 * 60_000);
+    };
+    if (requested === "local") return local(false);
+
+    const alpaca = providers.find((provider) => provider.id === "alpaca");
+    if (!alpaca?.configured() || typeof alpaca.mostActives !== "function") return local(true);
+    try {
+      const symbols = await alpaca.mostActives({ limit: cappedLimit });
+      if (symbols.length === 0) throw new Error("Alpaca most-actives screener returned no symbols.");
+      return selectionUniverseCache.set(cacheKey, {
+        symbols,
+        source: "alpaca-most-actives",
+        // This list is sampled today. It must not be turned into a historical
+        // backtest universe: doing so selects on information at the end of the window.
+        forwardTestOnly: true,
+        fallback: false,
+        survivorshipWarning: "Live screen universes omit delisted names and are forward-test-only; do not use them to claim historical performance."
+      }, 5 * 60_000);
+    } catch {
+      return local(true);
+    }
+  }
+
+  function markForwardTestOnly(symbols) {
+    for (const symbol of symbols ?? []) forwardTestOnlySymbols.add(String(symbol).trim().toUpperCase());
+  }
+
+  function assertBacktestAllowed(symbol) {
+    const normalized = String(symbol).trim().toUpperCase();
+    if (forwardTestOnlySymbols.has(normalized)) {
+      throw new AppError(
+        "FORWARD_TEST_ONLY",
+        `${normalized} came from a current live screen and is forward-test-only; historical backtesting would introduce look-ahead bias.`,
+        422
+      );
+    }
+  }
+
   function providerHealth() {
     return providers.map((provider) => {
       const current = health.get(provider.id);
@@ -169,5 +224,16 @@ export function createMarketService(config) {
     return providerHealth();
   }
 
-  return { getQuote, getBars, search, movers, providerHealth, testProviders, clearCaches: () => { quoteCache.clear(); barsCache.clear(); catalogCache.clear(); } };
+  return {
+    getQuote,
+    getBars,
+    search,
+    movers,
+    selectionUniverse,
+    markForwardTestOnly,
+    assertBacktestAllowed,
+    providerHealth,
+    testProviders,
+    clearCaches: () => { quoteCache.clear(); barsCache.clear(); catalogCache.clear(); selectionUniverseCache.clear(); }
+  };
 }

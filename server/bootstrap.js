@@ -19,6 +19,7 @@ import { createAiCliAdapter } from "./research/adapters/ai-cli.js";
 import { createResearchAdapterRegistry } from "./research/adapters/registry.js";
 import { createWebPageAdapter } from "./research/adapters/web-page.js";
 import { createResearchService } from "./research/service.js";
+import { createSelectionService } from "./selection/service.js";
 import { SessionScheduler } from "./runtime/scheduler.js";
 import { createSupervisor } from "./runtime/supervisor.js";
 import { createDatabaseSettingsService } from "./settings/database-service.js";
@@ -129,6 +130,7 @@ export async function createStockbot(options = {}) {
   const startup = await supervisor.bootstrap();
   const accountId = startup.account?.id ?? DEFAULT_ACCOUNT_ID;
   const experiments = createExperimentService({ repositories, algorithms, supervisor, accountId });
+  const selection = createSelectionService({ market });
   const database = databaseHealth(client);
   const databaseSettings = options.databaseSettings ?? createDatabaseSettingsService({ config, repositories });
   const context = {
@@ -143,6 +145,7 @@ export async function createStockbot(options = {}) {
     enginePool,
     algorithms,
     experiments,
+    selection,
     research,
     researchAdapters,
     ledger,

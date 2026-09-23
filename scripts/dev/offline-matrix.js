@@ -113,17 +113,30 @@ async function main() {
       symbol: "SYNTH",
       range: "1Y",
       seeds,
-      strategies: ["base-methods/ema-momentum", "base-methods/rsi-mean-reversion", "base-methods/donchian-breakout"],
+      strategies: ["base-methods/ema-momentum", "base-methods/rsi-mean-reversion", "base-methods/donchian-breakout", "momentum-pack/time-series-momentum", "automation-methods/sma-trend-stack", "automation-methods/rsi-trend-rebound", "automation-methods/donchian-channel", "automation-methods/atr-gated-ema", "exit-lab/ema-trail-percent", "exit-lab/ema-trail-atr", "exit-lab/ema-time-stop", "anomaly-lab/near-annual-high", "anomaly-lab/squeeze-breakout", "anomaly-lab/distance-reversion", "anomaly-lab/price-rsi-divergence", "anomaly-lab/weekday-effect"],
       controls: "auto"
     }
   });
 
-  const bars = syntheticBars({ count: barCount });
+  const seedForSymbol = (symbol) => {
+    let value = 2166136261;
+    for (const character of String(symbol)) value = Math.imul(value ^ character.charCodeAt(0), 16777619) >>> 0;
+    return value;
+  };
+  // Cross-symbol index controls must not accidentally replay the treatment series.
+  // These are still fabricated paths, but each control label exercises its own stable
+  // series exactly as the API executor requests its own symbol from a provider.
+  const barsBySymbol = new Map();
+  const barsFor = (symbol) => {
+    const key = String(symbol ?? "SYNTH").toUpperCase();
+    if (!barsBySymbol.has(key)) barsBySymbol.set(key, syntheticBars({ count: barCount, seed: seedForSymbol(key) }));
+    return barsBySymbol.get(key);
+  };
   const execute = async (arm) => {
     const method = byId.get(arm.algorithmId);
     if (!method) throw new Error(`method not loaded: ${arm.algorithmId}`);
     const result = runBacktest({
-      bars,
+      bars: barsFor(arm.symbol),
       algorithm: method.algorithm,
       params: arm.params,
       interval: "1day",
@@ -132,7 +145,7 @@ async function main() {
     return { metrics: result.metrics, trades: result.trades.length };
   };
 
-  process.stderr.write(`Running ${plan.arms.length} arms over ${bars.length} synthetic bars (${plan.savedRuns} duplicate runs shared)…\n`);
+  process.stderr.write(`Running ${plan.arms.length} arms over ${barCount} synthetic bars (${plan.savedRuns} duplicate runs shared)…\n`);
   const results = await runExperiment({ plan, execute, concurrency: 1 });
   const report = summarizeExperiment({ plan, results });
 

@@ -9,8 +9,13 @@ import {
 } from "./registry.js";
 
 const METRICS_VERSION = "2026-08-truth-v1";
-const CASH_CONTROL_SOURCE = `export default { name: "Cash — Control", signal() { return null; } };`;
-const SPY_CONTROL_SOURCE = `export default { name: "S&P 500 Index (SPY) — Control", signal({ index, position }) { return index === 1 && position.qty === 0 ? { action: "buy", reason: "Buy-and-hold control entry" } : null; } };`;
+const INDEX_BENCHMARKS = Object.freeze([
+  Object.freeze({ symbol: "SPY", name: "S&P 500 (SPY)" }),
+  Object.freeze({ symbol: "QQQ", name: "Nasdaq-100 (QQQ)" }),
+  Object.freeze({ symbol: "IWM", name: "Russell 2000 (IWM)" }),
+  Object.freeze({ symbol: "DIA", name: "Dow Jones (DIA)" })
+]);
+const BUY_AND_HOLD_CONTROL_SOURCE = `export default { name: "Index fund — Buy and Hold", signal({ index, position }) { return index === 1 && position.qty === 0 ? { action: "buy", reason: "Index benchmark entry" } : null; } };`;
 
 function stable(value) {
   if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
@@ -154,11 +159,15 @@ export function createAlgorithmService({ config, enginePool, repository, market 
   }
 
   async function backtest(id, { symbol, range = "3M", params = {}, fillModel = { slippageBps: 5, fixedCommission: 0, perShareCommission: 0 } }) {
+    market.assertBacktestAllowed?.(symbol);
     const algorithm = await get(id, { includeSource: true });
     const marketData = await market.getBars(symbol, range);
     if (marketData.bars.length < 5) throw new AppError("INSUFFICIENT_BARS", "At least five real bars are required.", 422);
     const rangeConfig = getRangeConfig(range);
-    const spyMarketData = String(symbol).toUpperCase() === "SPY" ? marketData : await market.getBars("SPY", range);
+    const benchmarkData = await Promise.all(INDEX_BENCHMARKS.map(async (benchmark) => ({
+      benchmark,
+      marketData: benchmark.symbol === String(symbol).toUpperCase() ? marketData : await market.getBars(benchmark.symbol, range)
+    })));
     const version = await repository.getLatestVersion(id);
     const key = {
       algorithmVersionId: version.id,
@@ -166,28 +175,43 @@ export function createAlgorithmService({ config, enginePool, repository, market 
       barInterval: rangeConfig.interval,
       windowStart: marketData.bars[0].time,
       windowEnd: marketData.bars.at(-1).time,
-      barsHash: hash({ strategy: marketData.bars, spy: spyMarketData.bars }),
+      barsHash: hash({ strategy: marketData.bars, benchmarks: benchmarkData.map(({ benchmark, marketData: data }) => ({ symbol: benchmark.symbol, bars: data.bars })) }),
       paramsHash: hash(params),
       fillModelHash: hash(fillModel)
     };
     const cached = await repository.findBacktest(key);
     if (cached) return { ...cached.resultJson, cache: { hit: true, computedAt: cached.computedAt }, source: marketData.source, algorithmVersionId: version.id, metricsVersion: METRICS_VERSION };
     const started = Date.now();
-    const [strategyRaw, spyRaw, cashRaw] = await Promise.all([
+    const [strategyRaw, ...benchmarkRaw] = await Promise.all([
       enginePool.runBacktest({ algorithmSource: algorithm.source, filename: algorithm.file, bars: marketData.bars, params, startingCash: 100_000, fillModel, interval: rangeConfig.interval }),
-      enginePool.runBacktest({ algorithmSource: SPY_CONTROL_SOURCE, filename: "spy-control.js", bars: spyMarketData.bars, startingCash: 100_000, fillModel, interval: rangeConfig.interval }),
-      enginePool.runBacktest({ algorithmSource: CASH_CONTROL_SOURCE, filename: "cash-control.js", bars: marketData.bars, startingCash: 100_000, fillModel, interval: rangeConfig.interval })
+      ...benchmarkData.map(({ benchmark, marketData: data }) => enginePool.runBacktest({
+        algorithmSource: BUY_AND_HOLD_CONTROL_SOURCE,
+        filename: `${benchmark.symbol.toLowerCase()}-index-control.js`,
+        bars: data.bars,
+        startingCash: 100_000,
+        fillModel,
+        interval: rangeConfig.interval
+      }))
     ]);
     const strategy = normalizeBacktestResult(strategyRaw);
-    const spy = normalizeBacktestResult(spyRaw);
-    const cash = normalizeBacktestResult(cashRaw);
+    const controls = benchmarkData.map(({ benchmark }, index) => {
+      const normalized = normalizeBacktestResult(benchmarkRaw[index]);
+      return {
+        id: `control/index/${benchmark.symbol.toLowerCase()}`,
+        symbol: benchmark.symbol,
+        name: `${benchmark.name} — Buy and Hold`,
+        metrics: normalized.metrics,
+        equityCurve: normalized.equityCurve
+      };
+    });
+    const spy = controls.find((control) => control.symbol === "SPY");
     const result = {
       ...strategy,
-      controls: [
-        { id: "control/spy", name: "S&P 500 Index (SPY) — Control", metrics: spy.metrics, equityCurve: spy.equityCurve },
-        { id: "control/cash", name: "Cash — Control", metrics: cash.metrics, equityCurve: cash.equityCurve }
-      ],
-      comparison: { vsSpyPercent: strategy.metrics.returnPercent - spy.metrics.returnPercent, vsCashPercent: strategy.metrics.returnPercent }
+      controls,
+      comparison: {
+        vsIndexPercent: Object.fromEntries(controls.map((control) => [control.symbol, strategy.metrics.returnPercent - control.metrics.returnPercent])),
+        vsSpyPercent: spy ? strategy.metrics.returnPercent - spy.metrics.returnPercent : null
+      }
     };
     await repository.putBacktest({ id: crypto.randomUUID(), ...key, result, computedAt: Date.now(), computeMs: Date.now() - started });
     return { ...result, cache: { hit: false, computedAt: Date.now() }, source: marketData.source, algorithmVersionId: version.id, metricsVersion: METRICS_VERSION };

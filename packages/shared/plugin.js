@@ -275,7 +275,13 @@ export const PluginCliSkillSchema = z
 export const PluginPairingSchema = z
   .object({
     strategy: IdSchema,
-    controls: z.array(MethodRefSchema).min(1).max(MAX_LIST),
+    // A control normally runs on the treatment symbol. An explicit `symbol` creates a
+    // cross-symbol benchmark arm (for example, buy-and-hold SPY/QQQ/IWM/DIA) while
+    // retaining the same algorithm, fill model, range and parameter provenance.
+    controls: z.array(z.union([
+      MethodRefSchema,
+      z.object({ id: MethodRefSchema, symbol: z.string().regex(/^[A-Z0-9][A-Z0-9./-]*$/).max(32) }).strict()
+    ])).min(1).max(MAX_LIST),
     // Params to apply to each control so it is congruent with the strategy. Keyed by
     // control id; this is what stops a monthly strategy being compared with a daily
     // control, which measures turnover rather than skill.
@@ -425,7 +431,8 @@ export const StockbotPluginV1Schema = z
       if (!methodIds.has(pairing.strategy)) {
         context.addIssue({ code: z.ZodIssueCode.custom, path: ["pairings", index, "strategy"], message: `Unknown strategy "${pairing.strategy}"` });
       }
-      for (const control of pairing.controls) {
+      for (const declaredControl of pairing.controls) {
+        const control = typeof declaredControl === "string" ? declaredControl : declaredControl.id;
         // A control may be defined in this plugin or supplied by an already-installed
         // one; cross-plugin references are resolved at install time, not here.
         if (!methodIds.has(control) && !control.includes("/")) {

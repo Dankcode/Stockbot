@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "node:test";
+import { EventEmitter } from "node:events";
 
 import { createClient, rewritePlaceholders } from "../../server/db/client.js";
 
@@ -241,4 +242,35 @@ test("PostgreSQL adapter rejects a non-IP hostaddr", async () => {
     createClient("postgresql://stockbot@example.test/stockbot?hostaddr=not-an-ip", { Pool: FakePool }),
     (error) => error.code === "ERR_PG_HOSTADDR"
   );
+});
+
+test("PostgreSQL pool errors from a dropped idle connection are logged, not thrown", async () => {
+  // pg.Pool emits "error" on the pool itself (not via a query rejection) when
+  // a background connection is reset by the network or the server -- exactly
+  // what a Tailscale blip or an oldlaptop reboot looks like. An EventEmitter
+  // "error" with no listener is fatal in Node, so before this listener
+  // existed, that one background event would have crashed the whole process
+  // -- taking down the API and any running session with it.
+  class FakePool extends EventEmitter {
+    async end() {}
+  }
+
+  const fakePool = new FakePool();
+  const originalConsoleError = console.error;
+  const loggedCalls = [];
+  console.error = (...args) => {
+    loggedCalls.push(args);
+  };
+
+  const client = await createClient("postgres://stockbot@example.test/stockbot", { pool: fakePool });
+  try {
+    const simulated = new Error("simulated idle-connection reset");
+    assert.doesNotThrow(() => fakePool.emit("error", simulated));
+    assert.equal(loggedCalls.length, 1);
+    assert.match(loggedCalls[0][0], /PostgreSQL pool error/);
+    assert.equal(loggedCalls[0][1], simulated);
+  } finally {
+    console.error = originalConsoleError;
+    await client.close();
+  }
 });

@@ -72,6 +72,20 @@ test("a control pinned to an explicit seed is not fanned out", () => {
   assert.deepEqual(result.groups[0].controls[0].params, { seed: 42 });
 });
 
+test("an index control preserves its own symbol and does not deduplicate into the treatment series", () => {
+  const result = plan({
+    symbol: "NVDA",
+    strategies: ["pack/ema"],
+    controls: [
+      { id: "ctl/buy-and-hold", symbol: "SPY" },
+      { id: "ctl/buy-and-hold", symbol: "QQQ" }
+    ]
+  });
+  assert.deepEqual(result.groups[0].controls.map((arm) => arm.symbol), ["SPY", "QQQ"]);
+  assert.notEqual(result.groups[0].controls[0].key, result.groups[0].controls[1].key);
+  assert.equal(result.groups[0].controls[0].id, "ctl/buy-and-hold@SPY");
+});
+
 test("identical arms across strategies are executed once, not per group", () => {
   const result = plan({ symbol: "AAPL", strategies: ["pack/ema", "pack/rsi"], seeds: 5 });
   const naive = result.groups.reduce((sum, group) => sum + 1 + group.controls.length, 0);

@@ -8,6 +8,7 @@ import "../styles/markets.css";
 import "../styles/sessions.css";
 import "../styles/strategies.css";
 import "../styles/settings.css";
+import "../styles/selection.css";
 import { AppRoutes } from "./routes";
 
 export function App() {

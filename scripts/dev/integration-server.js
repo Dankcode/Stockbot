@@ -39,7 +39,10 @@ const UNIVERSE = Object.freeze([
   { symbol: "THIN", name: "Illiquid Synthetic", sector: "Synthetic", price: 44, drift: 0.0005, vol: 0.03, dollarVolume: 2_000_000, bars: 900 },
   { symbol: "PENNY", name: "Sub-dollar Synthetic", sector: "Synthetic", price: 2.4, drift: 0.001, vol: 0.05, dollarVolume: 90_000_000, bars: 900 },
   { symbol: "NEWCO", name: "Recent Listing Synthetic", sector: "Synthetic", price: 33, drift: 0.002, vol: 0.03, dollarVolume: 500_000_000, bars: 40 },
-  { symbol: "SPY", name: "Synthetic Index Proxy", sector: "Synthetic", price: 520, drift: 0.0004, vol: 0.009, dollarVolume: 30_000_000_000, bars: 900 }
+  { symbol: "SPY", name: "Synthetic S&P 500 Proxy", sector: "Synthetic", price: 520, drift: 0.0004, vol: 0.009, dollarVolume: 30_000_000_000, bars: 900 },
+  { symbol: "QQQ", name: "Synthetic Nasdaq-100 Proxy", sector: "Synthetic", price: 470, drift: 0.00055, vol: 0.013, dollarVolume: 18_000_000_000, bars: 900 },
+  { symbol: "IWM", name: "Synthetic Russell 2000 Proxy", sector: "Synthetic", price: 210, drift: 0.00025, vol: 0.016, dollarVolume: 4_000_000_000, bars: 900 },
+  { symbol: "DIA", name: "Synthetic Dow Jones Proxy", sector: "Synthetic", price: 430, drift: 0.00035, vol: 0.01, dollarVolume: 2_000_000_000, bars: 900 }
 ]);
 
 /** SplitMix32, seeded per symbol so every process serves byte-identical history. */
@@ -154,6 +157,13 @@ function createSyntheticMarket() {
   return {
     getBars,
     getQuote,
+    selectionUniverse: async ({ limit = 100 } = {}) => ({
+      symbols: catalogue.slice(0, Math.max(1, Math.min(Number(limit) || 100, catalogue.length))).map((asset) => asset.symbol),
+      source: "synthetic-catalogue",
+      forwardTestOnly: false,
+      fallback: false,
+      survivorshipWarning: null
+    }),
     search,
     movers: async () => (await search("", { withQuotes: true, limit: 60 })).sort(
       (a, b) => Math.abs(b.quote.changePercent) - Math.abs(a.quote.changePercent)

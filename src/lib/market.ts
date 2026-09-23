@@ -9,7 +9,7 @@ import {
   ProviderHealthListSchema
 } from "./contracts";
 import { api } from "./api";
-import type { MarketAsset, MarketBars, ProviderHealth } from "./types";
+import type { MarketAsset, MarketBars, ProviderHealth, SymbolSelection } from "./types";
 
 export async function fetchMarketSearch(query: string): Promise<MarketAsset[]> {
   return api.getValidated(
@@ -31,6 +31,10 @@ export async function fetchMarketBars(symbol: string, range: string): Promise<Ma
     `/market/bars/${encodeURIComponent(normalized)}?range=${encodeURIComponent(range)}`,
     MarketBarsSchema
   );
+}
+
+export async function fetchSymbolSelection(range: string, source: "auto" | "local" | "active"): Promise<SymbolSelection> {
+  return api.get<SymbolSelection>(`/selection?range=${encodeURIComponent(range)}&source=${encodeURIComponent(source)}&limit=10`);
 }
 
 export function providersFrom(payload: unknown): ProviderHealth[] {

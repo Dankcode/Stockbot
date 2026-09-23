@@ -130,9 +130,6 @@ function crossed(context, node, path, direction, depth = 0) {
 function evaluateOperand(context, node, extraOffset, path, depth = 0) {
   if (extraOffset === 0) return evaluate(context, node, path, depth + 1);
   if (typeof node === "string") return seriesValue(context, node, extraOffset, path);
-  if (node && typeof node === "object" && typeof node.series === "string") {
-    return seriesValue(context, node.series, Number(node.offset ?? 0) + extraOffset, path);
-  }
   return evaluate({ ...context, index: context.index - extraOffset }, node, path, depth + 1);
 }
 
@@ -204,7 +201,11 @@ export function evaluate(context, node, path = "$", depth = 0) {
     case "series": {
       if (typeof operand === "string") return seriesValue(context, operand, 0, path);
       if (operand && typeof operand === "object" && typeof operand.name === "string") {
-        const offset = Number(operand.offset ?? 0);
+        // This is the only path that reads historical bars.  `seriesValue` subtracts
+        // the validated offset from the current index; it must never add it, or a
+        // plugin could look ahead.  Evaluating the node through `recurse` also makes
+        // parameterised and derived lookbacks part of the normal expression budget.
+        const offset = operand.offset === undefined ? 0 : recurse(operand.offset, `${path}.series.offset`);
         if (!Number.isInteger(offset) || offset < 0 || offset > 512) {
           fail("series offset must be an integer from 0 through 512", path);
         }
@@ -344,7 +345,10 @@ export function collectExpressionReferences(node, path = "$", found = { series: 
   if (op === "state") { found.state.add(String(operand)); return found; }
   if (op === "series") {
     if (typeof operand === "string") found.series.add(operand);
-    else if (operand && typeof operand.name === "string") found.series.add(operand.name);
+    else if (operand && typeof operand.name === "string") {
+      found.series.add(operand.name);
+      if (operand.offset !== undefined) collectExpressionReferences(operand.offset, `${path}.series.offset`, found, depth + 1);
+    }
     else fail("series takes a name or { name, offset }", path);
     return found;
   }
