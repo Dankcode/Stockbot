@@ -522,7 +522,7 @@ Give it a real universe. Read docs/plan/10-ai-selection.md section 2 first.
 Neither sandbox can reach data.alpaca.markets — it returns HTTP 000 from both the VM and the
 cloud container, an egress allowlist rather than an outage. So build the provider against a
 recorded fixture of the real response shape, test the fallback and the forwardTestOnly guard
-offline, and hand Leon ONE command to run against live credentials on his machine. Dry-run
+offline, and hand the owner ONE command to run against live credentials on their machine. Dry-run
 everything else first.
 ```
 

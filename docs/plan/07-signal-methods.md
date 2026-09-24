@@ -146,7 +146,7 @@ fires is the most common silent failure in a rules method.
 real API against an injected synthetic market service. Boot and test must share **one**
 `device_bash` call; background processes do not survive between calls.
 
-**Rung 4 — real data, on Leon's machine only.** One command, dry-run first:
+**Rung 4 — real data, on the owner's machine only.** One command, dry-run first:
 
 ```bash
 npm run experiment -- run --symbol SPY --all-strategies --seeds 20 --range 1Y --json

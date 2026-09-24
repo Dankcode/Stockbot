@@ -1,6 +1,6 @@
 # Prompt for your implementation agent: SQLite-on-oldlaptop for multiple projects
 
-Paste this to Codex (or whichever agent will actually touch oldlaptop). It follows Leon's standard contract: implement only what's approved here, stop and ask rather than guess on anything marked BLOCKER, write a failing test first where a test makes sense, run focused then full tests, and report back changed files/commands/results/risks/rollback. No secrets get printed, logged, or committed anywhere in this work.
+Paste this to Codex (or whichever agent will actually touch oldlaptop). It follows the owner's standard contract: implement only what's approved here, stop and ask rather than guess on anything marked BLOCKER, write a failing test first where a test makes sense, run focused then full tests, and report back changed files/commands/results/risks/rollback. No secrets get printed, logged, or committed anywhere in this work.
 
 ---
 
@@ -21,7 +21,7 @@ There is no existing app repository for this yet — it's being built from scrat
 
 ## What to build, per project
 
-1. **Directory + venv.** One directory per project (naming: BLOCKER — confirm with Leon), its own Python virtual environment, its own `requirements.txt`/`pyproject.toml`. Do not share a venv or dependency set across projects.
+1. **Directory + venv.** One directory per project (naming: BLOCKER — confirm with the owner), its own Python virtual environment, its own `requirements.txt`/`pyproject.toml`. Do not share a venv or dependency set across projects.
 
 2. **Database file.** `<project_dir>/data/<project>.sqlite`, created via a small init script that, on first connect, sets:
    ```python
@@ -66,7 +66,7 @@ There is no existing app repository for this yet — it's being built from scrat
 - A backup file produced, `PRAGMA integrity_check` clean, and a restore into a scratch path opened successfully.
 - Full test suite passing.
 
-## Blockers — stop and ask Leon, don't guess
+## Blockers — stop and ask the owner, don't guess
 
 - Project name(s) — how many projects are being set up right now, and what to call each one (directory names, Tailscale Serve path segments, ports).
 - Web framework/tooling preference (FastAPI/Flask/other; venv vs uv vs poetry).
