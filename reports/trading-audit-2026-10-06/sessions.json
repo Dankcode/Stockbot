@@ -1,0 +1,2286 @@
+{
+  "data": [
+    {
+      "id": "d53f8b53-76ee-4e6a-8b4d-131fa3446ff0",
+      "accountId": "default-paper",
+      "name": "Always-on paper | trend-pullback",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "trend-pullback:99fe5e535a1c0a81c8c1d318",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144824419,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144824356,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "fastPeriod": 20,
+        "slowPeriod": 50,
+        "rsiPeriod": 14,
+        "entryRsi": 55,
+        "exitRsi": 45,
+        "atrPeriod": 14,
+        "atrTrailMultiple": 3,
+        "maxHoldBars": 40
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "e1024c55-a2d5-49a4-9e14-5b8e813cef74",
+      "accountId": "default-paper",
+      "name": "Always-on paper | sentiment-pack/gated-momentum",
+      "mode": "paper",
+      "status": "errored",
+      "algorithmVersionId": "sentiment-pack/gated-momentum:89eb25cb6483340d08bdeec7",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144824282,
+      "endedAt": 1790625626860,
+      "stopReason": "error",
+      "errorDetail": "Engine task exceeded 10000 ms.",
+      "createdAt": 1790144824208,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": {
+        "id": "f2f3a4e4-e963-48e6-95c3-ea9581f49264",
+        "sessionId": "e1024c55-a2d5-49a4-9e14-5b8e813cef74",
+        "computedAt": 1790625627536,
+        "metricsVersion": "2026-08-truth-v1",
+        "returnPercent": 0,
+        "finalEquity": 10000000,
+        "maxDrawdown": 0,
+        "sharpe": 0,
+        "sortino": null,
+        "profitFactor": null,
+        "winRate": null,
+        "tradeCount": 0,
+        "exposurePercent": 0,
+        "avgTradePercent": null
+      },
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8,
+        "minConfidence": 0.6,
+        "allowMixed": 0
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "f9e14f81-fed9-46c3-aefc-479c14981048",
+      "accountId": "default-paper",
+      "name": "Always-on paper | sentiment-pack/blind-momentum",
+      "mode": "paper",
+      "status": "errored",
+      "algorithmVersionId": "sentiment-pack/blind-momentum:0d87c8c32b4b4a70abede56f",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144824167,
+      "endedAt": 1790625627510,
+      "stopReason": "error",
+      "errorDetail": "Engine task exceeded 10000 ms.",
+      "createdAt": 1790144824108,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": {
+        "id": "387cd143-3f53-442a-8376-7e0fe64eff3b",
+        "sessionId": "f9e14f81-fed9-46c3-aefc-479c14981048",
+        "computedAt": 1790625627852,
+        "metricsVersion": "2026-08-truth-v1",
+        "returnPercent": 0,
+        "finalEquity": 10000000,
+        "maxDrawdown": 0,
+        "sharpe": 0,
+        "sortino": null,
+        "profitFactor": null,
+        "winRate": null,
+        "tradeCount": 0,
+        "exposurePercent": 0,
+        "avgTradePercent": null
+      },
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+      "accountId": "default-paper",
+      "name": "Always-on paper | momentum-pack/time-series-momentum",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "momentum-pack/time-series-momentum:c5582563e6969d5be0b64d21",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144824027,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144823954,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "lookback": 12,
+        "trendPeriod": 26,
+        "maxHoldBars": 26
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "199a832d-d0d3-4196-9d43-afad3bdd32ba",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/yearly-rsi",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/yearly-rsi:ce2175a17cd9f429f22f89d1",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144823892,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144823823,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "period": 50,
+        "oversold": 45,
+        "exitLevel": 55,
+        "maxHoldBars": 252
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "8ebdf90a-aedf-455c-8876-676ac6ab5c98",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/yearly-ema",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/yearly-ema:834ffe933bc3f1e0d346418b",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144823750,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144823691,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "fast": 50,
+        "slow": 200,
+        "stopLossPercent": 30
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "42b88886-0864-41a2-bfb5-2738c7284a75",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/yearly-donchian",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/yearly-donchian:9f9a79bac804071705006b0b",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144823614,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144823553,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "entryPeriod": 252,
+        "exitPeriod": 126,
+        "atrPeriod": 50,
+        "atrStopMultiple": 4
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "9638d42c-779c-4f1d-a163-a6c7961d3b68",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/weekly-rsi",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/weekly-rsi:96694f16590a19988a58c3a3",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144823472,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144823401,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "period": 7,
+        "oversold": 30,
+        "exitLevel": 55,
+        "maxHoldBars": 10
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "a579890b-497e-4555-bc9f-cdb2712cbf16",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/weekly-ema",
+      "mode": "paper",
+      "status": "errored",
+      "algorithmVersionId": "horizon-pack/weekly-ema:868bea72999690472ff9c0fe",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144823337,
+      "endedAt": 1790625627508,
+      "stopReason": "error",
+      "errorDetail": "Engine task exceeded 10000 ms.",
+      "createdAt": 1790144823262,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": {
+        "id": "3058ef04-5cb6-421d-bbd7-7cc981ee6fe8",
+        "sessionId": "a579890b-497e-4555-bc9f-cdb2712cbf16",
+        "computedAt": 1790625627882,
+        "metricsVersion": "2026-08-truth-v1",
+        "returnPercent": 0,
+        "finalEquity": 10000000,
+        "maxDrawdown": 0,
+        "sharpe": 0,
+        "sortino": null,
+        "profitFactor": null,
+        "winRate": null,
+        "tradeCount": 0,
+        "exposurePercent": 0,
+        "avgTradePercent": null
+      },
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "c62b79e1-6a6b-43df-8bd2-94e215e7222b",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/weekly-donchian",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/weekly-donchian:a798f77fd76c263eb579f290",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144823184,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144823116,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "entryPeriod": 20,
+        "exitPeriod": 10,
+        "atrPeriod": 14,
+        "atrStopMultiple": 2
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "096b04ec-137e-4ecd-a2ac-0ac104eabd36",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/monthly-rsi",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/monthly-rsi:c31f3899db629f52951dc462",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144823041,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144822973,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "period": 21,
+        "oversold": 40,
+        "exitLevel": 55,
+        "maxHoldBars": 21
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "c9ff1c69-ad21-405a-831e-a7c3b36942d2",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/monthly-ema",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/monthly-ema:a96e26dc0e754341406e98f3",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144822908,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144822834,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "fast": 21,
+        "slow": 55,
+        "stopLossPercent": 15
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "ce7ddfd6-e91d-464e-b6db-79fe380fdc60",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/monthly-donchian",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/monthly-donchian:865ef6674135267865a9d7f4",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144822763,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144822697,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "entryPeriod": 55,
+        "exitPeriod": 20,
+        "atrPeriod": 20,
+        "atrStopMultiple": 3
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "8244de55-4b06-403b-afe2-49fe64b893d0",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/horizon-random",
+      "mode": "paper",
+      "status": "errored",
+      "algorithmVersionId": "horizon-pack/horizon-random:8dc6828c74d5c69c7e5898a1",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144822618,
+      "endedAt": 1790193613168,
+      "stopReason": "error",
+      "errorDetail": "() => {\n    counter = (counter + 0x9e3779b9) >>> 0;\n    let mixed = counter;\n    mixed = Math.imul(mixed ^ (mix...<omitted>... } could not be cloned.",
+      "createdAt": 1790144822560,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": {
+        "id": "06dc3cdc-cc2a-415f-818d-52836f4a0679",
+        "sessionId": "8244de55-4b06-403b-afe2-49fe64b893d0",
+        "computedAt": 1790193613257,
+        "metricsVersion": "2026-08-truth-v1",
+        "returnPercent": 0,
+        "finalEquity": 10000000,
+        "maxDrawdown": 0,
+        "sharpe": 0,
+        "sortino": null,
+        "profitFactor": null,
+        "winRate": null,
+        "tradeCount": 0,
+        "exposurePercent": 0,
+        "avgTradePercent": null
+      },
+      "params": {
+        "horizon": "weekly",
+        "seed": 1,
+        "dutyCycle": 0.4,
+        "warmupBars": 1
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "88705853-4b65-4812-9a07-b7258eafb1e3",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/horizon-fixed",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/horizon-fixed:49b53ff16c5e25cc28ae327d",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144822477,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144822406,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "horizon": "weekly",
+        "dutyCycle": 0.4,
+        "warmupBars": 1
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "aa8f36bd-7b57-4168-a734-36564359a7e0",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/daily-rsi",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/daily-rsi:3f2f7adc2d0cca8e85bc286c",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144822345,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144822268,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "period": 3,
+        "oversold": 25,
+        "exitLevel": 55,
+        "maxHoldBars": 3
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "14c2deb5-452a-4695-8d2c-bc9bdb211fb7",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/daily-ema",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/daily-ema:841a7e1766f1173974d377c3",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144822186,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144822123,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "fast": 3,
+        "slow": 8,
+        "stopLossPercent": 3
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "5a242697-e7c2-414d-8140-946c62cf06be",
+      "accountId": "default-paper",
+      "name": "Always-on paper | horizon-pack/daily-donchian",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "horizon-pack/daily-donchian:8df1495d5bc04854a8a1fe83",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144822066,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144821999,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "entryPeriod": 5,
+        "exitPeriod": 3,
+        "atrPeriod": 7,
+        "atrStopMultiple": 1.5
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "d20eca48-9a2e-40b6-b8ab-e00e0625a3c1",
+      "accountId": "default-paper",
+      "name": "Always-on paper | core-controls/random-entry",
+      "mode": "paper",
+      "status": "errored",
+      "algorithmVersionId": "core-controls/random-entry:703e5be1ff3763ea8554815d",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144821952,
+      "endedAt": 1790193612960,
+      "stopReason": "error",
+      "errorDetail": "() => {\n    counter = (counter + 0x9e3779b9) >>> 0;\n    let mixed = counter;\n    mixed = Math.imul(mixed ^ (mix...<omitted>... } could not be cloned.",
+      "createdAt": 1790144821899,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": {
+        "id": "3c8619cb-9707-4a74-b711-d4cb1c5b440a",
+        "sessionId": "d20eca48-9a2e-40b6-b8ab-e00e0625a3c1",
+        "computedAt": 1790193613003,
+        "metricsVersion": "2026-08-truth-v1",
+        "returnPercent": 0,
+        "finalEquity": 10000000,
+        "maxDrawdown": 0,
+        "sharpe": 0,
+        "sortino": null,
+        "profitFactor": null,
+        "winRate": null,
+        "tradeCount": 0,
+        "exposurePercent": 0,
+        "avgTradePercent": null
+      },
+      "params": {
+        "seed": 1,
+        "entryProbability": 0.05,
+        "minHoldBars": 5,
+        "maxHoldBars": 20,
+        "warmupBars": 1
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "bff129ad-c2ee-471d-b0db-7806430be6d6",
+      "accountId": "default-paper",
+      "name": "Always-on paper | core-controls/fixed-interval",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "core-controls/fixed-interval:6815d7982ce3f227016a9b9d",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144821831,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144821774,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "entryEveryBars": 20,
+        "holdBars": 8,
+        "warmupBars": 1
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+      "accountId": "default-paper",
+      "name": "Always-on paper | core-controls/buy-and-hold",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "core-controls/buy-and-hold:8b2856837b74cdcd8cdec08b",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144821709,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144821639,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "warmupBars": 1
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "e7a4bbc8-a8fa-4b45-b3c6-3f4529186cf4",
+      "accountId": "default-paper",
+      "name": "Always-on paper | base-methods/rsi-mean-reversion",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "base-methods/rsi-mean-reversion:6578322577e438ee0227a8f0",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144821578,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144821510,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "period": 14,
+        "oversold": 30,
+        "exitLevel": 55,
+        "maxHoldBars": 20
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "4e0ba5b6-b902-4b62-8842-765caa4b5848",
+      "accountId": "default-paper",
+      "name": "Always-on paper | base-methods/ema-momentum",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "base-methods/ema-momentum:fab868c6f89d481332ba15bf",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144821439,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144821362,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "fast": 9,
+        "slow": 21,
+        "stopLossPercent": 8
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    },
+    {
+      "id": "4338d2a9-5c11-44f5-a1d3-4fd8b7e9e909",
+      "accountId": "default-paper",
+      "name": "Always-on paper | base-methods/donchian-breakout",
+      "mode": "paper",
+      "status": "running",
+      "algorithmVersionId": "base-methods/donchian-breakout:af090d3333de72a8104e29ad",
+      "barInterval": "1day",
+      "windowStart": null,
+      "windowEnd": null,
+      "startingEquity": 10000000,
+      "endingEquity": null,
+      "startedAt": 1790144821277,
+      "endedAt": null,
+      "stopReason": null,
+      "errorDetail": null,
+      "createdAt": 1790144818079,
+      "researchPlanVersionId": null,
+      "experimentId": null,
+      "experimentArm": null,
+      "experimentArmId": null,
+      "metrics": null,
+      "params": {
+        "entryPeriod": 20,
+        "exitPeriod": 10,
+        "atrPeriod": 14,
+        "atrStopMultiple": 2
+      },
+      "symbols": [
+        "SPY"
+      ],
+      "fillModel": {
+        "slippageBps": 5,
+        "fixedCommission": 0,
+        "perShareCommission": 0
+      },
+      "riskProfile": {
+        "name": "Always-on multi-method paper guardrails",
+        "sizing": {
+          "mode": "risk_parity",
+          "perTradeRiskPercent": 0.5,
+          "fixedNotional": 500
+        },
+        "rules": {
+          "maxPositionSize": {
+            "enabled": true,
+            "percentOfEquity": 2
+          },
+          "maxPositionNotional": {
+            "enabled": true,
+            "amount": 2000
+          },
+          "maxConcurrentPositions": {
+            "enabled": true,
+            "count": 1
+          },
+          "maxSymbolExposure": {
+            "enabled": true,
+            "percentOfEquity": 5
+          },
+          "maxOrdersPerMinute": {
+            "enabled": true,
+            "count": 3
+          },
+          "maxOrdersPerDay": {
+            "enabled": true,
+            "count": 10
+          },
+          "maxDailyLoss": {
+            "enabled": true,
+            "percentOfStartingEquity": 1
+          },
+          "maxDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 5
+          },
+          "maxAccountDrawdown": {
+            "enabled": true,
+            "percentFromPeak": 8
+          },
+          "maxExposure": {
+            "enabled": true,
+            "warnPercent": 30,
+            "blockPercent": 40
+          }
+        }
+      },
+      "schedule": {
+        "timezone": "America/New_York",
+        "type": "continuous"
+      }
+    }
+  ],
+  "meta": {
+    "requestId": "40104951-ef93-4389-8a02-0a841f2df94f",
+    "nextCursor": null,
+    "hasMore": false
+  }
+}

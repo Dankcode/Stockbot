@@ -42,15 +42,18 @@ export class MethodCompileError extends Error {
  * rather than merely plausible.
  */
 function createPrng(seed) {
-  let counter = (Math.trunc(Number(seed)) >>> 0) || 1;
-  return () => {
-    counter = (counter + 0x9e3779b9) >>> 0;
-    let mixed = counter;
-    mixed = Math.imul(mixed ^ (mixed >>> 16), 0x21f0aaad) >>> 0;
-    mixed = Math.imul(mixed ^ (mixed >>> 15), 0x735a2d97) >>> 0;
-    mixed = (mixed ^ (mixed >>> 15)) >>> 0;
-    return mixed / 4294967296;
-  };
+  // Paper evaluations cross the worker boundary on every bar. Keep state as
+  // cloneable data; a closure works in backtests but crashes paper sessions.
+  return { counter: (Math.trunc(Number(seed)) >>> 0) || 1 };
+}
+
+function nextRandom(prng) {
+  prng.counter = (prng.counter + 0x9e3779b9) >>> 0;
+  let mixed = prng.counter;
+  mixed = Math.imul(mixed ^ (mixed >>> 16), 0x21f0aaad) >>> 0;
+  mixed = Math.imul(mixed ^ (mixed >>> 15), 0x735a2d97) >>> 0;
+  mixed = (mixed ^ (mixed >>> 15)) >>> 0;
+  return mixed / 4294967296;
 }
 
 function resolvePositiveInteger(value, label, methodId) {
@@ -234,7 +237,7 @@ export function compileMethod(definition, { id } = {}) {
       // on the path the strategy took. Deliberately after the warmup guard, matching the
       // hand-written controls: advancing during warmup would shift every later draw and
       // silently change the trade sequence for a given seed.
-      if (runtime.prng) runtime.random = runtime.prng();
+      if (runtime.prng) runtime.random = nextRandom(runtime.prng);
 
       const evaluationContext = {
         index,

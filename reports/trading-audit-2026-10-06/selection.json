@@ -1,0 +1,3682 @@
+{
+  "data": {
+    "recommended": [],
+    "eligibleCount": 0,
+    "excluded": [
+      {
+        "symbol": "SPY",
+        "score": 0.6634,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 1,
+          "volatility": 0.6860621120108579,
+          "trendClarity": 0.236719785873606,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 100/100 \u2014 median $4936M/day",
+          "volatility 69/100 \u2014 ATR 1.93% of price",
+          "trend clarity 24/100 \u2014 9.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 100/100 \u2014 median $4936M/day",
+            "volatility 69/100 \u2014 ATR 1.93% of price",
+            "trend clarity 24/100 \u2014 9.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "INTC",
+        "score": 0.6299,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.8464629972103239,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 85/100 \u2014 median $986M/day",
+          "volatility 0/100 \u2014 ATR 12.40% of price",
+          "trend clarity 100/100 \u2014 69.6% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 85/100 \u2014 median $986M/day",
+            "volatility 0/100 \u2014 ATR 12.40% of price",
+            "trend clarity 100/100 \u2014 69.6% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "WBD",
+        "score": 0.6213,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.49525735477725963,
+          "volatility": 0.8100297345534676,
+          "trendClarity": 0.5839114174845869,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 50/100 \u2014 median $196M/day",
+          "volatility 81/100 \u2014 ATR 3.24% of price",
+          "trend clarity 58/100 \u2014 21.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 50/100 \u2014 median $196M/day",
+            "volatility 81/100 \u2014 ATR 3.24% of price",
+            "trend clarity 58/100 \u2014 21.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "TLT",
+        "score": 0.6115,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.7794401106628728,
+          "volatility": 0.7587166756210987,
+          "trendClarity": 0.2627021297852075,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 78/100 \u2014 median $724M/day",
+          "volatility 76/100 \u2014 ATR 2.12% of price",
+          "trend clarity 26/100 \u2014 10.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 78/100 \u2014 median $724M/day",
+            "volatility 76/100 \u2014 ATR 2.12% of price",
+            "trend clarity 26/100 \u2014 10.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "XLF",
+        "score": 0.5744,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.7522994248955932,
+          "volatility": 0.9352353141567923,
+          "trendClarity": 0,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 75/100 \u2014 median $639M/day",
+          "volatility 94/100 \u2014 ATR 2.58% of price",
+          "trend clarity 0/100 \u2014 0.6% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 75/100 \u2014 median $639M/day",
+            "volatility 94/100 \u2014 ATR 2.58% of price",
+            "trend clarity 0/100 \u2014 0.6% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "XLE",
+        "score": 0.5661,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.730989222809499,
+          "volatility": 0.4140608760722252,
+          "trendClarity": 0.5201758127040004,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 73/100 \u2014 median $579M/day",
+          "volatility 41/100 \u2014 ATR 4.27% of price",
+          "trend clarity 52/100 \u2014 19.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 73/100 \u2014 median $579M/day",
+            "volatility 41/100 \u2014 ATR 4.27% of price",
+            "trend clarity 52/100 \u2014 19.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NVDA",
+        "score": 0.5648,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 1,
+          "volatility": 0,
+          "trendClarity": 0.6072813947616009,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 100/100 \u2014 median $3778M/day",
+          "volatility 0/100 \u2014 ATR 6.56% of price",
+          "trend clarity 61/100 \u2014 22.0% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 100/100 \u2014 median $3778M/day",
+            "volatility 0/100 \u2014 ATR 6.56% of price",
+            "trend clarity 61/100 \u2014 22.0% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SOXL",
+        "score": 0.5625,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.6667098041002735,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 67/100 \u2014 median $431M/day",
+          "volatility 0/100 \u2014 ATR 20.59% of price",
+          "trend clarity 100/100 \u2014 72.4% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 67/100 \u2014 median $431M/day",
+            "volatility 0/100 \u2014 ATR 20.59% of price",
+            "trend clarity 100/100 \u2014 72.4% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "AAPL",
+        "score": 0.5534,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.9867783945250945,
+          "volatility": 0.0835399552865248,
+          "trendClarity": 0.5031674208633,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 99/100 \u2014 median $1882M/day",
+          "volatility 8/100 \u2014 ATR 5.13% of price",
+          "trend clarity 50/100 \u2014 18.6% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 99/100 \u2014 median $1882M/day",
+            "volatility 8/100 \u2014 ATR 5.13% of price",
+            "trend clarity 50/100 \u2014 18.6% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "TQQQ",
+        "score": 0.5501,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.6334887697285074,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 63/100 \u2014 median $370M/day",
+          "volatility 0/100 \u2014 ATR 8.89% of price",
+          "trend clarity 100/100 \u2014 37.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 63/100 \u2014 median $370M/day",
+            "volatility 0/100 \u2014 ATR 8.89% of price",
+            "trend clarity 100/100 \u2014 37.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NFLX",
+        "score": 0.5367,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.8056325390602206,
+          "volatility": 0,
+          "trendClarity": 0.7507423635909984,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 81/100 \u2014 median $817M/day",
+          "volatility 0/100 \u2014 ATR 7.38% of price",
+          "trend clarity 75/100 \u2014 26.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 81/100 \u2014 median $817M/day",
+            "volatility 0/100 \u2014 ATR 7.38% of price",
+            "trend clarity 75/100 \u2014 26.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SQQQ",
+        "score": 0.526,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5694523172889081,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 57/100 \u2014 median $275M/day",
+          "volatility 0/100 \u2014 ATR 12.88% of price",
+          "trend clarity 100/100 \u2014 45.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 57/100 \u2014 median $275M/day",
+            "volatility 0/100 \u2014 ATR 12.88% of price",
+            "trend clarity 100/100 \u2014 45.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NKE",
+        "score": 0.5146,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5388448822607854,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 54/100 \u2014 median $239M/day",
+          "volatility 0/100 \u2014 ATR 7.18% of price",
+          "trend clarity 100/100 \u2014 37.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 54/100 \u2014 median $239M/day",
+            "volatility 0/100 \u2014 ATR 7.18% of price",
+            "trend clarity 100/100 \u2014 37.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SOXS",
+        "score": 0.5127,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5339783276274774,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 53/100 \u2014 median $234M/day",
+          "volatility 0/100 \u2014 ATR 39.99% of price",
+          "trend clarity 100/100 \u2014 92.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 53/100 \u2014 median $234M/day",
+            "volatility 0/100 \u2014 ATR 39.99% of price",
+            "trend clarity 100/100 \u2014 92.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SPCX",
+        "score": 0.5116,
+        "eligible": false,
+        "blockers": [
+          "only 18 bars of history, under the 40-bar floor"
+        ],
+        "components": {
+          "liquidity": 0.9888341539638619,
+          "volatility": 0,
+          "trendClarity": 0.45047937760425355,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 99/100 \u2014 median $1900M/day",
+          "volatility 0/100 \u2014 ATR 9.67% of price",
+          "trend clarity 45/100 \u2014 16.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 99/100 \u2014 median $1900M/day",
+            "volatility 0/100 \u2014 ATR 9.67% of price",
+            "trend clarity 45/100 \u2014 16.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "LQD",
+        "score": 0.5098,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.9074810751491125,
+          "volatility": 0.40258887932592935,
+          "trendClarity": 0.13986957457775118,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 91/100 \u2014 median $1306M/day",
+          "volatility 40/100 \u2014 ATR 1.20% of price",
+          "trend clarity 14/100 \u2014 6.6% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 91/100 \u2014 median $1306M/day",
+            "volatility 40/100 \u2014 ATR 1.20% of price",
+            "trend clarity 14/100 \u2014 6.6% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "XLU",
+        "score": 0.4907,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5785994315319609,
+          "volatility": 0.6478048099779613,
+          "trendClarity": 0.22821090795676943,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 58/100 \u2014 median $287M/day",
+          "volatility 65/100 \u2014 ATR 3.67% of price",
+          "trend clarity 23/100 \u2014 9.5% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 58/100 \u2014 median $287M/day",
+            "volatility 65/100 \u2014 ATR 3.67% of price",
+            "trend clarity 23/100 \u2014 9.5% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "EWZ",
+        "score": 0.4847,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5491162080062004,
+          "volatility": 0.24897776641962555,
+          "trendClarity": 0.6431389797495187,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 55/100 \u2014 median $251M/day",
+          "volatility 25/100 \u2014 ATR 4.70% of price",
+          "trend clarity 64/100 \u2014 23.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 55/100 \u2014 median $251M/day",
+            "volatility 25/100 \u2014 ATR 4.70% of price",
+            "trend clarity 64/100 \u2014 23.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NVD",
+        "score": 0.4626,
+        "eligible": false,
+        "blockers": [
+          "price 3.32 below the 5 floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.4001482022858207,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 40/100 \u2014 median $126M/day",
+          "volatility 0/100 \u2014 ATR 18.78% of price",
+          "trend clarity 100/100 \u2014 49.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 40/100 \u2014 median $126M/day",
+            "volatility 0/100 \u2014 ATR 18.78% of price",
+            "trend clarity 100/100 \u2014 49.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "RWM",
+        "score": 0.4444,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.3224477225819009,
+          "volatility": 0.8703679588893605,
+          "trendClarity": 0.16461726504894084,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 32/100 \u2014 median $88M/day",
+          "volatility 87/100 \u2014 ATR 2.41% of price",
+          "trend clarity 16/100 \u2014 7.4% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 32/100 \u2014 median $88M/day",
+            "volatility 87/100 \u2014 ATR 2.41% of price",
+            "trend clarity 16/100 \u2014 7.4% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PBR",
+        "score": 0.4396,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.3390259832585669,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 34/100 \u2014 median $95M/day",
+          "volatility 0/100 \u2014 ATR 6.44% of price",
+          "trend clarity 100/100 \u2014 47.6% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 34/100 \u2014 median $95M/day",
+            "volatility 0/100 \u2014 ATR 6.44% of price",
+            "trend clarity 100/100 \u2014 47.6% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "TWLO",
+        "score": 0.4284,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.3089430566930136,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 31/100 \u2014 median $83M/day",
+          "volatility 0/100 \u2014 ATR 9.38% of price",
+          "trend clarity 100/100 \u2014 86.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 31/100 \u2014 median $83M/day",
+            "volatility 0/100 \u2014 ATR 9.38% of price",
+            "trend clarity 100/100 \u2014 86.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "CPNG",
+        "score": 0.4242,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.33642908426856266,
+          "volatility": 0,
+          "trendClarity": 0.9536044338891436,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 34/100 \u2014 median $94M/day",
+          "volatility 0/100 \u2014 ATR 7.95% of price",
+          "trend clarity 95/100 \u2014 33.5% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 34/100 \u2014 median $94M/day",
+            "volatility 0/100 \u2014 ATR 7.95% of price",
+            "trend clarity 95/100 \u2014 33.5% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "TSLL",
+        "score": 0.4223,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.42743918255245017,
+          "volatility": 0,
+          "trendClarity": 0.8384245614894854,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 43/100 \u2014 median $143M/day",
+          "volatility 0/100 \u2014 ATR 15.38% of price",
+          "trend clarity 84/100 \u2014 29.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 43/100 \u2014 median $143M/day",
+            "volatility 0/100 \u2014 ATR 15.38% of price",
+            "trend clarity 84/100 \u2014 29.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "CTVA",
+        "score": 0.4179,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.2809333748915388,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 28/100 \u2014 median $73M/day",
+          "volatility 0/100 \u2014 ATR 77.35% of price",
+          "trend clarity 100/100 \u2014 83.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 28/100 \u2014 median $73M/day",
+            "volatility 0/100 \u2014 ATR 77.35% of price",
+            "trend clarity 100/100 \u2014 83.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "HYG",
+        "score": 0.4125,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.8683972108618168,
+          "volatility": 0.22293815996329125,
+          "trendClarity": 0.05485322398552246,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 87/100 \u2014 median $1091M/day",
+          "volatility 22/100 \u2014 ATR 0.73% of price",
+          "trend clarity 5/100 \u2014 3.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 87/100 \u2014 median $1091M/day",
+            "volatility 22/100 \u2014 ATR 0.73% of price",
+            "trend clarity 5/100 \u2014 3.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "AMZN",
+        "score": 0.3972,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.9665116570955821,
+          "volatility": 0,
+          "trendClarity": 0.11131845699617192,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 97/100 \u2014 median $1714M/day",
+          "volatility 0/100 \u2014 ATR 6.09% of price",
+          "trend clarity 11/100 \u2014 5.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 97/100 \u2014 median $1714M/day",
+            "volatility 0/100 \u2014 ATR 6.09% of price",
+            "trend clarity 11/100 \u2014 5.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "TSLA",
+        "score": 0.3915,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.9692796963317072,
+          "volatility": 0,
+          "trendClarity": 0.08953440217735344,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 97/100 \u2014 median $1736M/day",
+          "volatility 0/100 \u2014 ATR 7.76% of price",
+          "trend clarity 9/100 \u2014 5.0% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 97/100 \u2014 median $1736M/day",
+            "volatility 0/100 \u2014 ATR 7.76% of price",
+            "trend clarity 9/100 \u2014 5.0% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SOFI",
+        "score": 0.3913,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.45986412834723644,
+          "volatility": 0,
+          "trendClarity": 0.700304939893097,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 46/100 \u2014 median $166M/day",
+          "volatility 0/100 \u2014 ATR 10.54% of price",
+          "trend clarity 70/100 \u2014 25.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 46/100 \u2014 median $166M/day",
+            "volatility 0/100 \u2014 ATR 10.54% of price",
+            "trend clarity 70/100 \u2014 25.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "CMCSA",
+        "score": 0.3846,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5275022205568192,
+          "volatility": 0,
+          "trendClarity": 0.5976942954233335,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 53/100 \u2014 median $227M/day",
+          "volatility 0/100 \u2014 ATR 7.63% of price",
+          "trend clarity 60/100 \u2014 21.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 53/100 \u2014 median $227M/day",
+            "volatility 0/100 \u2014 ATR 7.63% of price",
+            "trend clarity 60/100 \u2014 21.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "XP",
+        "score": 0.3693,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.1513388145892569,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 15/100 \u2014 median $40M/day",
+          "volatility 0/100 \u2014 ATR 6.86% of price",
+          "trend clarity 100/100 \u2014 54.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 15/100 \u2014 median $40M/day",
+            "volatility 0/100 \u2014 ATR 6.86% of price",
+            "trend clarity 100/100 \u2014 54.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PBR.A",
+        "score": 0.3625,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.1334490042639862,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 13/100 \u2014 median $37M/day",
+          "volatility 0/100 \u2014 ATR 6.02% of price",
+          "trend clarity 100/100 \u2014 47.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 13/100 \u2014 median $37M/day",
+            "volatility 0/100 \u2014 ATR 6.02% of price",
+            "trend clarity 100/100 \u2014 47.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "TSLG",
+        "score": 0.3538,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.25708795115772265,
+          "volatility": 0,
+          "trendClarity": 0.8236931144493395,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 26/100 \u2014 median $65M/day",
+          "volatility 0/100 \u2014 ATR 15.13% of price",
+          "trend clarity 82/100 \u2014 29.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 26/100 \u2014 median $65M/day",
+            "volatility 0/100 \u2014 ATR 15.13% of price",
+            "trend clarity 82/100 \u2014 29.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PFE",
+        "score": 0.3498,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5382959627807518,
+          "volatility": 0.3738599051441075,
+          "trendClarity": 0.09940427503154989,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 54/100 \u2014 median $239M/day",
+          "volatility 37/100 \u2014 ATR 4.38% of price",
+          "trend clarity 10/100 \u2014 5.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 54/100 \u2014 median $239M/day",
+            "volatility 37/100 \u2014 ATR 4.38% of price",
+            "trend clarity 10/100 \u2014 5.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "UMC",
+        "score": 0.3484,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.09570806502521334,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 10/100 \u2014 median $31M/day",
+          "volatility 0/100 \u2014 ATR 11.31% of price",
+          "trend clarity 100/100 \u2014 77.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 10/100 \u2014 median $31M/day",
+            "volatility 0/100 \u2014 ATR 11.31% of price",
+            "trend clarity 100/100 \u2014 77.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "BAC",
+        "score": 0.3396,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.7329746993100184,
+          "volatility": 0.20729940734566177,
+          "trendClarity": 0,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 73/100 \u2014 median $585M/day",
+          "volatility 21/100 \u2014 ATR 4.81% of price",
+          "trend clarity 0/100 \u2014 0.4% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 73/100 \u2014 median $585M/day",
+            "volatility 21/100 \u2014 ATR 4.81% of price",
+            "trend clarity 0/100 \u2014 0.4% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PCG",
+        "score": 0.3321,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.33427496309943017,
+          "volatility": 0,
+          "trendClarity": 0.661446469381338,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 33/100 \u2014 median $93M/day",
+          "volatility 0/100 \u2014 ATR 9.75% of price",
+          "trend clarity 66/100 \u2014 23.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 33/100 \u2014 median $93M/day",
+            "volatility 0/100 \u2014 ATR 9.75% of price",
+            "trend clarity 66/100 \u2014 23.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "BEAT",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 0.67 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 16.60% of price",
+          "trend clarity 100/100 \u2014 43.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 16.60% of price",
+            "trend clarity 100/100 \u2014 43.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "MI",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 27.03% of price",
+          "trend clarity 100/100 \u2014 95.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 27.03% of price",
+            "trend clarity 100/100 \u2014 95.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "QTEX",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 1.56 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 17.57% of price",
+          "trend clarity 100/100 \u2014 58.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 17.57% of price",
+            "trend clarity 100/100 \u2014 58.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SDEV",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 3.91 below the 5 floor",
+          "median dollar volume $0.1M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 28.29% of price",
+          "trend clarity 100/100 \u2014 50.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 28.29% of price",
+            "trend clarity 100/100 \u2014 50.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PDSB",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 1.21 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 18.73% of price",
+          "trend clarity 100/100 \u2014 41.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 18.73% of price",
+            "trend clarity 100/100 \u2014 41.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "AGMH",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 0.73 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 30.82% of price",
+          "trend clarity 100/100 \u2014 64.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 30.82% of price",
+            "trend clarity 100/100 \u2014 64.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "VEEA",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 24.98% of price",
+          "trend clarity 100/100 \u2014 38.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 24.98% of price",
+            "trend clarity 100/100 \u2014 38.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "FNGR",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 0.26 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 49.40% of price",
+          "trend clarity 100/100 \u2014 73.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 49.40% of price",
+            "trend clarity 100/100 \u2014 73.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SDST",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 0.09 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 250.90% of price",
+          "trend clarity 100/100 \u2014 96.5% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 250.90% of price",
+            "trend clarity 100/100 \u2014 96.5% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "MSTZ",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 2.35 below the 5 floor",
+          "median dollar volume $12.8M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $13M/day",
+          "volatility 0/100 \u2014 ATR 94.64% of price",
+          "trend clarity 100/100 \u2014 74.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $13M/day",
+            "volatility 0/100 \u2014 ATR 94.64% of price",
+            "trend clarity 100/100 \u2014 74.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "CBRG",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 2.76 below the 5 floor",
+          "median dollar volume $1.8M below the $20M floor",
+          "only 22 bars of history, under the 40-bar floor"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $2M/day",
+          "volatility 0/100 \u2014 ATR 59.94% of price",
+          "trend clarity 100/100 \u2014 45.5% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $2M/day",
+            "volatility 0/100 \u2014 ATR 59.94% of price",
+            "trend clarity 100/100 \u2014 45.5% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "OLOX",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 0.85 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "59 of 80 bars for the requested window (74% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 76.02% of price",
+          "trend clarity 100/100 \u2014 96.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 76.02% of price",
+            "trend clarity 100/100 \u2014 96.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "APUS",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 4.38 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 62.13% of price",
+          "trend clarity 100/100 \u2014 69.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 62.13% of price",
+            "trend clarity 100/100 \u2014 69.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "BTTC",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 0.61 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 33.10% of price",
+          "trend clarity 100/100 \u2014 70.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 33.10% of price",
+            "trend clarity 100/100 \u2014 70.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NIVF",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 0.11 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 492.91% of price",
+          "trend clarity 100/100 \u2014 99.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 492.91% of price",
+            "trend clarity 100/100 \u2014 99.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SSPC",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $4.6M below the $20M floor",
+          "only 17 bars of history, under the 40-bar floor"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $5M/day",
+          "volatility 0/100 \u2014 ATR 52.22% of price",
+          "trend clarity 100/100 \u2014 45.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $5M/day",
+            "volatility 0/100 \u2014 ATR 52.22% of price",
+            "trend clarity 100/100 \u2014 45.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NVAX",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $9.5M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $10M/day",
+          "volatility 0/100 \u2014 ATR 9.41% of price",
+          "trend clarity 100/100 \u2014 45.6% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $10M/day",
+            "volatility 0/100 \u2014 ATR 9.41% of price",
+            "trend clarity 100/100 \u2014 45.6% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "AMOD",
+        "score": 0.3125,
+        "eligible": false,
+        "blockers": [
+          "price 3.76 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 1,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 21.83% of price",
+          "trend clarity 100/100 \u2014 81.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 21.83% of price",
+            "trend clarity 100/100 \u2014 81.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SAIQ",
+        "score": 0.3035,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.9713543838210006,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 22.94% of price",
+          "trend clarity 97/100 \u2014 34.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 22.94% of price",
+            "trend clarity 97/100 \u2014 34.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "ITUB",
+        "score": 0.3032,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.22898996293541263,
+          "volatility": 0,
+          "trendClarity": 0.6954190963385795,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 23/100 \u2014 median $57M/day",
+          "volatility 0/100 \u2014 ATR 5.90% of price",
+          "trend clarity 70/100 \u2014 24.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 23/100 \u2014 median $57M/day",
+            "volatility 0/100 \u2014 ATR 5.90% of price",
+            "trend clarity 70/100 \u2014 24.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "GRAB",
+        "score": 0.302,
+        "eligible": false,
+        "blockers": [
+          "price 3.17 below the 5 floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.18620829961656016,
+          "volatility": 0,
+          "trendClarity": 0.742921133556714,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 19/100 \u2014 median $47M/day",
+          "volatility 0/100 \u2014 ATR 10.00% of price",
+          "trend clarity 74/100 \u2014 26.5% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 19/100 \u2014 median $47M/day",
+            "volatility 0/100 \u2014 ATR 10.00% of price",
+            "trend clarity 74/100 \u2014 26.5% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NOK",
+        "score": 0.2979,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.4148655802247081,
+          "volatility": 0,
+          "trendClarity": 0.4554059574616028,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 41/100 \u2014 median $135M/day",
+          "volatility 0/100 \u2014 ATR 12.44% of price",
+          "trend clarity 46/100 \u2014 17.0% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 41/100 \u2014 median $135M/day",
+            "volatility 0/100 \u2014 ATR 12.44% of price",
+            "trend clarity 46/100 \u2014 17.0% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "IBIT",
+        "score": 0.2778,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.7163810301382005,
+          "volatility": 0,
+          "trendClarity": 0.029271860305866208,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 72/100 \u2014 median $542M/day",
+          "volatility 0/100 \u2014 ATR 5.55% of price",
+          "trend clarity 3/100 \u2014 3.0% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 72/100 \u2014 median $542M/day",
+            "volatility 0/100 \u2014 ATR 5.55% of price",
+            "trend clarity 3/100 \u2014 3.0% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "BITO",
+        "score": 0.2763,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.6271033635145642,
+          "volatility": 0,
+          "trendClarity": 0.13176857071718712,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 63/100 \u2014 median $359M/day",
+          "volatility 0/100 \u2014 ATR 5.57% of price",
+          "trend clarity 13/100 \u2014 6.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 63/100 \u2014 median $359M/day",
+            "volatility 0/100 \u2014 ATR 5.57% of price",
+            "trend clarity 13/100 \u2014 6.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "IREN",
+        "score": 0.2716,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5140688745491762,
+          "volatility": 0,
+          "trendClarity": 0.25211192983486136,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 51/100 \u2014 median $213M/day",
+          "volatility 0/100 \u2014 ATR 18.43% of price",
+          "trend clarity 25/100 \u2014 10.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 51/100 \u2014 median $213M/day",
+            "volatility 0/100 \u2014 ATR 18.43% of price",
+            "trend clarity 25/100 \u2014 10.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SWKS",
+        "score": 0.2651,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.17840792948041573,
+          "volatility": 0,
+          "trendClarity": 0.6341539190443444,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 18/100 \u2014 median $45M/day",
+          "volatility 0/100 \u2014 ATR 9.17% of price",
+          "trend clarity 63/100 \u2014 22.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 18/100 \u2014 median $45M/day",
+            "volatility 0/100 \u2014 ATR 9.17% of price",
+            "trend clarity 63/100 \u2014 22.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "VTEB",
+        "score": 0.264,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.36498373225666825,
+          "volatility": 0.3097875519750525,
+          "trendClarity": 0.09706710920694242,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 36/100 \u2014 median $107M/day",
+          "volatility 31/100 \u2014 ATR 0.96% of price",
+          "trend clarity 10/100 \u2014 5.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 36/100 \u2014 median $107M/day",
+            "volatility 31/100 \u2014 ATR 0.96% of price",
+            "trend clarity 10/100 \u2014 5.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "MDT",
+        "score": 0.25,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5041377833926681,
+          "volatility": 0.16571635911258564,
+          "trendClarity": 0.029386230185258037,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 50/100 \u2014 median $204M/day",
+          "volatility 17/100 \u2014 ATR 4.92% of price",
+          "trend clarity 3/100 \u2014 3.0% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 50/100 \u2014 median $204M/day",
+            "volatility 17/100 \u2014 ATR 4.92% of price",
+            "trend clarity 3/100 \u2014 3.0% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PTC",
+        "score": 0.2416,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.18217539397614768,
+          "volatility": 0,
+          "trendClarity": 0.5544019893611464,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 18/100 \u2014 median $46M/day",
+          "volatility 0/100 \u2014 ATR 7.75% of price",
+          "trend clarity 55/100 \u2014 20.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 18/100 \u2014 median $46M/day",
+            "volatility 0/100 \u2014 ATR 7.75% of price",
+            "trend clarity 55/100 \u2014 20.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "BBD",
+        "score": 0.239,
+        "eligible": false,
+        "blockers": [
+          "price 4.33 below the 5 floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.12190781002559214,
+          "volatility": 0,
+          "trendClarity": 0.6185283182311345,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 12/100 \u2014 median $35M/day",
+          "volatility 0/100 \u2014 ATR 6.38% of price",
+          "trend clarity 62/100 \u2014 22.4% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 12/100 \u2014 median $35M/day",
+            "volatility 0/100 \u2014 ATR 6.38% of price",
+            "trend clarity 62/100 \u2014 22.4% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "T",
+        "score": 0.2372,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.5458204721413455,
+          "volatility": 0,
+          "trendClarity": 0.10408207275537013,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 55/100 \u2014 median $247M/day",
+          "volatility 0/100 \u2014 ATR 5.54% of price",
+          "trend clarity 10/100 \u2014 5.4% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 55/100 \u2014 median $247M/day",
+            "volatility 0/100 \u2014 ATR 5.54% of price",
+            "trend clarity 10/100 \u2014 5.4% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "GGB",
+        "score": 0.2353,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $17.6M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.753027099750145,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $18M/day",
+          "volatility 0/100 \u2014 ATR 7.25% of price",
+          "trend clarity 75/100 \u2014 26.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $18M/day",
+            "volatility 0/100 \u2014 ATR 7.25% of price",
+            "trend clarity 75/100 \u2014 26.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "ONDS",
+        "score": 0.2262,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.2808507092350516,
+          "volatility": 0,
+          "trendClarity": 0.38693862207057417,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 28/100 \u2014 median $73M/day",
+          "volatility 0/100 \u2014 ATR 14.26% of price",
+          "trend clarity 39/100 \u2014 14.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 28/100 \u2014 median $73M/day",
+            "volatility 0/100 \u2014 ATR 14.26% of price",
+            "trend clarity 39/100 \u2014 14.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "F",
+        "score": 0.2174,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.42249220589550784,
+          "volatility": 0,
+          "trendClarity": 0.18875831127080092,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 42/100 \u2014 median $140M/day",
+          "volatility 0/100 \u2014 ATR 7.57% of price",
+          "trend clarity 19/100 \u2014 8.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 42/100 \u2014 median $140M/day",
+            "volatility 0/100 \u2014 ATR 7.57% of price",
+            "trend clarity 19/100 \u2014 8.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "CIFR",
+        "score": 0.2132,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.37309912869256756,
+          "volatility": 0,
+          "trendClarity": 0.23442836693762117,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 37/100 \u2014 median $111M/day",
+          "volatility 0/100 \u2014 ATR 28.70% of price",
+          "trend clarity 23/100 \u2014 9.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 37/100 \u2014 median $111M/day",
+            "volatility 0/100 \u2014 ATR 28.70% of price",
+            "trend clarity 23/100 \u2014 9.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PLUG",
+        "score": 0.2111,
+        "eligible": false,
+        "blockers": [
+          "price 1.90 below the 5 floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.07545620226072325,
+          "volatility": 0,
+          "trendClarity": 0.5850316229634919,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 8/100 \u2014 median $28M/day",
+          "volatility 0/100 \u2014 ATR 12.80% of price",
+          "trend clarity 59/100 \u2014 21.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 8/100 \u2014 median $28M/day",
+            "volatility 0/100 \u2014 ATR 12.80% of price",
+            "trend clarity 59/100 \u2014 21.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SPCH",
+        "score": 0.2056,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $10.6M below the $20M floor",
+          "only 17 bars of history, under the 40-bar floor"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.6579977947606568,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $11M/day",
+          "volatility 0/100 \u2014 ATR 16.65% of price",
+          "trend clarity 66/100 \u2014 23.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $11M/day",
+            "volatility 0/100 \u2014 ATR 16.65% of price",
+            "trend clarity 66/100 \u2014 23.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "AGNC",
+        "score": 0.2042,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.1524431956702208,
+          "volatility": 0,
+          "trendClarity": 0.47051764420122727,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 15/100 \u2014 median $40M/day",
+          "volatility 0/100 \u2014 ATR 5.43% of price",
+          "trend clarity 47/100 \u2014 17.5% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 15/100 \u2014 median $40M/day",
+            "volatility 0/100 \u2014 ATR 5.43% of price",
+            "trend clarity 47/100 \u2014 17.5% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "WULF",
+        "score": 0.2024,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.3670564963518359,
+          "volatility": 0,
+          "trendClarity": 0.20718873906390478,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 37/100 \u2014 median $108M/day",
+          "volatility 0/100 \u2014 ATR 19.96% of price",
+          "trend clarity 21/100 \u2014 8.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 37/100 \u2014 median $108M/day",
+            "volatility 0/100 \u2014 ATR 19.96% of price",
+            "trend clarity 21/100 \u2014 8.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PSKY",
+        "score": 0.1933,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.06719995394842426,
+          "volatility": 0,
+          "trendClarity": 0.5379582391889738,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 7/100 \u2014 median $27M/day",
+          "volatility 0/100 \u2014 ATR 10.99% of price",
+          "trend clarity 54/100 \u2014 19.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 7/100 \u2014 median $27M/day",
+            "volatility 0/100 \u2014 ATR 10.99% of price",
+            "trend clarity 54/100 \u2014 19.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "BMNR",
+        "score": 0.1918,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.43116144604378714,
+          "volatility": 0,
+          "trendClarity": 0.09640168260857919,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 43/100 \u2014 median $146M/day",
+          "volatility 0/100 \u2014 ATR 10.96% of price",
+          "trend clarity 10/100 \u2014 5.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 43/100 \u2014 median $146M/day",
+            "volatility 0/100 \u2014 ATR 10.96% of price",
+            "trend clarity 10/100 \u2014 5.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "ABEV",
+        "score": 0.1857,
+        "eligible": false,
+        "blockers": [
+          "price 3.25 below the 5 floor",
+          "median dollar volume $19.2M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0.13756941982748516,
+          "trendClarity": 0.45673616636330966,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $19M/day",
+          "volatility 14/100 \u2014 ATR 4.99% of price",
+          "trend clarity 46/100 \u2014 17.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $19M/day",
+            "volatility 14/100 \u2014 ATR 4.99% of price",
+            "trend clarity 46/100 \u2014 17.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "AAL",
+        "score": 0.1828,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.39221998220649024,
+          "volatility": 0,
+          "trendClarity": 0.11428076887937388,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 39/100 \u2014 median $122M/day",
+          "volatility 0/100 \u2014 ATR 9.31% of price",
+          "trend clarity 11/100 \u2014 5.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 39/100 \u2014 median $122M/day",
+            "volatility 0/100 \u2014 ATR 9.31% of price",
+            "trend clarity 11/100 \u2014 5.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "CDE",
+        "score": 0.1801,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.3434497271959187,
+          "volatility": 0,
+          "trendClarity": 0.164101717273498,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 34/100 \u2014 median $97M/day",
+          "volatility 0/100 \u2014 ATR 12.81% of price",
+          "trend clarity 16/100 \u2014 7.4% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 34/100 \u2014 median $97M/day",
+            "volatility 0/100 \u2014 ATR 12.81% of price",
+            "trend clarity 16/100 \u2014 7.4% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "RXRX",
+        "score": 0.1776,
+        "eligible": false,
+        "blockers": [
+          "price 4.79 below the 5 floor",
+          "median dollar volume $14.1M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.5683728036669226,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $14M/day",
+          "volatility 0/100 \u2014 ATR 10.65% of price",
+          "trend clarity 57/100 \u2014 20.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $14M/day",
+            "volatility 0/100 \u2014 ATR 10.65% of price",
+            "trend clarity 57/100 \u2014 20.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NU",
+        "score": 0.1764,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.47028715748132566,
+          "volatility": 0,
+          "trendClarity": 0,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 47/100 \u2014 median $174M/day",
+          "volatility 0/100 \u2014 ATR 8.78% of price",
+          "trend clarity 0/100 \u2014 1.6% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 47/100 \u2014 median $174M/day",
+            "volatility 0/100 \u2014 ATR 8.78% of price",
+            "trend clarity 0/100 \u2014 1.6% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "MARA",
+        "score": 0.1731,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.2834481234797632,
+          "volatility": 0,
+          "trendClarity": 0.21386763884831975,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 28/100 \u2014 median $74M/day",
+          "volatility 0/100 \u2014 ATR 18.44% of price",
+          "trend clarity 21/100 \u2014 9.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 28/100 \u2014 median $74M/day",
+            "volatility 0/100 \u2014 ATR 18.44% of price",
+            "trend clarity 21/100 \u2014 9.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "RIG",
+        "score": 0.1431,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.21416223885444596,
+          "volatility": 0,
+          "trendClarity": 0.20099711361847264,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 21/100 \u2014 median $54M/day",
+          "volatility 0/100 \u2014 ATR 8.03% of price",
+          "trend clarity 20/100 \u2014 8.6% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 21/100 \u2014 median $54M/day",
+            "volatility 0/100 \u2014 ATR 8.03% of price",
+            "trend clarity 20/100 \u2014 8.6% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "VALE",
+        "score": 0.1412,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.3765332539426671,
+          "volatility": 0,
+          "trendClarity": 0,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 38/100 \u2014 median $113M/day",
+          "volatility 0/100 \u2014 ATR 6.74% of price",
+          "trend clarity 0/100 \u2014 0.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 38/100 \u2014 median $113M/day",
+            "volatility 0/100 \u2014 ATR 6.74% of price",
+            "trend clarity 0/100 \u2014 0.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SBS",
+        "score": 0.1368,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $12.3M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.43776100100275145,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $12M/day",
+          "volatility 0/100 \u2014 ATR 6.74% of price",
+          "trend clarity 44/100 \u2014 16.4% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $12M/day",
+            "volatility 0/100 \u2014 ATR 6.74% of price",
+            "trend clarity 44/100 \u2014 16.4% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "STNE",
+        "score": 0.136,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $19.2M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.435140577464485,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $19M/day",
+          "volatility 0/100 \u2014 ATR 8.07% of price",
+          "trend clarity 44/100 \u2014 16.4% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $19M/day",
+            "volatility 0/100 \u2014 ATR 8.07% of price",
+            "trend clarity 44/100 \u2014 16.4% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "DNN",
+        "score": 0.1343,
+        "eligible": false,
+        "blockers": [
+          "price 2.63 below the 5 floor",
+          "median dollar volume $19.8M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.42972875558490625,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $20M/day",
+          "volatility 0/100 \u2014 ATR 13.37% of price",
+          "trend clarity 43/100 \u2014 16.2% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $20M/day",
+            "volatility 0/100 \u2014 ATR 13.37% of price",
+            "trend clarity 43/100 \u2014 16.2% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "HL",
+        "score": 0.1109,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.29577270130384026,
+          "volatility": 0,
+          "trendClarity": 0,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 30/100 \u2014 median $78M/day",
+          "volatility 0/100 \u2014 ATR 11.94% of price",
+          "trend clarity 0/100 \u2014 1.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 30/100 \u2014 median $78M/day",
+            "volatility 0/100 \u2014 ATR 11.94% of price",
+            "trend clarity 0/100 \u2014 1.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "PATH",
+        "score": 0.1027,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.27384799315807484,
+          "volatility": 0,
+          "trendClarity": 0,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 27/100 \u2014 median $71M/day",
+          "volatility 0/100 \u2014 ATR 14.38% of price",
+          "trend clarity 0/100 \u2014 1.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 27/100 \u2014 median $71M/day",
+            "volatility 0/100 \u2014 ATR 14.38% of price",
+            "trend clarity 0/100 \u2014 1.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SNXX",
+        "score": 0.0995,
+        "eligible": false,
+        "blockers": [
+          "only 37 bars of history, under the 40-bar floor"
+        ],
+        "components": {
+          "liquidity": 0.19236553775370568,
+          "volatility": 0,
+          "trendClarity": 0.0875760412395592,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 19/100 \u2014 median $49M/day",
+          "volatility 0/100 \u2014 ATR 38.84% of price",
+          "trend clarity 9/100 \u2014 4.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 19/100 \u2014 median $49M/day",
+            "volatility 0/100 \u2014 ATR 38.84% of price",
+            "trend clarity 9/100 \u2014 4.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "INTR",
+        "score": 0.0934,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $10.5M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.2988018943758983,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $10M/day",
+          "volatility 0/100 \u2014 ATR 8.56% of price",
+          "trend clarity 30/100 \u2014 11.9% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $10M/day",
+            "volatility 0/100 \u2014 ATR 8.56% of price",
+            "trend clarity 30/100 \u2014 11.9% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "UNG",
+        "score": 0.0897,
+        "eligible": false,
+        "blockers": [
+          "median dollar volume $16.7M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.28689623751593535,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $17M/day",
+          "volatility 0/100 \u2014 ATR 6.98% of price",
+          "trend clarity 29/100 \u2014 11.5% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $17M/day",
+            "volatility 0/100 \u2014 ATR 6.98% of price",
+            "trend clarity 29/100 \u2014 11.5% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SID",
+        "score": 0.0819,
+        "eligible": false,
+        "blockers": [
+          "price 1.23 below the 5 floor",
+          "median dollar volume $1.3M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.26221199541312423,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $1M/day",
+          "volatility 0/100 \u2014 ATR 12.12% of price",
+          "trend clarity 26/100 \u2014 10.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $1M/day",
+            "volatility 0/100 \u2014 ATR 12.12% of price",
+            "trend clarity 26/100 \u2014 10.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "AUR",
+        "score": 0.0676,
+        "eligible": false,
+        "blockers": [
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.058606222341668346,
+          "volatility": 0,
+          "trendClarity": 0.14608512874408797,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 6/100 \u2014 median $26M/day",
+          "volatility 0/100 \u2014 ATR 13.37% of price",
+          "trend clarity 15/100 \u2014 6.8% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 6/100 \u2014 median $26M/day",
+            "volatility 0/100 \u2014 ATR 13.37% of price",
+            "trend clarity 15/100 \u2014 6.8% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "KEEL",
+        "score": 0.0388,
+        "eligible": false,
+        "blockers": [
+          "price 3.46 below the 5 floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0.036237833083571314,
+          "volatility": 0,
+          "trendClarity": 0.08079127507396412,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 4/100 \u2014 median $24M/day",
+          "volatility 0/100 \u2014 ATR 20.38% of price",
+          "trend clarity 8/100 \u2014 4.7% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 4/100 \u2014 median $24M/day",
+            "volatility 0/100 \u2014 ATR 20.38% of price",
+            "trend clarity 8/100 \u2014 4.7% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "ALEC",
+        "score": 0.0091,
+        "eligible": false,
+        "blockers": [
+          "price 1.97 below the 5 floor",
+          "median dollar volume $0.7M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.029080261172540367,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $1M/day",
+          "volatility 0/100 \u2014 ATR 21.48% of price",
+          "trend clarity 3/100 \u2014 3.0% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $1M/day",
+            "volatility 0/100 \u2014 ATR 21.48% of price",
+            "trend clarity 3/100 \u2014 3.0% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "NAUT",
+        "score": 0.0011,
+        "eligible": false,
+        "blockers": [
+          "price 1.86 below the 5 floor",
+          "median dollar volume $0.1M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0.003562635351944109,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 16.66% of price",
+          "trend clarity 0/100 \u2014 2.1% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 16.66% of price",
+            "trend clarity 0/100 \u2014 2.1% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      },
+      {
+        "symbol": "SCKT",
+        "score": 0,
+        "eligible": false,
+        "blockers": [
+          "price 0.91 below the 5 floor",
+          "median dollar volume $0.0M below the $20M floor",
+          "60 of 80 bars for the requested window (75% coverage, floor 80%)"
+        ],
+        "components": {
+          "liquidity": 0,
+          "volatility": 0,
+          "trendClarity": 0,
+          "researchCoverage": null
+        },
+        "unmeasured": [
+          "researchCoverage"
+        ],
+        "reasons": [
+          "liquidity 0/100 \u2014 median $0M/day",
+          "volatility 0/100 \u2014 ATR 34.49% of price",
+          "trend clarity 0/100 \u2014 1.3% from its long average",
+          "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+        ],
+        "evidence": [],
+        "board": {
+          "score": null,
+          "confidence": "low",
+          "reasons": [
+            "liquidity 0/100 \u2014 median $0M/day",
+            "volatility 0/100 \u2014 ATR 34.49% of price",
+            "trend clarity 0/100 \u2014 1.3% from its long average",
+            "not measured: researchCoverage \u2014 score computed over the remaining weight only"
+          ],
+          "evidence": []
+        },
+        "forwardTestOnly": true
+      }
+    ],
+    "separation": null,
+    "range": "1Y",
+    "requested": 100,
+    "scored": 100,
+    "errors": [],
+    "universe": {
+      "source": "alpaca-most-actives",
+      "forwardTestOnly": true,
+      "survivorshipWarning": "Live screen universes omit delisted names and are forward-test-only; do not use them to claim historical performance.",
+      "fallback": false,
+      "size": 100
+    },
+    "caption": "Board B \u2014 tradeability and measurement quality, not expected return."
+  },
+  "meta": {
+    "requestId": "7f8178df-ad93-476d-a2e0-11c804f13e0e"
+  }
+}

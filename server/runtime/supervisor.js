@@ -72,6 +72,16 @@ function rangeForInterval(interval) {
   }[interval];
 }
 
+function paperBarOptions(session) {
+  if (session.mode !== "paper") return {};
+  // Chart windows are too short for slow methods (e.g. EMA200 on daily
+  // bars). Include indicator warmup and holding-period history for paper runs.
+  const periods = Object.entries(session.paramsJson ?? {})
+    .filter(([key, value]) => /period|lookback|warmup|holdbars|^(fast|slow)$/i.test(key) && Number.isFinite(Number(value)))
+    .map(([, value]) => Number(value));
+  return { fresh: true, minBars: Math.min(2000, Math.max(60, ...periods) + 20) };
+}
+
 function asAt(value, fallback) {
   const numeric = Number(value);
   if (Number.isSafeInteger(numeric) && numeric >= 0) return numeric;
@@ -606,7 +616,7 @@ export function createSupervisor({
     if (!range) throw new AppError("INVALID_BAR_INTERVAL", `Unsupported interval: ${session.barInterval}`, 400);
     const marketData = await Promise.all(
       session.symbolsJson.map(async (symbol) => {
-        const historical = await market.getBars(symbol, range);
+        const historical = await market.getBars(symbol, range, paperBarOptions(session));
         if (!historical?.bars?.length || historical.source === "unavailable") {
           throw new AppError("MARKET_DATA_UNAVAILABLE", `No real bars available for ${symbol}.`, 503);
         }
@@ -1063,7 +1073,7 @@ export function createSupervisor({
       if (!Number.isSafeInteger(Number(order.signalBarAt))) continue;
       let historical;
       try {
-        historical = await market.getBars(order.symbol, rangeForInterval(session.barInterval));
+        historical = await market.getBars(order.symbol, rangeForInterval(session.barInterval), paperBarOptions(session));
       } catch (error) {
         await appendAudit("session_next_open_unavailable", session, { orderId: order.id, symbol: order.symbol, error: error.message }, "supervisor");
         continue;
@@ -1085,7 +1095,7 @@ export function createSupervisor({
       const higherEquityInterval = ["1day", "1week", "1month"].includes(session.barInterval) &&
         !isCryptoSymbol(order.symbol);
       const expectedOpenAt = higherEquityInterval ? exchangeBarOpen(nextBar.time) : nextBar.time;
-      const maxFillAt = expectedOpenAt + (higherEquityInterval ? tolerance : intervalSpan(session.barInterval, nextBar.time) + tolerance);
+      const maxFillAt = expectedOpenAt + (higherEquityInterval ? 300_000 + tolerance : intervalSpan(session.barInterval, nextBar.time) + tolerance);
       if (expectedOpenAt > at || expectedOpenAt < submittedAt - tolerance || at > maxFillAt) {
         await rejectMissedOpen(order, {
           signalBarAt: order.signalBarAt,
@@ -1167,7 +1177,7 @@ export function createSupervisor({
       }
       let historical;
       try {
-        historical = await market.getBars(symbol, range);
+        historical = await market.getBars(symbol, range, paperBarOptions(session));
       } catch (error) {
         await appendAudit("session_bars_unavailable", session, { symbol, error: error.message }, "supervisor");
         continue;
@@ -1327,7 +1337,7 @@ export function createSupervisor({
       let signalBarAt = null;
       if (qty > 0) {
         try {
-          const historical = await market.getBars(candidate.symbol, rangeForInterval(session.barInterval));
+          const historical = await market.getBars(candidate.symbol, rangeForInterval(session.barInterval), paperBarOptions(session));
           const closed = realClosedBars(
             historical,
             session.barInterval,

@@ -205,9 +205,20 @@ test("a terminal callback result cancels instead of rearming", async () => {
   assert.equal(timers.length, 0);
 });
 
+test("opening polls retry boundedly while the provider publishes the next bar", () => {
+  let at = Date.parse("2026-08-10T13:30:02Z");
+  for (let minute = 1; minute <= 5; minute += 1) {
+    const next = nextExchangeBarEvent("1day", at, 2_000);
+    assert.equal(next.at, Date.parse("2026-08-10T13:30:02Z") + minute * 60_000);
+    assert.equal(next.trigger.phase, "open");
+    at = next.at;
+  }
+  assert.equal(nextExchangeBarEvent("1day", at, 2_000).trigger.phase, "close");
+});
+
 test("monthly waits are chunked below Node's maximum timer delay", () => {
   const timers = [];
-  let now = Date.parse("2026-09-01T13:30:03Z");
+  let now = Date.parse("2026-09-01T13:36:03Z");
   let calls = 0;
   const scheduler = new SessionScheduler({
     clock: () => now,

@@ -74,10 +74,13 @@ export function alpacaProvider(config) {
       url.searchParams.set("start", new Date(Date.now() - range.lookbackDays * 86_400_000).toISOString());
       url.searchParams.set("end", new Date().toISOString());
       url.searchParams.set("limit", String(range.limit));
-      url.searchParams.set("sort", "asc");
+      // The response limit is a page cap. Ascending order would return the
+      // oldest page in the lookback and silently omit the current trading bars.
+      url.searchParams.set("sort", "desc");
       const payload = await json(await fetch(url, { headers: headers(config), signal: AbortSignal.timeout(12_000) }), "Alpaca bars");
       const values = crypto ? payload.bars?.[cryptoPair(symbol)] ?? [] : payload.bars ?? [];
-      return values.map((bar) => normalizeBar(bar, "alpaca")).slice(-range.limit);
+      return values.map((bar) => normalizeBar(bar, "alpaca"))
+        .sort((left, right) => left.time - right.time).slice(-range.limit);
     }
   };
 }

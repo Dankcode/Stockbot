@@ -44,8 +44,9 @@ import { band, ramp, scoreSeparation, weightedScore } from "../scoring/scale.js"
  *
  * Coverage asks the question that actually matters — "does this symbol have a full
  * history for the window we asked for?" — and is what catches a recent listing returning
- * 40 bars against a 140-bar request. `minBars` survives as an absolute floor below which
- * no indicator warmup is meaningful at any range.
+ * 40 bars against a full quarter. Expected coverage must also respect the calendar:
+ * a response cap is not a promise that a window contains that many bars. The default
+ * 40-bar floor is reduced only for short windows; explicit caller gates are preserved.
  */
 export const DEFAULT_GATES = Object.freeze({
   minPrice: 5,
@@ -233,11 +234,16 @@ export async function recommendSymbols({
   concurrency = 4
 }) {
   const symbols = [...new Set((universe ?? []).map((symbol) => String(symbol).trim().toUpperCase()).filter(Boolean))];
-  // How many bars a full history for this range should contain. Coverage, not an
-  // absolute count, is what the history gate compares against — see DEFAULT_GATES.
+  // Estimate available periods, bounded by the response cap. The 80% coverage
+  // threshold allows for exchange holidays and partial weeks/months.
   let expectedBars = null;
   try {
-    expectedBars = getRangeConfig(range).limit;
+    const config = getRangeConfig(range);
+    const calendarBars = config.interval === "1week" ? config.lookbackDays / 7
+      : config.interval === "1month" ? config.lookbackDays / (365.25 / 12)
+      : config.interval === "1day" ? config.lookbackDays * 252 / 365.25
+      : config.limit;
+    expectedBars = Math.min(config.limit, Math.ceil(calendarBars));
   } catch {
     expectedBars = null;
   }
@@ -273,7 +279,14 @@ export async function recommendSymbols({
   };
 
   await Promise.all(Array.from({ length: Math.max(1, Math.min(8, concurrency)) }, worker));
-  const ranked = rankCandidates(facts, { weights, gates, limit });
+  // Short chart windows can contain fewer than 40 daily bars even with full
+  // coverage. Explicit caller gates remain authoritative.
+  const effectiveGates = gates ?? {
+    ...DEFAULT_GATES,
+    minBars: expectedBars == null ? DEFAULT_GATES.minBars
+      : Math.min(DEFAULT_GATES.minBars, Math.ceil(expectedBars * DEFAULT_GATES.minHistoryCoverage))
+  };
+  const ranked = rankCandidates(facts, { weights, gates: effectiveGates, limit });
   return Object.freeze({
     ...ranked,
     range,

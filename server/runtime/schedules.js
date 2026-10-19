@@ -115,10 +115,15 @@ export function nextExchangeBarEvent(interval, after = Date.now(), settleDelayMs
     const previous = sessions[index - 1];
     const next = sessions[index + 1];
     if (previous && closesPeriod(interval, previous, session)) {
-      candidates.push({
-        at: session.openAt + settleDelayMs,
-        trigger: { kind: "market", phase: "open", interval, scheduledAt: session.openAt + settleDelayMs }
-      });
+      // Aggregated opening bars often arrive after the first poll. Retry within
+      // a bounded five-minute publication window instead of waiting until close.
+      for (const delay of [0, 60_000, 120_000, 180_000, 240_000, 300_000]) {
+        const at = session.openAt + settleDelayMs + delay;
+        candidates.push({
+          at,
+          trigger: { kind: "market", phase: "open", interval, scheduledAt: at }
+        });
+      }
     }
     if (closesPeriod(interval, session, next)) {
       candidates.push({

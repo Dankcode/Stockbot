@@ -35,6 +35,7 @@ export function createMarketService(config) {
   const providers = [alpacaProvider(config), polygonProvider(config), finnhubProvider(config)];
   const quoteCache = new TtlCache();
   const barsCache = new TtlCache();
+  const barsInFlight = new Map();
   const catalogCache = new TtlCache();
   const selectionUniverseCache = new TtlCache();
   const forwardTestOnlySymbols = new Set();
@@ -99,7 +100,7 @@ export function createMarketService(config) {
     return quoteCache.set(normalized, value, config.quoteCacheMs);
   }
 
-  async function getBars(symbol, rangeKey = "1D") {
+  async function getBars(symbol, rangeKey = "1D", { fresh = false, minBars = 0 } = {}) {
     const normalized = String(symbol || "").trim().toUpperCase();
     if (!(await catalog()).some((asset) => asset.symbol === normalized)) {
       throw new AppError("UNKNOWN_SYMBOL", `Unknown symbol: ${normalized}`, 404);
@@ -107,13 +108,26 @@ export function createMarketService(config) {
     let range;
     try { range = getRangeConfig(rangeKey); }
     catch { throw new AppError("INVALID_RANGE", `Unsupported chart range: ${rangeKey}`, 400); }
-    const key = `${normalized}:${range.key}`;
+    if (Number.isFinite(minBars) && minBars > 0) {
+      const limit = Math.max(range.limit, Math.min(2000, Math.ceil(minBars)));
+      const periodsPerDay = { "1min": 390, "5min": 78, "1hour": 6.5, "1day": 1, "1week": 1 / 5, "1month": 1 / 21 }[range.interval];
+      range = { ...range, limit, lookbackDays: Math.max(range.lookbackDays, Math.ceil(limit / periodsPerDay * 365.25 / 252) + 14) };
+    }
+    const key = `${normalized}:${range.key}:${range.limit}:${range.lookbackDays}`;
     const cached = barsCache.get(key);
-    if (cached) return cached;
-    const { value, provider } = await attempt("bars", normalized, range);
-    const data = { symbol: normalized, range: range.key, interval: range.interval, source: provider, bars: value, diagnostics: diagnostics(value) };
-    const ttl = ["1H", "1D"].includes(range.key) ? config.barsCacheIntradayMs : config.barsCacheLongMs;
-    return barsCache.set(key, data, ttl);
+    if (cached && !fresh) return cached;
+    // Sessions wake together at exchange boundaries. Share the fresh request
+    // instead of issuing one identical provider call per strategy.
+    if (barsInFlight.has(key)) return barsInFlight.get(key);
+    const pending = (async () => {
+      const { value, provider } = await attempt("bars", normalized, range);
+      const data = { symbol: normalized, range: range.key, interval: range.interval, source: provider, bars: value, diagnostics: diagnostics(value) };
+      const ttl = ["1H", "1D"].includes(range.key) ? config.barsCacheIntradayMs : config.barsCacheLongMs;
+      return barsCache.set(key, data, ttl);
+    })();
+    barsInFlight.set(key, pending);
+    try { return await pending; }
+    finally { if (barsInFlight.get(key) === pending) barsInFlight.delete(key); }
   }
 
   async function search(query, { withQuotes = false, limit = 20 } = {}) {

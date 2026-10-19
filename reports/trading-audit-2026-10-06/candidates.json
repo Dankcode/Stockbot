@@ -1,0 +1,847 @@
+{
+  "checkedAt": "2026-10-05T21:55:25.695Z",
+  "note": "Read-only forward paper candidates, not orders or return predictions. Signals use conservatively closed daily bars; re-evaluate before starting sessions.",
+  "recommended": [
+    {
+      "symbol": "NVDA",
+      "score": 0.6449,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.7947012962226507,
+        "volatility": 0.8007523274282,
+        "trendClarity": 0.3092026814568545,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 79/100 — median $777M/day",
+        "volatility 80/100 — ATR 2.23% of price",
+        "trend clarity 31/100 — 12.2% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "MSFT",
+      "score": 0.6405,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.6459192518994179,
+        "volatility": 0.8224845429422469,
+        "trendClarity": 0.4521072146479541,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 65/100 — median $392M/day",
+        "volatility 82/100 — ATR 2.29% of price",
+        "trend clarity 45/100 — 16.9% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "META",
+      "score": 0.5965,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.6452607366611351,
+        "volatility": 0.5860840370386202,
+        "trendClarity": 0.5484390426049068,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 65/100 — median $390M/day",
+        "volatility 59/100 — ATR 3.83% of price",
+        "trend clarity 55/100 — 20.1% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "AMD",
+      "score": 0.585,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.5913301155521182,
+        "volatility": 0.5648658734138818,
+        "trendClarity": 0.5975386737281816,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 59/100 — median $305M/day",
+        "volatility 56/100 — ATR 3.88% of price",
+        "trend clarity 60/100 — 21.7% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "NFLX",
+      "score": 0.5354,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.41923124153534364,
+        "volatility": 0.96041921041921,
+        "trendClarity": 0.24979528522216907,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 42/100 — median $138M/day",
+        "volatility 96/100 — ATR 2.65% of price",
+        "trend clarity 25/100 — 10.2% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "GOOGL",
+      "score": 0.5096,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.5781104199382252,
+        "volatility": 0.9370231598338744,
+        "trendClarity": 0,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 58/100 — median $287M/day",
+        "volatility 94/100 — ATR 2.59% of price",
+        "trend clarity 0/100 — 0.7% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "AAPL",
+      "score": 0.4908,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.652129662194608,
+        "volatility": 0.68427459034916,
+        "trendClarity": 0.10381796108400985,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 65/100 — median $403M/day",
+        "volatility 68/100 — ATR 1.93% of price",
+        "trend clarity 10/100 — 5.4% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "AMZN",
+      "score": 0.456,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.6034030707897076,
+        "volatility": 0.734991539093456,
+        "trendClarity": 0,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 60/100 — median $322M/day",
+        "volatility 73/100 — ATR 2.06% of price",
+        "trend clarity 0/100 — 0.1% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "NKE",
+      "score": 0.4512,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.19124230982153323,
+        "volatility": 0.7827308840703018,
+        "trendClarity": 0.4316341515372505,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 19/100 — median $48M/day",
+        "volatility 78/100 — ATR 3.31% of price",
+        "trend clarity 43/100 — 16.2% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "JPM",
+      "score": 0.3284,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.2792309138930702,
+        "volatility": 0.6704189634850524,
+        "trendClarity": 0.04548234375390258,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 28/100 — median $72M/day",
+        "volatility 67/100 — ATR 1.89% of price",
+        "trend clarity 5/100 — 3.5% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "INTC",
+      "score": 0.2816,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.5845760268003435,
+        "volatility": 0,
+        "trendClarity": 0.19966933990084404,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 58/100 — median $295M/day",
+        "volatility 0/100 — ATR 5.62% of price",
+        "trend clarity 20/100 — 8.6% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    },
+    {
+      "symbol": "WBD",
+      "score": 0.2767,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.16555315268520587,
+        "volatility": 0.3818503904877807,
+        "trendClarity": 0.30506219702832343,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 17/100 — median $43M/day",
+        "volatility 38/100 — ATR 1.14% of price",
+        "trend clarity 31/100 — 12.1% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": []
+    }
+  ],
+  "eligibleCount": 12,
+  "excluded": [],
+  "separation": 0.0044,
+  "range": "3M",
+  "requested": 12,
+  "scored": 12,
+  "errors": [],
+  "candidates": [
+    {
+      "symbol": "NVDA",
+      "score": 0.6449,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.7947012962226507,
+        "volatility": 0.8007523274282,
+        "trendClarity": 0.3092026814568545,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 79/100 — median $777M/day",
+        "volatility 80/100 — ATR 2.23% of price",
+        "trend clarity 31/100 — 12.2% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": {
+            "action": "buy"
+          },
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "MSFT",
+      "score": 0.6405,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.6459192518994179,
+        "volatility": 0.8224845429422469,
+        "trendClarity": 0.4521072146479541,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 65/100 — median $392M/day",
+        "volatility 82/100 — ATR 2.29% of price",
+        "trend clarity 45/100 — 16.9% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": {
+            "action": "buy"
+          },
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "META",
+      "score": 0.5965,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.6452607366611351,
+        "volatility": 0.5860840370386202,
+        "trendClarity": 0.5484390426049068,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 65/100 — median $390M/day",
+        "volatility 59/100 — ATR 3.83% of price",
+        "trend clarity 55/100 — 20.1% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "AMD",
+      "score": 0.585,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.5913301155521182,
+        "volatility": 0.5648658734138818,
+        "trendClarity": 0.5975386737281816,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 59/100 — median $305M/day",
+        "volatility 56/100 — ATR 3.88% of price",
+        "trend clarity 60/100 — 21.7% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "NFLX",
+      "score": 0.5354,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.41923124153534364,
+        "volatility": 0.96041921041921,
+        "trendClarity": 0.24979528522216907,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 42/100 — median $138M/day",
+        "volatility 96/100 — ATR 2.65% of price",
+        "trend clarity 25/100 — 10.2% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "GOOGL",
+      "score": 0.5096,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.5781104199382252,
+        "volatility": 0.9370231598338744,
+        "trendClarity": 0,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 58/100 — median $287M/day",
+        "volatility 94/100 — ATR 2.59% of price",
+        "trend clarity 0/100 — 0.7% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "AAPL",
+      "score": 0.4908,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.652129662194608,
+        "volatility": 0.68427459034916,
+        "trendClarity": 0.10381796108400985,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 65/100 — median $403M/day",
+        "volatility 68/100 — ATR 1.93% of price",
+        "trend clarity 10/100 — 5.4% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "AMZN",
+      "score": 0.456,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.6034030707897076,
+        "volatility": 0.734991539093456,
+        "trendClarity": 0,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 60/100 — median $322M/day",
+        "volatility 73/100 — ATR 2.06% of price",
+        "trend clarity 0/100 — 0.1% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "NKE",
+      "score": 0.4512,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.19124230982153323,
+        "volatility": 0.7827308840703018,
+        "trendClarity": 0.4316341515372505,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 19/100 — median $48M/day",
+        "volatility 78/100 — ATR 3.31% of price",
+        "trend clarity 43/100 — 16.2% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "JPM",
+      "score": 0.3284,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.2792309138930702,
+        "volatility": 0.6704189634850524,
+        "trendClarity": 0.04548234375390258,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 28/100 — median $72M/day",
+        "volatility 67/100 — ATR 1.89% of price",
+        "trend clarity 5/100 — 3.5% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "INTC",
+      "score": 0.2816,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.5845760268003435,
+        "volatility": 0,
+        "trendClarity": 0.19966933990084404,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 58/100 — median $295M/day",
+        "volatility 0/100 — ATR 5.62% of price",
+        "trend clarity 20/100 — 8.6% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    },
+    {
+      "symbol": "WBD",
+      "score": 0.2767,
+      "eligible": true,
+      "blockers": [],
+      "components": {
+        "liquidity": 0.16555315268520587,
+        "volatility": 0.3818503904877807,
+        "trendClarity": 0.30506219702832343,
+        "researchCoverage": null
+      },
+      "unmeasured": [
+        "researchCoverage"
+      ],
+      "reasons": [
+        "liquidity 17/100 — median $43M/day",
+        "volatility 38/100 — ATR 1.14% of price",
+        "trend clarity 31/100 — 12.1% from its long average",
+        "not measured: researchCoverage — score computed over the remaining weight only"
+      ],
+      "evidence": [],
+      "provider": "alpaca",
+      "latestProviderBar": 1791172800000,
+      "evaluatedBar": 1791172800000,
+      "signals": [
+        {
+          "method": "trend-pullback",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "ema-momentum",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "rsi-mean-reversion",
+          "signal": null,
+          "barTime": 1791172800000
+        },
+        {
+          "method": "donchian-breakout",
+          "signal": null,
+          "barTime": 1791172800000
+        }
+      ]
+    }
+  ]
+}

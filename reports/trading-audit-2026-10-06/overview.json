@@ -1,0 +1,3855 @@
+{
+  "data": {
+    "portfolio": {
+      "accountId": "default-paper",
+      "sessionId": null,
+      "cash": 10000000,
+      "accountCash": 10000000,
+      "buyingPower": 10000000,
+      "equity": 10000000,
+      "dayChange": 0,
+      "dayStartEquity": 10000000,
+      "realizedPnl": 0,
+      "positionValue": 0,
+      "positions": [],
+      "orders": [
+        {
+          "id": "d804c7a0-6b9d-4a30-8ff3-f4b6fbdc04db",
+          "clientOrderId": "paper:5a242697-e7c2-414d-8140-946c62cf06be:SPY:1791172800000:buy",
+          "sessionId": "5a242697-e7c2-414d-8140-946c62cf06be",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2580611,
+          "limitPrice": null,
+          "status": "pending",
+          "rejectReason": null,
+          "signalReason": "Close cleared the prior channel high",
+          "submittedAt": 1791230402082,
+          "resolvedAt": null,
+          "signalBarAt": 1791172800000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "bca6934c-22fd-474e-8a5d-826604249be4",
+          "clientOrderId": "paper:d53f8b53-76ee-4e6a-8b4d-131fa3446ff0:SPY:1791172800000:buy",
+          "sessionId": "d53f8b53-76ee-4e6a-8b4d-131fa3446ff0",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2580611,
+          "limitPrice": null,
+          "status": "pending",
+          "rejectReason": null,
+          "signalReason": "Uptrend confirmed and RSI recovered from pullback",
+          "submittedAt": 1791230402064,
+          "resolvedAt": null,
+          "signalBarAt": 1791172800000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "8076650e-a840-44c7-8bf5-363c4443c62c",
+          "clientOrderId": "paper:330aa985-5a0d-4c8f-ad91-4a49d81ca56c:SPY:1791172800000:buy",
+          "sessionId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2580611,
+          "limitPrice": null,
+          "status": "pending",
+          "rejectReason": null,
+          "signalReason": "Price exceeds its lookback close and long trend",
+          "submittedAt": 1791230402046,
+          "resolvedAt": null,
+          "signalBarAt": 1791172800000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "fdf4b52f-3b8b-4b15-ab76-01080bd0a0a8",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1791172800000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2580611,
+          "limitPrice": null,
+          "status": "pending",
+          "rejectReason": null,
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1791230402044,
+          "resolvedAt": null,
+          "signalBarAt": 1791172800000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "32bcffab-c4a4-4246-8687-716fdea98a35",
+          "clientOrderId": "paper:14c2deb5-452a-4695-8d2c-bc9bdb211fb7:SPY:1790913600000:buy",
+          "sessionId": "14c2deb5-452a-4695-8d2c-bc9bdb211fb7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2598583,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Fast EMA crossed above slow EMA",
+          "submittedAt": 1790971202123,
+          "resolvedAt": 1791230402044,
+          "signalBarAt": 1790913600000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "e75dec34-ea2d-4642-b9a0-daa332aeba69",
+          "clientOrderId": "paper:330aa985-5a0d-4c8f-ad91-4a49d81ca56c:SPY:1790913600000:buy",
+          "sessionId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2598583,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Price exceeds its lookback close and long trend",
+          "submittedAt": 1790971202031,
+          "resolvedAt": 1791230402046,
+          "signalBarAt": 1790913600000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "2a5aa808-b2fd-4daf-8e9e-22919f7d384f",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1790913600000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2598583,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1790971202031,
+          "resolvedAt": 1791230402064,
+          "signalBarAt": 1790913600000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "27bf504d-ce74-473e-ba82-7cb78b98f240",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1790827200000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2617458,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1790884802134,
+          "resolvedAt": 1790971202031,
+          "signalBarAt": 1790827200000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "de6bfa53-166d-4492-a65d-21d178e2228d",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1790740800000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2623501,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1790798402023,
+          "resolvedAt": 1790884802134,
+          "signalBarAt": 1790740800000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "bb6fbd30-c44b-4ad7-a5ca-5f524e890e8f",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1790654400000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2616499,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1790712002086,
+          "resolvedAt": 1790798402023,
+          "signalBarAt": 1790654400000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "825a6994-2ca5-410e-bf4f-6998dcf7bdf4",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1790568000000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2612705,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1790625602150,
+          "resolvedAt": 1790712002086,
+          "signalBarAt": 1790568000000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "fa555fcb-acf2-4928-81c5-14a39a9d3e96",
+          "clientOrderId": "paper:330aa985-5a0d-4c8f-ad91-4a49d81ca56c:SPY:1790308800000:buy",
+          "sessionId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2592991,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Price exceeds its lookback close and long trend",
+          "submittedAt": 1790366402035,
+          "resolvedAt": 1790625602159,
+          "signalBarAt": 1790308800000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "9ea4f012-27af-427d-8618-31f8ff5215a8",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1790308800000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2592991,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1790366402035,
+          "resolvedAt": 1790625602150,
+          "signalBarAt": 1790308800000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "911fca4d-3405-442c-a0cd-2a487fee42f7",
+          "clientOrderId": "paper:d53f8b53-76ee-4e6a-8b4d-131fa3446ff0:SPY:1790308800000:buy",
+          "sessionId": "d53f8b53-76ee-4e6a-8b4d-131fa3446ff0",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2592991,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Uptrend confirmed and RSI recovered from pullback",
+          "submittedAt": 1790366402031,
+          "resolvedAt": 1790625602031,
+          "signalBarAt": 1790308800000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "5cf4c516-cb5e-40dd-89e1-bb60300fc7d4",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1790222400000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2606576,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1790280002038,
+          "resolvedAt": 1790366402035,
+          "signalBarAt": 1790222400000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "1c663aaf-6cc4-40e9-b107-c34b20c967bb",
+          "clientOrderId": "paper:330aa985-5a0d-4c8f-ad91-4a49d81ca56c:SPY:1790222400000:buy",
+          "sessionId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2606576,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Price exceeds its lookback close and long trend",
+          "submittedAt": 1790280002033,
+          "resolvedAt": 1790366402035,
+          "signalBarAt": 1790222400000,
+          "researchSnapshotId": null
+        },
+        {
+          "id": "d38dee84-cfe0-4e60-b187-762c68285764",
+          "clientOrderId": "paper:a8db1957-5f07-4778-b860-e01b90aa62f7:SPY:1790136000000:buy",
+          "sessionId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+          "accountId": "default-paper",
+          "symbol": "SPY",
+          "side": "buy",
+          "orderType": "market",
+          "qty": 2604404,
+          "limitPrice": null,
+          "status": "rejected",
+          "rejectReason": "missed_next_bar_open",
+          "signalReason": "Passive control entry: buy and hold to end of window",
+          "submittedAt": 1790193602030,
+          "resolvedAt": 1790280002038,
+          "signalBarAt": 1790136000000,
+          "researchSnapshotId": null
+        }
+      ],
+      "dataStatus": "real",
+      "at": 1791237004606,
+      "equityHistory": [
+        {
+          "at": 1790170202032,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202033,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202035,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202036,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202037,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202038,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202039,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202040,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202041,
+          "equity": 10000000
+        },
+        {
+          "at": 1790170202043,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602029,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602030,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602031,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602032,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602033,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602034,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602035,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602036,
+          "equity": 10000000
+        },
+        {
+          "at": 1790193602037,
+          "equity": 10000000
+        },
+        {
+          "at": 1790256602045,
+          "equity": 10000000
+        },
+        {
+          "at": 1790256602046,
+          "equity": 10000000
+        },
+        {
+          "at": 1790256602047,
+          "equity": 10000000
+        },
+        {
+          "at": 1790256602048,
+          "equity": 10000000
+        },
+        {
+          "at": 1790256602049,
+          "equity": 10000000
+        },
+        {
+          "at": 1790256602050,
+          "equity": 10000000
+        },
+        {
+          "at": 1790256602053,
+          "equity": 10000000
+        },
+        {
+          "at": 1790256602055,
+          "equity": 10000000
+        },
+        {
+          "at": 1790280002033,
+          "equity": 10000000
+        },
+        {
+          "at": 1790280002034,
+          "equity": 10000000
+        },
+        {
+          "at": 1790280002035,
+          "equity": 10000000
+        },
+        {
+          "at": 1790280002036,
+          "equity": 10000000
+        },
+        {
+          "at": 1790280002037,
+          "equity": 10000000
+        },
+        {
+          "at": 1790280002038,
+          "equity": 10000000
+        },
+        {
+          "at": 1790280002039,
+          "equity": 10000000
+        },
+        {
+          "at": 1790280002040,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002031,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002032,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002033,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002034,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002035,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002036,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002037,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002039,
+          "equity": 10000000
+        },
+        {
+          "at": 1790343002040,
+          "equity": 10000000
+        },
+        {
+          "at": 1790366402031,
+          "equity": 10000000
+        },
+        {
+          "at": 1790366402032,
+          "equity": 10000000
+        },
+        {
+          "at": 1790366402033,
+          "equity": 10000000
+        },
+        {
+          "at": 1790366402034,
+          "equity": 10000000
+        },
+        {
+          "at": 1790366402035,
+          "equity": 10000000
+        },
+        {
+          "at": 1790366402037,
+          "equity": 10000000
+        },
+        {
+          "at": 1790366402038,
+          "equity": 10000000
+        },
+        {
+          "at": 1790366402039,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202100,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202101,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202104,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202105,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202106,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202107,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202108,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202109,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602202111,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602218130,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602218224,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602218236,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602218238,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602218239,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602218241,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219069,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219075,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219097,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219099,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219114,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219116,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219120,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219122,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219136,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219181,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219182,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219183,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219200,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219205,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219208,
+          "equity": 10000000
+        },
+        {
+          "at": 1790602219210,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602028,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602029,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602030,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602031,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602032,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602048,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602049,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602057,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602063,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602083,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602128,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602129,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602130,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602131,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602132,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602133,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602134,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602146,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602147,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602148,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602149,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602150,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602151,
+          "equity": 10000000
+        },
+        {
+          "at": 1790625602159,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602029,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602030,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602032,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602033,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602034,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602035,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602037,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602038,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602039,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602040,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602041,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602042,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602044,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602045,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602046,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602047,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602048,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602052,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602069,
+          "equity": 10000000
+        },
+        {
+          "at": 1790688602071,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712002081,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712002082,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712002083,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712002084,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712002085,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712002086,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712002088,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712002089,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712003934,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712003961,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712003977,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712003980,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712003981,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712003982,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004002,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004003,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004012,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004014,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004015,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004016,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004017,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004026,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004027,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004028,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004029,
+          "equity": 10000000
+        },
+        {
+          "at": 1790712004092,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002053,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002054,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002055,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002056,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002057,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002063,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002064,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002129,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002130,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002131,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002132,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002133,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002134,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002135,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002136,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002140,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002333,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002336,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002366,
+          "equity": 10000000
+        },
+        {
+          "at": 1790775002736,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402022,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402023,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402024,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402025,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402026,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402027,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402029,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402122,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402123,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402124,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402125,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402126,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402127,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402129,
+          "equity": 10000000
+        },
+        {
+          "at": 1790798402130,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402051,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402052,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402053,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402054,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402055,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402056,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402057,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402059,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402156,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402157,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402158,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402159,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402160,
+          "equity": 10000000
+        },
+        {
+          "at": 1790861402161,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802025,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802026,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802027,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802028,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802029,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802030,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802031,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802034,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802123,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802124,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802130,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802131,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802132,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802133,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802134,
+          "equity": 10000000
+        },
+        {
+          "at": 1790884802136,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802045,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802049,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802050,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802051,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802052,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802055,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802144,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802145,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802147,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802148,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802149,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802150,
+          "equity": 10000000
+        },
+        {
+          "at": 1790947802151,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202027,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202028,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202029,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202030,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202031,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202032,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202035,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202123,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202124,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202125,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202126,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202127,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202128,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202130,
+          "equity": 10000000
+        },
+        {
+          "at": 1790971202132,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002051,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002183,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002184,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002185,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002186,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002187,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002188,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002189,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002190,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002191,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207002215,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013087,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013228,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013255,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013256,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013258,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013259,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013260,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013261,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013296,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013301,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013302,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013303,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013324,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013325,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013349,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013350,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013351,
+          "equity": 10000000
+        },
+        {
+          "at": 1791207013510,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402042,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402043,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402044,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402045,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402046,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402047,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402052,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402055,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402062,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402063,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402064,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402065,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402067,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402068,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402069,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402071,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402072,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402082,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402302,
+          "equity": 10000000
+        },
+        {
+          "at": 1791230402692,
+          "equity": 10000000
+        }
+      ]
+    },
+    "activeSessions": [
+      {
+        "id": "d53f8b53-76ee-4e6a-8b4d-131fa3446ff0",
+        "accountId": "default-paper",
+        "name": "Always-on paper | trend-pullback",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "trend-pullback:99fe5e535a1c0a81c8c1d318",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144824419,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144824356,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "fastPeriod": 20,
+          "slowPeriod": 50,
+          "rsiPeriod": 14,
+          "entryRsi": 55,
+          "exitRsi": 45,
+          "atrPeriod": 14,
+          "atrTrailMultiple": 3,
+          "maxHoldBars": 40
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+        "accountId": "default-paper",
+        "name": "Always-on paper | momentum-pack/time-series-momentum",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "momentum-pack/time-series-momentum:c5582563e6969d5be0b64d21",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144824027,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144823954,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "lookback": 12,
+          "trendPeriod": 26,
+          "maxHoldBars": 26
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "199a832d-d0d3-4196-9d43-afad3bdd32ba",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/yearly-rsi",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/yearly-rsi:ce2175a17cd9f429f22f89d1",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144823892,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144823823,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "period": 50,
+          "oversold": 45,
+          "exitLevel": 55,
+          "maxHoldBars": 252
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "8ebdf90a-aedf-455c-8876-676ac6ab5c98",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/yearly-ema",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/yearly-ema:834ffe933bc3f1e0d346418b",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144823750,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144823691,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "fast": 50,
+          "slow": 200,
+          "stopLossPercent": 30
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "42b88886-0864-41a2-bfb5-2738c7284a75",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/yearly-donchian",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/yearly-donchian:9f9a79bac804071705006b0b",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144823614,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144823553,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "entryPeriod": 252,
+          "exitPeriod": 126,
+          "atrPeriod": 50,
+          "atrStopMultiple": 4
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "9638d42c-779c-4f1d-a163-a6c7961d3b68",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/weekly-rsi",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/weekly-rsi:96694f16590a19988a58c3a3",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144823472,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144823401,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "period": 7,
+          "oversold": 30,
+          "exitLevel": 55,
+          "maxHoldBars": 10
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "c62b79e1-6a6b-43df-8bd2-94e215e7222b",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/weekly-donchian",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/weekly-donchian:a798f77fd76c263eb579f290",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144823184,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144823116,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "entryPeriod": 20,
+          "exitPeriod": 10,
+          "atrPeriod": 14,
+          "atrStopMultiple": 2
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "096b04ec-137e-4ecd-a2ac-0ac104eabd36",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/monthly-rsi",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/monthly-rsi:c31f3899db629f52951dc462",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144823041,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144822973,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "period": 21,
+          "oversold": 40,
+          "exitLevel": 55,
+          "maxHoldBars": 21
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "c9ff1c69-ad21-405a-831e-a7c3b36942d2",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/monthly-ema",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/monthly-ema:a96e26dc0e754341406e98f3",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144822908,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144822834,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "fast": 21,
+          "slow": 55,
+          "stopLossPercent": 15
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "ce7ddfd6-e91d-464e-b6db-79fe380fdc60",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/monthly-donchian",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/monthly-donchian:865ef6674135267865a9d7f4",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144822763,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144822697,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "entryPeriod": 55,
+          "exitPeriod": 20,
+          "atrPeriod": 20,
+          "atrStopMultiple": 3
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "88705853-4b65-4812-9a07-b7258eafb1e3",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/horizon-fixed",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/horizon-fixed:49b53ff16c5e25cc28ae327d",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144822477,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144822406,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "horizon": "weekly",
+          "dutyCycle": 0.4,
+          "warmupBars": 1
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "aa8f36bd-7b57-4168-a734-36564359a7e0",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/daily-rsi",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/daily-rsi:3f2f7adc2d0cca8e85bc286c",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144822345,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144822268,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "period": 3,
+          "oversold": 25,
+          "exitLevel": 55,
+          "maxHoldBars": 3
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "14c2deb5-452a-4695-8d2c-bc9bdb211fb7",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/daily-ema",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/daily-ema:841a7e1766f1173974d377c3",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144822186,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144822123,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "fast": 3,
+          "slow": 8,
+          "stopLossPercent": 3
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "5a242697-e7c2-414d-8140-946c62cf06be",
+        "accountId": "default-paper",
+        "name": "Always-on paper | horizon-pack/daily-donchian",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "horizon-pack/daily-donchian:8df1495d5bc04854a8a1fe83",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144822066,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144821999,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "entryPeriod": 5,
+          "exitPeriod": 3,
+          "atrPeriod": 7,
+          "atrStopMultiple": 1.5
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "bff129ad-c2ee-471d-b0db-7806430be6d6",
+        "accountId": "default-paper",
+        "name": "Always-on paper | core-controls/fixed-interval",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "core-controls/fixed-interval:6815d7982ce3f227016a9b9d",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144821831,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144821774,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "entryEveryBars": 20,
+          "holdBars": 8,
+          "warmupBars": 1
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "accountId": "default-paper",
+        "name": "Always-on paper | core-controls/buy-and-hold",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "core-controls/buy-and-hold:8b2856837b74cdcd8cdec08b",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144821709,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144821639,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "warmupBars": 1
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "e7a4bbc8-a8fa-4b45-b3c6-3f4529186cf4",
+        "accountId": "default-paper",
+        "name": "Always-on paper | base-methods/rsi-mean-reversion",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "base-methods/rsi-mean-reversion:6578322577e438ee0227a8f0",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144821578,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144821510,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "period": 14,
+          "oversold": 30,
+          "exitLevel": 55,
+          "maxHoldBars": 20
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "4e0ba5b6-b902-4b62-8842-765caa4b5848",
+        "accountId": "default-paper",
+        "name": "Always-on paper | base-methods/ema-momentum",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "base-methods/ema-momentum:fab868c6f89d481332ba15bf",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144821439,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144821362,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "fast": 9,
+          "slow": 21,
+          "stopLossPercent": 8
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      },
+      {
+        "id": "4338d2a9-5c11-44f5-a1d3-4fd8b7e9e909",
+        "accountId": "default-paper",
+        "name": "Always-on paper | base-methods/donchian-breakout",
+        "mode": "paper",
+        "status": "running",
+        "algorithmVersionId": "base-methods/donchian-breakout:af090d3333de72a8104e29ad",
+        "barInterval": "1day",
+        "windowStart": null,
+        "windowEnd": null,
+        "startingEquity": 10000000,
+        "endingEquity": null,
+        "startedAt": 1790144821277,
+        "endedAt": null,
+        "stopReason": null,
+        "errorDetail": null,
+        "createdAt": 1790144818079,
+        "researchPlanVersionId": null,
+        "experimentId": null,
+        "experimentArm": null,
+        "experimentArmId": null,
+        "metrics": null,
+        "params": {
+          "entryPeriod": 20,
+          "exitPeriod": 10,
+          "atrPeriod": 14,
+          "atrStopMultiple": 2
+        },
+        "symbols": [
+          "SPY"
+        ],
+        "fillModel": {
+          "slippageBps": 5,
+          "fixedCommission": 0,
+          "perShareCommission": 0
+        },
+        "riskProfile": {
+          "name": "Always-on multi-method paper guardrails",
+          "sizing": {
+            "mode": "risk_parity",
+            "perTradeRiskPercent": 0.5,
+            "fixedNotional": 500
+          },
+          "rules": {
+            "maxPositionSize": {
+              "enabled": true,
+              "percentOfEquity": 2
+            },
+            "maxPositionNotional": {
+              "enabled": true,
+              "amount": 2000
+            },
+            "maxConcurrentPositions": {
+              "enabled": true,
+              "count": 1
+            },
+            "maxSymbolExposure": {
+              "enabled": true,
+              "percentOfEquity": 5
+            },
+            "maxOrdersPerMinute": {
+              "enabled": true,
+              "count": 3
+            },
+            "maxOrdersPerDay": {
+              "enabled": true,
+              "count": 10
+            },
+            "maxDailyLoss": {
+              "enabled": true,
+              "percentOfStartingEquity": 1
+            },
+            "maxDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 5
+            },
+            "maxAccountDrawdown": {
+              "enabled": true,
+              "percentFromPeak": 8
+            },
+            "maxExposure": {
+              "enabled": true,
+              "warnPercent": 30,
+              "blockPercent": 40
+            }
+          }
+        },
+        "schedule": {
+          "timezone": "America/New_York",
+          "type": "continuous"
+        }
+      }
+    ],
+    "riskBudget": {
+      "dailyLoss": {
+        "used": 0,
+        "limit": 300000,
+        "percent": 0
+      },
+      "drawdown": {
+        "usedPercent": null,
+        "limitPercent": 10,
+        "percent": null
+      },
+      "exposure": {
+        "usedPercent": 0,
+        "limitPercent": 80,
+        "percent": 0
+      },
+      "ordersToday": {
+        "used": 4,
+        "limit": 100,
+        "percent": 4
+      }
+    },
+    "activity": [
+      {
+        "id": "60435bbb-7c62-4962-99a7-c3c03fc7ae94",
+        "at": 1791230425242,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1791172800000,
+          "orderId": "8076650e-a840-44c7-8bf5-363c4443c62c",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.580611,
+            "riskBudget": 500,
+            "stopDistance": 38.7505,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "4e915f8f-9d91-495d-a273-9fec07e80eaf",
+        "at": 1791230424113,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1791172800000,
+          "orderId": "fdf4b52f-3b8b-4b15-ab76-01080bd0a0a8",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.580611,
+            "riskBudget": 500,
+            "stopDistance": 38.7505,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "06806ea2-61af-42f6-998e-145f7ddcdb8c",
+        "at": 1791230420140,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "5a242697-e7c2-414d-8140-946c62cf06be",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1791172800000,
+          "orderId": "d804c7a0-6b9d-4a30-8ff3-f4b6fbdc04db",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.580611,
+            "riskBudget": 500,
+            "stopDistance": 38.7505,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "53f629af-25b7-40d6-95c3-17618a3b5297",
+        "at": 1791230419928,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "d53f8b53-76ee-4e6a-8b4d-131fa3446ff0",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "confidence": 0.6427914976871498,
+          "barTime": 1791172800000,
+          "orderId": "bca6934c-22fd-474e-8a5d-826604249be4",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.580611,
+            "riskBudget": 500,
+            "stopDistance": 38.7505,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "3ed83852-296f-48e8-875f-65bbc35bb270",
+        "at": 1791230419861,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+        "detailJson": {
+          "orderId": "e75dec34-ea2d-4642-b9a0-daa332aeba69",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790913600000,
+          "expectedOpenAt": 1791207000000,
+          "submittedAt": 1790971202031,
+          "observedAt": 1791230402046
+        }
+      },
+      {
+        "id": "05ea9fbe-5679-4d34-82a0-c85e8a286c34",
+        "at": 1791230419732,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "14c2deb5-452a-4695-8d2c-bc9bdb211fb7",
+        "detailJson": {
+          "orderId": "32bcffab-c4a4-4246-8687-716fdea98a35",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790913600000,
+          "expectedOpenAt": 1791207000000,
+          "submittedAt": 1790971202123,
+          "observedAt": 1791230402044
+        }
+      },
+      {
+        "id": "fecb8ce6-5b30-46f1-83e5-2c8110cc64c3",
+        "at": 1791230419726,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "orderId": "2a5aa808-b2fd-4daf-8e9e-22919f7d384f",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790913600000,
+          "expectedOpenAt": 1791207000000,
+          "submittedAt": 1790971202031,
+          "observedAt": 1791230402064
+        }
+      },
+      {
+        "id": "679680ee-a12f-48d2-a7d4-48137f56906d",
+        "at": 1790971225432,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1790913600000,
+          "orderId": "2a5aa808-b2fd-4daf-8e9e-22919f7d384f",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.598583,
+            "riskBudget": 500,
+            "stopDistance": 38.4825,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "04fc884b-d383-4a0b-b51f-0b5466deb647",
+        "at": 1790971221768,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1790913600000,
+          "orderId": "e75dec34-ea2d-4642-b9a0-daa332aeba69",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.598583,
+            "riskBudget": 500,
+            "stopDistance": 38.4825,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "657ce8e7-ae3b-401f-94f1-c0ee12ac7f1c",
+        "at": 1790971221193,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "14c2deb5-452a-4695-8d2c-bc9bdb211fb7",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1790913600000,
+          "orderId": "32bcffab-c4a4-4246-8687-716fdea98a35",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.598583,
+            "riskBudget": 500,
+            "stopDistance": 38.4825,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "de0a257c-d0e6-4394-9abe-13781d629d4e",
+        "at": 1790971221053,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "orderId": "27bf504d-ce74-473e-ba82-7cb78b98f240",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790827200000,
+          "expectedOpenAt": 1790947800000,
+          "submittedAt": 1790884802134,
+          "observedAt": 1790971202128
+        }
+      },
+      {
+        "id": "fd040544-69a4-4d62-a2f5-45887b0f63ee",
+        "at": 1790971221037,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "orderId": "27bf504d-ce74-473e-ba82-7cb78b98f240",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790827200000,
+          "expectedOpenAt": 1790947800000,
+          "submittedAt": 1790884802134,
+          "observedAt": 1790971202031
+        }
+      },
+      {
+        "id": "eead6cc9-681e-42ca-8c92-d348e2fe2bbc",
+        "at": 1790884816944,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1790827200000,
+          "orderId": "27bf504d-ce74-473e-ba82-7cb78b98f240",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.617458,
+            "riskBudget": 500,
+            "stopDistance": 38.205000000000005,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "31f6d24e-73c1-4c22-aad4-3dfed75130dd",
+        "at": 1790884816844,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "orderId": "de6bfa53-166d-4492-a65d-21d178e2228d",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790740800000,
+          "expectedOpenAt": 1790861400000,
+          "submittedAt": 1790798402023,
+          "observedAt": 1790884802134
+        }
+      },
+      {
+        "id": "49f84eec-0b05-43e7-b525-3cfd43257cea",
+        "at": 1790884816832,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "orderId": "de6bfa53-166d-4492-a65d-21d178e2228d",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790740800000,
+          "expectedOpenAt": 1790861400000,
+          "submittedAt": 1790798402023,
+          "observedAt": 1790884802030
+        }
+      },
+      {
+        "id": "0cf8cf43-6eb6-4aa0-ab8b-7ab4dace0fd9",
+        "at": 1790798423446,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1790740800000,
+          "orderId": "de6bfa53-166d-4492-a65d-21d178e2228d",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.623501,
+            "riskBudget": 500,
+            "stopDistance": 38.117000000000004,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "5dbc93a8-f92d-4314-ab4c-85ad52bde3e1",
+        "at": 1790798420624,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "orderId": "bb6fbd30-c44b-4ad7-a5ca-5f524e890e8f",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790654400000,
+          "expectedOpenAt": 1790775000000,
+          "submittedAt": 1790712002086,
+          "observedAt": 1790798402023
+        }
+      },
+      {
+        "id": "5193f750-6fc8-4f50-8818-f04fdb989c09",
+        "at": 1790712023168,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1790654400000,
+          "orderId": "bb6fbd30-c44b-4ad7-a5ca-5f524e890e8f",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.616499,
+            "riskBudget": 500,
+            "stopDistance": 38.219,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "1d790426-c6e6-4058-bf8d-c3d19f7739c5",
+        "at": 1790712019980,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "orderId": "825a6994-2ca5-410e-bf4f-6998dcf7bdf4",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790568000000,
+          "expectedOpenAt": 1790688600000,
+          "submittedAt": 1790625602150,
+          "observedAt": 1790712002086
+        }
+      },
+      {
+        "id": "0cef8898-8b75-4919-ae4e-eb1ba5b7063e",
+        "at": 1790625635149,
+        "actor": "engine",
+        "action": "session_signal",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "type": "signal",
+          "action": "buy",
+          "symbol": "SPY",
+          "barTime": 1790568000000,
+          "orderId": "825a6994-2ca5-410e-bf4f-6998dcf7bdf4",
+          "researchSnapshotId": null,
+          "sizing": {
+            "qty": 2.612705,
+            "riskBudget": 500,
+            "stopDistance": 38.2745,
+            "mode": "risk_parity"
+          }
+        }
+      },
+      {
+        "id": "d9cbe99e-2d5e-4186-a9af-663eeb10ac26",
+        "at": 1790625627749,
+        "actor": "user",
+        "action": "session_fail",
+        "entity": "session",
+        "entityId": "a579890b-497e-4555-bc9f-cdb2712cbf16",
+        "detailJson": {
+          "from": "running",
+          "to": "errored",
+          "endedAt": 1790625627508,
+          "stopReason": "error",
+          "errorDetail": "Engine task exceeded 10000 ms."
+        }
+      },
+      {
+        "id": "6494aed8-72ad-4ba9-99cd-83cf10534b1c",
+        "at": 1790625627749,
+        "actor": "user",
+        "action": "session_fail",
+        "entity": "session",
+        "entityId": "f9e14f81-fed9-46c3-aefc-479c14981048",
+        "detailJson": {
+          "from": "running",
+          "to": "errored",
+          "endedAt": 1790625627510,
+          "stopReason": "error",
+          "errorDetail": "Engine task exceeded 10000 ms."
+        }
+      },
+      {
+        "id": "06aaa597-07a3-4698-91ad-0982bbcd0af5",
+        "at": 1790625627255,
+        "actor": "user",
+        "action": "session_fail",
+        "entity": "session",
+        "entityId": "e1024c55-a2d5-49a4-9e14-5b8e813cef74",
+        "detailJson": {
+          "from": "running",
+          "to": "errored",
+          "endedAt": 1790625626860,
+          "stopReason": "error",
+          "errorDetail": "Engine task exceeded 10000 ms."
+        }
+      },
+      {
+        "id": "30136ed4-d868-4410-afb4-da0883ee4a08",
+        "at": 1790625617366,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+        "detailJson": {
+          "orderId": "fa555fcb-acf2-4928-81c5-14a39a9d3e96",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790308800000,
+          "expectedOpenAt": 1790602200000,
+          "submittedAt": 1790366402035,
+          "observedAt": 1790625602159
+        }
+      },
+      {
+        "id": "0f3b9cef-36f3-48b6-8bd4-b36b055d25bc",
+        "at": 1790625617360,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "a8db1957-5f07-4778-b860-e01b90aa62f7",
+        "detailJson": {
+          "orderId": "9ea4f012-27af-427d-8618-31f8ff5215a8",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790308800000,
+          "expectedOpenAt": 1790602200000,
+          "submittedAt": 1790366402035,
+          "observedAt": 1790625602150
+        }
+      },
+      {
+        "id": "9d6544cd-8593-49ef-b8d4-a67f64cf5c15",
+        "at": 1790625617291,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "330aa985-5a0d-4c8f-ad91-4a49d81ca56c",
+        "detailJson": {
+          "orderId": "fa555fcb-acf2-4928-81c5-14a39a9d3e96",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790308800000,
+          "expectedOpenAt": 1790602200000,
+          "submittedAt": 1790366402035,
+          "observedAt": 1790625602032
+        }
+      },
+      {
+        "id": "a51301ed-1b06-4ace-a692-79a81986536b",
+        "at": 1790625617242,
+        "actor": "supervisor",
+        "action": "session_order_rejected",
+        "entity": "session",
+        "entityId": "d53f8b53-76ee-4e6a-8b4d-131fa3446ff0",
+        "detailJson": {
+          "orderId": "911fca4d-3405-442c-a0cd-2a487fee42f7",
+          "symbol": "SPY",
+          "reason": "missed_next_bar_open",
+          "signalBarAt": 1790308800000,
+          "expectedOpenAt": 1790602200000,
+          "submittedAt": 1790366402031,
+          "observedAt": 1790625602031
+        }
+      },
+      {
+        "id": "c78ff58f-1f9e-4f72-9727-e6ff622c2cdb",
+        "at": 1790475012887,
+        "actor": "supervisor",
+        "action": "session_restart_resumed",
+        "entity": "session",
+        "entityId": "4338d2a9-5c11-44f5-a1d3-4fd8b7e9e909",
+        "detailJson": {
+          "previousStatus": "running"
+        }
+      },
+      {
+        "id": "b9e05ff4-26ce-4687-90a6-3e5f782ffdf1",
+        "at": 1790475012746,
+        "actor": "supervisor",
+        "action": "session_restart_resumed",
+        "entity": "session",
+        "entityId": "4e0ba5b6-b902-4b62-8842-765caa4b5848",
+        "detailJson": {
+          "previousStatus": "running"
+        }
+      },
+      {
+        "id": "01e9e62c-6c64-4c08-9084-65e07d69c736",
+        "at": 1790475012675,
+        "actor": "supervisor",
+        "action": "session_restart_resumed",
+        "entity": "session",
+        "entityId": "4338d2a9-5c11-44f5-a1d3-4fd8b7e9e909",
+        "detailJson": {
+          "previousStatus": "running"
+        }
+      }
+    ],
+    "alerts": {
+      "items": [],
+      "unread": 0
+    },
+    "dataHealth": [
+      {
+        "id": "alpaca",
+        "configured": true,
+        "status": "healthy",
+        "lastSuccessAt": 1791230420310,
+        "lastErrorAt": null,
+        "latencyMs": 5910,
+        "message": "Available"
+      },
+      {
+        "id": "polygon",
+        "configured": true,
+        "status": "unknown",
+        "lastSuccessAt": null,
+        "lastErrorAt": null,
+        "latencyMs": null,
+        "message": "Not checked yet"
+      },
+      {
+        "id": "finnhub",
+        "configured": true,
+        "status": "unknown",
+        "lastSuccessAt": null,
+        "lastErrorAt": null,
+        "latencyMs": null,
+        "message": "Not checked yet"
+      }
+    ]
+  },
+  "meta": {
+    "requestId": "f90035df-1874-47ea-a3f6-49f4bab33efb"
+  }
+}

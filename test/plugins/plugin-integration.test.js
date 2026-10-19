@@ -15,6 +15,21 @@ import { deterministicBars } from "../engine/fixtures/bars.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const PLUGINS_DIR = path.join(ROOT, "plugins");
 
+test("random plugin paper state survives consecutive worker round trips", async (t) => {
+  const loaded = await loadAlgorithmRegistry({ algorithmsDir: path.join(ROOT, "algorithms"), pluginsDir: PLUGINS_DIR });
+  const pool = new EnginePool({ size: 1, timeoutMs: 2_000 });
+  t.after(() => pool.close());
+  for (const id of ["core-controls/random-entry", "horizon-pack/horizon-random"]) {
+    const method = loaded.algorithms.find((algorithm) => algorithm.id === id);
+    assert.ok(method, id);
+    const first = await pool.evaluateSignal({ algorithmSource: method.source, bars: deterministicBars.slice(0, 40) });
+    const second = await pool.evaluateSignal({ algorithmSource: method.source, bars: deterministicBars.slice(0, 41), state: first.state });
+    assert.notEqual(first.state.__plugin.prng.counter, second.state.__plugin.prng.counter);
+    const replay = await pool.evaluateSignal({ algorithmSource: method.source, bars: deterministicBars.slice(0, 41), state: first.state });
+    assert.deepEqual(second, replay);
+  }
+});
+
 test("plugin methods load into the live registry as durable sources executed inside the engine worker", async (t) => {
   const loaded = await loadAlgorithmRegistry({
     algorithmsDir: path.join(ROOT, "algorithms"),

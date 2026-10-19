@@ -516,6 +516,28 @@ test("required paper research skips unavailable bars and pins the selected snaps
   assert.equal(filled.fills[0].order.researchSnapshotId, snapshot.id);
 });
 
+test("a delayed opening bar fills on a fresh retry, once only", async (t) => {
+  const context = await harness(t);
+  context.setVisibleBars(40);
+  context.setNow(Date.UTC(2025, 1, 10, 21, 0, 2));
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("delayed-open", {
+    mode: "paper", params: { entry: 39, exit: 45 }
+  }));
+  await context.supervisor.start(session.id);
+  await context.supervisor.tick(session.id, { kind: "market", phase: "close", interval: "1day" });
+  context.setNow(Date.UTC(2025, 1, 11, 14, 30, 2));
+  const opening = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
+  assert.equal(opening.fills.length, 0, "provider has not published the opening bar yet");
+  context.setVisibleBars(41);
+  context.setNow(Date.UTC(2025, 1, 11, 14, 31, 2));
+  const retry = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
+  assert.equal(retry.fills[0].order.status, "filled");
+  const duplicate = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
+  assert.equal(duplicate.fills.length, 0);
+  assert.equal((await context.repositories.orders.listFills({ sessionId: session.id })).length, 1);
+});
+
 test("a paper signal is pending on tick N and fills only on tick N+1", async (t) => {
   const context = await harness(t);
   const signalIndex = 39;

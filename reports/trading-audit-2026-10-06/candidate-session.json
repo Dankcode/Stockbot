@@ -1,0 +1,75 @@
+{
+  "name": "Paper recovery candidate \u2014 NVDA / MSFT Donchian",
+  "mode": "paper",
+  "algorithmVersionId": "base-methods/donchian-breakout:af090d3333de72a8104e29ad",
+  "symbols": [
+    "NVDA",
+    "MSFT"
+  ],
+  "barInterval": "1day",
+  "params": {
+    "entryPeriod": 20,
+    "exitPeriod": 10,
+    "atrPeriod": 14,
+    "atrStopMultiple": 2
+  },
+  "fillModel": {
+    "slippageBps": 5,
+    "fixedCommission": 0,
+    "perShareCommission": 0
+  },
+  "riskProfile": {
+    "name": "Always-on multi-method paper guardrails",
+    "sizing": {
+      "mode": "fixed_notional",
+      "fixedNotional": 500
+    },
+    "rules": {
+      "maxPositionSize": {
+        "enabled": true,
+        "percentOfEquity": 2
+      },
+      "maxPositionNotional": {
+        "enabled": true,
+        "amount": 2000
+      },
+      "maxConcurrentPositions": {
+        "enabled": true,
+        "count": 1
+      },
+      "maxSymbolExposure": {
+        "enabled": true,
+        "percentOfEquity": 5
+      },
+      "maxOrdersPerMinute": {
+        "enabled": true,
+        "count": 3
+      },
+      "maxOrdersPerDay": {
+        "enabled": true,
+        "count": 10
+      },
+      "maxDailyLoss": {
+        "enabled": true,
+        "percentOfStartingEquity": 1
+      },
+      "maxDrawdown": {
+        "enabled": true,
+        "percentFromPeak": 5
+      },
+      "maxAccountDrawdown": {
+        "enabled": true,
+        "percentFromPeak": 8
+      },
+      "maxExposure": {
+        "enabled": true,
+        "warnPercent": 30,
+        "blockPercent": 40
+      }
+    }
+  },
+  "schedule": {
+    "type": "market_hours",
+    "timezone": "America/New_York"
+  }
+}

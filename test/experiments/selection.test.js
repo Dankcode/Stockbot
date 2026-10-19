@@ -26,6 +26,17 @@ function goodFacts(overrides = {}) {
   };
 }
 
+test("calendar-sized histories pass selection without filling a provider page", async () => {
+  for (const [range, count] of [["1Y", 60], ["3M", 82], ["ALL", 120], ["1M", 31]]) {
+    const bars = Array.from({ length: count }, (_, i) => ({
+      time: 1_790_000_000_000 + i * 86_400_000,
+      open: 100, high: 103, low: 99, close: 101, volume: 5_000_000
+    }));
+    const result = await recommendSymbols({ universe: ["AAPL"], range, getBars: async () => ({ bars }) });
+    assert.equal(result.eligibleCount, 1, `${range}: ${JSON.stringify(result.excluded)}`);
+  }
+});
+
 test("a liquid, moving, well-covered symbol scores near the top of the range", () => {
   const scored = scoreCandidate(goodFacts());
   assert.equal(scored.eligible, true);
@@ -197,5 +208,5 @@ test("recommendSymbols derives the expected bar count from the range it was give
   });
   assert.deepEqual(result.recommended.map((entry) => entry.symbol), ["FULL"]);
   assert.deepEqual(result.excluded.map((entry) => entry.symbol), ["SHORT"]);
-  assert.match(result.excluded[0].blockers.join(" "), /40 of 140 bars/);
+  assert.match(result.excluded[0].blockers.join(" "), /40 of 83 bars/);
 });
