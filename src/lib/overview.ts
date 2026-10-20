@@ -1,3 +1,4 @@
+import { activityFrom } from "./activity";
 import { api, listFrom } from "./api";
 import { useQuery } from "./query";
 import type { ActivityItem, OverviewAggregate, Portfolio, ProviderHealth, RiskBudgetItem, SessionSummary } from "./types";
@@ -44,8 +45,8 @@ export function decodeOverview(payload: unknown): OverviewAggregate {
     portfolio: source.portfolio && typeof source.portfolio === "object" ? source.portfolio as Portfolio : undefined,
     activeSessions: listFrom<SessionSummary>(source.activeSessions ?? source.sessions, ["sessions", "items"]),
     riskBudget,
-    activity: listFrom<ActivityItem>(source.activity, ["activity", "items", "events"]),
-    alerts: listFrom<ActivityItem>(source.alerts, ["alerts", "items"]),
+    activity: listFrom<unknown>(source.activity, ["activity", "items", "events"]).map(activityFrom),
+    alerts: listFrom<unknown>(source.alerts, ["alerts", "items"]).map(activityFrom),
     dataHealth: healthFrom(source.dataHealth ?? source.providers)
   };
 }

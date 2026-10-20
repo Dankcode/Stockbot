@@ -11,6 +11,28 @@ async function json(response, label) {
   return response.json();
 }
 
+/**
+ * The last trade on a thin venue (IEX, Alpaca crypto) can be many seconds old
+ * while the bid/ask is current, and the paper broker rejects quotes older than
+ * a few seconds. Use whichever of the last trade and the quote midpoint is
+ * newer, so a quiet tape does not block every fill.
+ */
+export function freshestPrice(snapshot) {
+  const candidates = [];
+  const trade = snapshot?.latestTrade;
+  if (Number(trade?.p) > 0 && trade?.t) candidates.push({ price: Number(trade.p), time: trade.t, at: Date.parse(trade.t) });
+  const quote = snapshot?.latestQuote;
+  const bid = Number(quote?.bp);
+  const ask = Number(quote?.ap);
+  // A crossed or one-sided book is not a usable price.
+  if (bid > 0 && ask >= bid && quote?.t && (ask - bid) / bid <= 0.01) {
+    candidates.push({ price: (bid + ask) / 2, time: quote.t, at: Date.parse(quote.t) });
+  }
+  const valid = candidates.filter((candidate) => Number.isFinite(candidate.at));
+  if (valid.length === 0) return null;
+  return valid.sort((left, right) => right.at - left.at)[0];
+}
+
 export function alpacaProvider(config) {
   return {
     id: "alpaca",
@@ -56,11 +78,12 @@ export function alpacaProvider(config) {
       const payload = await json(await fetch(url, { headers: headers(config), signal: AbortSignal.timeout(8_000) }), "Alpaca quote");
       const snapshot = crypto ? payload.snapshots?.[cryptoPair(symbol)] : payload;
       if (!snapshot) throw new Error("Alpaca returned no snapshot.");
+      const latest = freshestPrice(snapshot);
       return normalizeQuote(symbol, {
-        price: snapshot.latestTrade?.p ?? snapshot.minuteBar?.c ?? snapshot.dailyBar?.c,
+        price: latest?.price ?? snapshot.minuteBar?.c ?? snapshot.dailyBar?.c,
         previousClose: snapshot.prevDailyBar?.c ?? snapshot.dailyBar?.o,
         volume: snapshot.dailyBar?.v ?? snapshot.minuteBar?.v ?? null,
-        quoteTime: snapshot.latestTrade?.t ?? snapshot.minuteBar?.t ?? snapshot.dailyBar?.t
+        quoteTime: latest?.time ?? snapshot.minuteBar?.t ?? snapshot.dailyBar?.t
       }, crypto ? "alpaca-crypto" : "alpaca-iex");
     },
     async bars(symbol, range) {

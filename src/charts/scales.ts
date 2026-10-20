@@ -104,7 +104,16 @@ export function formatPrice(value: number) {
   }).format(value);
 }
 
+/**
+ * Normalized equity (1.0 = starting value) as a signed percent change. A fixed
+ * three-decimal multiple printed "1.000×" on every gridline for the small moves
+ * a paper session makes, so the axis carried no information.
+ */
 export function formatEquityMultiple(value: number) {
-  return `${value.toFixed(3)}×`;
+  const percent = (value - 1) * 100;
+  const absolute = Math.abs(percent);
+  const digits = absolute === 0 ? 0 : absolute < 0.01 ? 4 : absolute < 0.1 ? 3 : absolute < 10 ? 2 : 1;
+  const text = percent.toFixed(digits);
+  return `${percent > 0 ? "+" : ""}${Number(text) === 0 ? "0" : text}%`;
 }
 

@@ -228,6 +228,7 @@ Skills are how you build the coverage a research-gated strategy needs. Backtests
 | `horizon-pack` | 12 strategies × 4 horizons + 2 band-matched controls | nothing |
 | `sentiment-pack` | gated/blind pair, 2 research plans, 2 CLI skills | 5 sources, AI CLI, `OPENAI_API_KEY` |
 | `gov-research` | EDGAR + federal contracts plans, 1 CLI skill | 4 sources, AI CLI |
+| `crypto-pack` | Bitcoin SMA crossover (short average crosses the long one) for `BTCUSD` | nothing |
 
 ## Verification
 

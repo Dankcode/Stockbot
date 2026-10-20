@@ -1,3 +1,5 @@
+import { Play } from "lucide-react";
+import { Link } from "react-router-dom";
 import { BudgetMeter } from "../../components/data/BudgetMeter";
 import { EquitySparkline } from "../../components/data/EquitySparkline";
 import { Metric } from "../../components/data/Metric";
@@ -35,10 +37,10 @@ export function OverviewPage() {
       </section>
 
       <section className="panel overview-sessions">
-        <header className="panel-header"><h2>Active sessions</h2>{sessions.isStale ? <StaleBadge updatedAt={sessions.updatedAt} /> : null}</header>
+        <header className="panel-header"><h2>Active sessions</h2><Link className="panel-link" to="/sessions">All sessions</Link>{sessions.isStale ? <StaleBadge updatedAt={sessions.updatedAt} /> : null}</header>
         {sessions.isLoading ? <LoadingState title="Loading active sessions" /> : null}
         {sessions.error && !sessions.data ? <ErrorState detail={sessions.error.message} onRetry={sessions.refetch} /> : null}
-        {sessions.data?.length ? <ActiveSessions sessions={sessions.data} /> : sessions.data ? <EmptyState title="No active sessions" detail="Started paper sessions will appear here." /> : null}
+        {sessions.data?.length ? <ActiveSessions sessions={sessions.data} /> : sessions.data ? <EmptyState title="Nothing is trading" detail="Start a paper session to let a strategy trade live prices with simulated money." action={<Link className="button primary" to="/sessions?new=1"><Play size={14} /> New paper session</Link>} /> : null}
       </section>
 
       <section className="panel overview-risk">

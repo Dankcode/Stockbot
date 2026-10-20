@@ -31,6 +31,7 @@
  */
 import { getRangeConfig } from "../../packages/shared/ranges.js";
 import { band, ramp, scoreSeparation, weightedScore } from "../scoring/scale.js";
+import { isCryptoSymbol } from "../market/catalog.js";
 
 /**
  * History is gated on *coverage of the requested window*, not on an absolute bar count.
@@ -78,9 +79,12 @@ export function scoreCandidate(facts, { weights = DEFAULT_WEIGHTS, gates = DEFAU
   const symbol = String(facts?.symbol ?? "").trim().toUpperCase();
   const blockers = [];
 
+  const crypto = isCryptoSymbol(symbol);
   if (Number.isFinite(Number(facts?.price))) {
-    if (Number(facts.price) < gates.minPrice) blockers.push(`price ${Number(facts.price).toFixed(2)} below the ${gates.minPrice} floor`);
-    if (Number(facts.price) > gates.maxPrice) blockers.push(`price ${Number(facts.price).toFixed(2)} above the ${gates.maxPrice} ceiling`);
+    // Share-price gates guard against penny stocks and unaffordable whole shares.
+    // Crypto trades in fractions, so a $60,000 Bitcoin is not "above the ceiling".
+    if (!crypto && Number(facts.price) < gates.minPrice) blockers.push(`price ${Number(facts.price).toFixed(2)} below the ${gates.minPrice} floor`);
+    if (!crypto && Number(facts.price) > gates.maxPrice) blockers.push(`price ${Number(facts.price).toFixed(2)} above the ${gates.maxPrice} ceiling`);
   } else {
     blockers.push("no price");
   }
@@ -121,7 +125,9 @@ export function scoreCandidate(facts, { weights = DEFAULT_WEIGHTS, gates = DEFAU
     // something to time, not so much that any sane stop is inside the noise. The band
     // reaches zero at 0.15% and 5.35% — a symbol that barely moves and one that gaps
     // wildly are both bad experiment subjects, for opposite reasons.
-    volatility: band(facts?.atrPercent, 2.75, 2.6),
+    // Crypto routinely moves 3-5% a day; scored on the equity band it lost a quarter
+    // of its score for being crypto, not for being untradeable.
+    volatility: crypto ? band(facts?.atrPercent, 4, 4) : band(facts?.atrPercent, 2.75, 2.6),
     // Distance from the long moving average, unsigned: a clean downtrend is as testable
     // as a clean uptrend, and a symbol pinned to its mean gives a trend method nothing.
     trendClarity: ramp(facts?.trendStrength, 0.02, 0.35),

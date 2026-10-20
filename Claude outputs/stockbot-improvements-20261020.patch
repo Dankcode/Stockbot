@@ -1,0 +1,1802 @@
+diff --git a/.gitignore b/.gitignore
+index 4f20d1b..b4cb8d8 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,6 +1,6 @@
+ node_modules
+ dist
+-data
++/data/
+ algorithms/uploads
+ algorithms/params.json
+ .env
+diff --git a/docs/PLUGIN_FORMAT.md b/docs/PLUGIN_FORMAT.md
+index 6275fd1..ce14c6c 100644
+--- a/docs/PLUGIN_FORMAT.md
++++ b/docs/PLUGIN_FORMAT.md
+@@ -228,6 +228,7 @@ Skills are how you build the coverage a research-gated strategy needs. Backtests
+ | `horizon-pack` | 12 strategies × 4 horizons + 2 band-matched controls | nothing |
+ | `sentiment-pack` | gated/blind pair, 2 research plans, 2 CLI skills | 5 sources, AI CLI, `OPENAI_API_KEY` |
+ | `gov-research` | EDGAR + federal contracts plans, 1 CLI skill | 4 sources, AI CLI |
++| `crypto-pack` | Bitcoin SMA crossover (short average crosses the long one) for `BTCUSD` | nothing |
+ 
+ ## Verification
+ 
+diff --git a/plugins/crypto-pack.plugin.json b/plugins/crypto-pack.plugin.json
+new file mode 100644
+index 0000000..65a8a85
+--- /dev/null
++++ b/plugins/crypto-pack.plugin.json
+@@ -0,0 +1,92 @@
++{
++  "kind": "stockbot.plugin.v1",
++  "schemaVersion": 1,
++  "id": "crypto-pack",
++  "name": "Crypto trend methods",
++  "version": "1.0.0",
++  "author": "Stockbot",
++  "license": "MIT",
++  "description": "Trend-following methods intended for Bitcoin (BTCUSD). Crypto trades around the clock, so these sessions make decisions every bar instead of waiting for an exchange open.",
++  "requires": {
++    "capabilities": [
++      "backtest"
++    ],
++    "sources": [],
++    "secrets": [],
++    "promptTemplates": [],
++    "aiCli": false
++  },
++  "methods": [
++    {
++      "id": "btc-sma-crossover",
++      "name": "Bitcoin SMA Crossover",
++      "role": "strategy",
++      "horizon": "weekly",
++      "description": "For BTCUSD. Buys when the short simple moving average of price (default 20 bars) crosses above the long one (default 50 bars); sells when it crosses back below.",
++      "params": {
++        "fast": 20,
++        "slow": 50
++      },
++      "method": {
++        "kind": "rules.v1",
++        "warmup": {
++          "param": "slow"
++        },
++        "indicators": {
++          "fast": {
++            "fn": "sma",
++            "period": {
++              "param": "fast"
++            }
++          },
++          "slow": {
++            "fn": "sma",
++            "period": {
++              "param": "slow"
++            }
++          }
++        },
++        "entry": [
++          {
++            "when": {
++              "crossesAbove": [
++                "fast",
++                "slow"
++              ]
++            },
++            "reason": "Short average crossed above the long average"
++          }
++        ],
++        "exit": [
++          {
++            "when": {
++              "crossesBelow": [
++                "fast",
++                "slow"
++              ]
++            },
++            "reason": "Short average crossed back below the long average"
++          }
++        ]
++      }
++    }
++  ],
++  "pairings": [
++    {
++      "strategy": "btc-sma-crossover",
++      "controls": [
++        "core-controls/buy-and-hold",
++        "core-controls/fixed-interval",
++        "core-controls/random-entry"
++      ],
++      "controlParams": {
++        "core-controls/fixed-interval": {
++          "entryEveryBars": 20,
++          "holdBars": 8
++        }
++      },
++      "seeds": 20,
++      "notes": "Run the controls on BTCUSD over the same window and bar interval. Buy-and-hold Bitcoin is the bar to beat."
++    }
++  ]
++}
+diff --git a/scripts/dev/integration-server.js b/scripts/dev/integration-server.js
+index c1dab09..5640894 100644
+--- a/scripts/dev/integration-server.js
++++ b/scripts/dev/integration-server.js
+@@ -42,9 +42,48 @@ const UNIVERSE = Object.freeze([
+   { symbol: "SPY", name: "Synthetic S&P 500 Proxy", sector: "Synthetic", price: 520, drift: 0.0004, vol: 0.009, dollarVolume: 30_000_000_000, bars: 900 },
+   { symbol: "QQQ", name: "Synthetic Nasdaq-100 Proxy", sector: "Synthetic", price: 470, drift: 0.00055, vol: 0.013, dollarVolume: 18_000_000_000, bars: 900 },
+   { symbol: "IWM", name: "Synthetic Russell 2000 Proxy", sector: "Synthetic", price: 210, drift: 0.00025, vol: 0.016, dollarVolume: 4_000_000_000, bars: 900 },
+-  { symbol: "DIA", name: "Synthetic Dow Jones Proxy", sector: "Synthetic", price: 430, drift: 0.00035, vol: 0.01, dollarVolume: 2_000_000_000, bars: 900 }
++  { symbol: "DIA", name: "Synthetic Dow Jones Proxy", sector: "Synthetic", price: 430, drift: 0.00035, vol: 0.01, dollarVolume: 2_000_000_000, bars: 900 },
++  { symbol: "BTCUSD", name: "Synthetic Bitcoin", sector: "Crypto", price: 64_000, drift: 0.0003, vol: 0.03, dollarVolume: 25_000_000_000, bars: 900, cycle: 30 }
+ ]);
+ 
++/**
++ * SYNTHETIC_LIVE=1 turns the frozen history into a moving market: bars are spaced
++ * at the range's real interval and end at the current bar, and quotes are stamped
++ * "real" at the current instant. That is what the paper supervisor needs to make
++ * and fill decisions, so a paper session can be watched trading end to end.
++ * Bars are generated from a fixed anchor, so a bar never changes once it closes.
++ */
++const LIVE = process.env.SYNTHETIC_LIVE === "1";
++const LIVE_ANCHOR = Date.UTC(2026, 0, 1);
++const INTERVAL_MS = Object.freeze({ "1min": 60_000, "5min": 300_000, "1hour": 3_600_000, "1day": 86_400_000, "1week": 7 * 86_400_000, "1month": 2_629_746_000 });
++
++function liveBars(spec, intervalMs, limit, now = Date.now()) {
++  const next = rng(seedOf(`${spec.symbol}:${intervalMs}`));
++  const gaussian = () => Math.sqrt(-2 * Math.log(Math.max(1e-9, next()))) * Math.cos(2 * Math.PI * next());
++  const scale = Math.sqrt(Math.min(1, intervalMs / 86_400_000));
++  const lastStart = Math.floor((now - LIVE_ANCHOR) / intervalMs);
++  const firstStart = Math.max(0, lastStart - Math.min(limit, 2_000) + 1);
++  const bars = [];
++  let price = spec.price;
++  for (let index = 0; index <= lastStart; index += 1) {
++    const open = price;
++    const cyclical = spec.cycle ? Math.sin((index / spec.cycle) * Math.PI * 2) * spec.vol * scale * 0.9 : 0;
++    price = Math.max(0.05, price * (1 + spec.drift * scale * scale + cyclical + spec.vol * scale * gaussian()));
++    if (index < firstStart) continue;
++    const close = Number(price.toFixed(4));
++    const wick = Math.abs(close - open) * 0.5;
++    bars.push({
++      time: LIVE_ANCHOR + index * intervalMs,
++      open: Number(open.toFixed(4)),
++      high: Number((Math.max(open, close) + wick).toFixed(4)),
++      low: Number(Math.max(0.01, Math.min(open, close) - wick).toFixed(4)),
++      close,
++      volume: Math.max(1, Math.round(spec.dollarVolume * scale * scale / close))
++    });
++  }
++  return bars;
++}
++
+ /** SplitMix32, seeded per symbol so every process serves byte-identical history. */
+ function rng(seed) {
+   let counter = seed >>> 0 || 1;
+@@ -112,9 +151,19 @@ function createSyntheticMarket() {
+     return spec;
+   }
+ 
+-  async function getBars(symbol, rangeKey = "1D") {
++  async function getBars(symbol, rangeKey = "1D", { minBars = 0 } = {}) {
+     const spec = requireSpec(symbol);
+     const range = getRangeConfig(rangeKey);
++    if (LIVE) {
++      return {
++        symbol: spec.symbol,
++        range: range.key,
++        interval: range.interval,
++        source: "synthetic-live",
++        bars: liveBars(spec, INTERVAL_MS[range.interval], Math.max(range.limit, Number(minBars) || 0)),
++        diagnostics: { rsi: null, emaFast: null, emaSlow: null, atr: null, vwap: null }
++      };
++    }
+     // Honour range.limit exactly as the real provider chain does. A harness that quietly
+     // served 900 bars for every range would hide the fact that "1Y" is 80 weekly bars.
+     const bars = generate(spec, range.limit, Math.max(range.key === "ALL" ? 2_629_746_000 : 86_400_000, 60_000), endTime);
+@@ -130,6 +179,23 @@ function createSyntheticMarket() {
+ 
+   async function getQuote(symbol) {
+     const spec = requireSpec(symbol);
++    if (LIVE) {
++      const [previous, last] = liveBars(spec, 60_000, 2);
++      const now = Date.now();
++      return {
++        symbol: spec.symbol,
++        price: last.close,
++        previousClose: previous.close,
++        change: Number((last.close - previous.close).toFixed(4)),
++        changePercent: Number((((last.close - previous.close) / previous.close) * 100).toFixed(4)),
++        volume: last.volume,
++        source: "synthetic-live",
++        status: "real",
++        at: now,
++        quoteTime: now,
++        checkedAt: now
++      };
++    }
+     const bars = generate(spec, 2, 86_400_000, endTime);
+     const last = bars.at(-1);
+     const previous = bars[0];
+@@ -176,7 +242,7 @@ function createSyntheticMarket() {
+ 
+ const runtime = await createStockbot({ market: createSyntheticMarket() });
+ const server = runtime.app.listen(runtime.config.port, runtime.config.host, () => {
+-  process.stderr.write(`SYNTHETIC Stockbot API on http://${runtime.config.host}:${runtime.config.port} — fabricated market data\n`);
++  process.stderr.write(`SYNTHETIC${LIVE ? " LIVE" : ""} Stockbot API on http://${runtime.config.host}:${runtime.config.port} — fabricated market data\n`);
+ });
+ 
+ for (const signal of ["SIGINT", "SIGTERM"]) {
+diff --git a/server/experiments/selection.js b/server/experiments/selection.js
+index 19a03dd..236446b 100644
+--- a/server/experiments/selection.js
++++ b/server/experiments/selection.js
+@@ -31,6 +31,7 @@
+  */
+ import { getRangeConfig } from "../../packages/shared/ranges.js";
+ import { band, ramp, scoreSeparation, weightedScore } from "../scoring/scale.js";
++import { isCryptoSymbol } from "../market/catalog.js";
+ 
+ /**
+  * History is gated on *coverage of the requested window*, not on an absolute bar count.
+@@ -78,9 +79,12 @@ export function scoreCandidate(facts, { weights = DEFAULT_WEIGHTS, gates = DEFAU
+   const symbol = String(facts?.symbol ?? "").trim().toUpperCase();
+   const blockers = [];
+ 
++  const crypto = isCryptoSymbol(symbol);
+   if (Number.isFinite(Number(facts?.price))) {
+-    if (Number(facts.price) < gates.minPrice) blockers.push(`price ${Number(facts.price).toFixed(2)} below the ${gates.minPrice} floor`);
+-    if (Number(facts.price) > gates.maxPrice) blockers.push(`price ${Number(facts.price).toFixed(2)} above the ${gates.maxPrice} ceiling`);
++    // Share-price gates guard against penny stocks and unaffordable whole shares.
++    // Crypto trades in fractions, so a $60,000 Bitcoin is not "above the ceiling".
++    if (!crypto && Number(facts.price) < gates.minPrice) blockers.push(`price ${Number(facts.price).toFixed(2)} below the ${gates.minPrice} floor`);
++    if (!crypto && Number(facts.price) > gates.maxPrice) blockers.push(`price ${Number(facts.price).toFixed(2)} above the ${gates.maxPrice} ceiling`);
+   } else {
+     blockers.push("no price");
+   }
+@@ -121,7 +125,9 @@ export function scoreCandidate(facts, { weights = DEFAULT_WEIGHTS, gates = DEFAU
+     // something to time, not so much that any sane stop is inside the noise. The band
+     // reaches zero at 0.15% and 5.35% — a symbol that barely moves and one that gaps
+     // wildly are both bad experiment subjects, for opposite reasons.
+-    volatility: band(facts?.atrPercent, 2.75, 2.6),
++    // Crypto routinely moves 3-5% a day; scored on the equity band it lost a quarter
++    // of its score for being crypto, not for being untradeable.
++    volatility: crypto ? band(facts?.atrPercent, 4, 4) : band(facts?.atrPercent, 2.75, 2.6),
+     // Distance from the long moving average, unsigned: a clean downtrend is as testable
+     // as a clean uptrend, and a symbol pinned to its mean gives a trend method nothing.
+     trendClarity: ramp(facts?.trendStrength, 0.02, 0.35),
+diff --git a/server/market/providers/alpaca.js b/server/market/providers/alpaca.js
+index 212c1d5..708c9b1 100644
+--- a/server/market/providers/alpaca.js
++++ b/server/market/providers/alpaca.js
+@@ -11,6 +11,28 @@ async function json(response, label) {
+   return response.json();
+ }
+ 
++/**
++ * The last trade on a thin venue (IEX, Alpaca crypto) can be many seconds old
++ * while the bid/ask is current, and the paper broker rejects quotes older than
++ * a few seconds. Use whichever of the last trade and the quote midpoint is
++ * newer, so a quiet tape does not block every fill.
++ */
++export function freshestPrice(snapshot) {
++  const candidates = [];
++  const trade = snapshot?.latestTrade;
++  if (Number(trade?.p) > 0 && trade?.t) candidates.push({ price: Number(trade.p), time: trade.t, at: Date.parse(trade.t) });
++  const quote = snapshot?.latestQuote;
++  const bid = Number(quote?.bp);
++  const ask = Number(quote?.ap);
++  // A crossed or one-sided book is not a usable price.
++  if (bid > 0 && ask >= bid && quote?.t && (ask - bid) / bid <= 0.01) {
++    candidates.push({ price: (bid + ask) / 2, time: quote.t, at: Date.parse(quote.t) });
++  }
++  const valid = candidates.filter((candidate) => Number.isFinite(candidate.at));
++  if (valid.length === 0) return null;
++  return valid.sort((left, right) => right.at - left.at)[0];
++}
++
+ export function alpacaProvider(config) {
+   return {
+     id: "alpaca",
+@@ -56,11 +78,12 @@ export function alpacaProvider(config) {
+       const payload = await json(await fetch(url, { headers: headers(config), signal: AbortSignal.timeout(8_000) }), "Alpaca quote");
+       const snapshot = crypto ? payload.snapshots?.[cryptoPair(symbol)] : payload;
+       if (!snapshot) throw new Error("Alpaca returned no snapshot.");
++      const latest = freshestPrice(snapshot);
+       return normalizeQuote(symbol, {
+-        price: snapshot.latestTrade?.p ?? snapshot.minuteBar?.c ?? snapshot.dailyBar?.c,
++        price: latest?.price ?? snapshot.minuteBar?.c ?? snapshot.dailyBar?.c,
+         previousClose: snapshot.prevDailyBar?.c ?? snapshot.dailyBar?.o,
+         volume: snapshot.dailyBar?.v ?? snapshot.minuteBar?.v ?? null,
+-        quoteTime: snapshot.latestTrade?.t ?? snapshot.minuteBar?.t ?? snapshot.dailyBar?.t
++        quoteTime: latest?.time ?? snapshot.minuteBar?.t ?? snapshot.dailyBar?.t
+       }, crypto ? "alpaca-crypto" : "alpaca-iex");
+     },
+     async bars(symbol, range) {
+diff --git a/server/runtime/supervisor.js b/server/runtime/supervisor.js
+index dd26798..deb4e3e 100644
+--- a/server/runtime/supervisor.js
++++ b/server/runtime/supervisor.js
+@@ -7,6 +7,7 @@ import { createRepositories } from "../db/repositories/index.js";
+ import { computeMetrics } from "../engine/metrics.js";
+ import { AppError } from "../http/errors.js";
+ import { createRiskEngine } from "../risk/engine.js";
++import { marketSession } from "../risk/market-hours.js";
+ import { SessionScheduler } from "./scheduler.js";
+ import {
+   EXCHANGE_TIMEZONE,
+@@ -203,6 +204,36 @@ function intervalSpan(interval, at) {
+   return end.getTime() - start.getTime();
+ }
+ 
++// A pending next-open order waits this long for the provider to publish the
++// opening bar before it falls back to the live quote.
++const OPENING_BAR_GRACE_MS = 120_000;
++const OPENING_FILL_WINDOW_MS = 300_000;
++const MAX_SESSION_GAP_MS = 6 * 86_400_000;
++
++/**
++ * When the bar after the signal bar has not been published yet, a market order
++ * would still execute at the prevailing price. Returns true when this tick is
++ * inside the window where filling at the fresh live quote is equivalent to the
++ * next-open fill: the signal bar is closed, the market is open, and (for
++ * exchange-traded daily/weekly/monthly bars) it is the first minutes of the
++ * immediately following session.
++ */
++export function liveQuoteFillAllowed({ interval, symbol, signalBarAt, submittedAt, at, tolerance }) {
++  if (!marketSession(symbol, at).open) return false;
++  const higherEquityInterval = ["1day", "1week", "1month"].includes(interval) && !isCryptoSymbol(symbol);
++  if (higherEquityInterval) {
++    const openAt = exchangeBarOpen(at);
++    const signalEnd = interval === "1day" ? dailyExchangeClose(signalBarAt) : barEnd(signalBarAt, interval);
++    return signalEnd <= openAt &&
++      openAt - signalEnd <= MAX_SESSION_GAP_MS &&
++      submittedAt <= openAt + tolerance &&
++      at >= openAt + OPENING_BAR_GRACE_MS &&
++      at <= openAt + OPENING_FILL_WINDOW_MS + tolerance;
++  }
++  const signalEnd = barEnd(signalBarAt, interval);
++  return at >= signalEnd && submittedAt <= at && at <= signalEnd + intervalSpan(interval, signalEnd) + tolerance;
++}
++
+ function nextOpenTolerance(interval, settleDelayMs) {
+   const intervalAllowance = Math.min(5_000, Math.max(1_000, intervalSpan(interval, 0) * 0.02));
+   return Math.max(intervalAllowance, Number(settleDelayMs) + 1_000);
+@@ -1090,20 +1121,37 @@ export function createSupervisor({
+         continue;
+       }
+       const nextBar = bars[signalIndex + 1];
+-      if (!nextBar || nextBar.time > at) continue;
+       const submittedAt = Number(order.submittedAt);
+-      const higherEquityInterval = ["1day", "1week", "1month"].includes(session.barInterval) &&
+-        !isCryptoSymbol(order.symbol);
+-      const expectedOpenAt = higherEquityInterval ? exchangeBarOpen(nextBar.time) : nextBar.time;
+-      const maxFillAt = expectedOpenAt + (higherEquityInterval ? 300_000 + tolerance : intervalSpan(session.barInterval, nextBar.time) + tolerance);
+-      if (expectedOpenAt > at || expectedOpenAt < submittedAt - tolerance || at > maxFillAt) {
+-        await rejectMissedOpen(order, {
+-          signalBarAt: order.signalBarAt,
+-          expectedOpenAt,
++      let referencePrice;
++      let priceSource = "next_bar_open";
++      if (!nextBar || nextBar.time > at) {
++        const fallback = liveQuoteFillAllowed({
++          interval: session.barInterval,
++          symbol: order.symbol,
++          signalBarAt: Number(order.signalBarAt),
+           submittedAt,
+-          observedAt: at
++          at,
++          tolerance
+         });
+-        continue;
++        if (!fallback) continue;
++        priceSource = "live_quote";
++      } else {
++        referencePrice = nextBar.open;
++      }
++      if (priceSource === "next_bar_open") {
++        const higherEquityInterval = ["1day", "1week", "1month"].includes(session.barInterval) &&
++          !isCryptoSymbol(order.symbol);
++        const expectedOpenAt = higherEquityInterval ? exchangeBarOpen(nextBar.time) : nextBar.time;
++        const maxFillAt = expectedOpenAt + (higherEquityInterval ? 300_000 + tolerance : intervalSpan(session.barInterval, nextBar.time) + tolerance);
++        if (expectedOpenAt > at || expectedOpenAt < submittedAt - tolerance || at > maxFillAt) {
++          await rejectMissedOpen(order, {
++            signalBarAt: order.signalBarAt,
++            expectedOpenAt,
++            submittedAt,
++            observedAt: at
++          });
++          continue;
++        }
+       }
+       const execution = await broker.submitOrder({
+         clientOrderId: order.clientOrderId,
+@@ -1115,7 +1163,7 @@ export function createSupervisor({
+         qty: order.qty,
+         signalReason: order.signalReason,
+         fillModel: session.fillModelJson,
+-        referencePrice: nextBar.open,
++        referencePrice,
+         riskEngine: createRiskEngine(session.riskProfileJson),
+         submittedAt: at,
+         filledAt: at
+@@ -1123,9 +1171,15 @@ export function createSupervisor({
+       results.push(execution);
+       if (execution.order.status === "filled" && execution.fills.length > 0) {
+         const fill = execution.fills[0];
+-        await addSessionEvent(session, "order_filled", { orderId: order.id, fillId: fill.id, symbol: order.symbol });
+-        await appendAudit("session_order_filled", session, { orderId: order.id, fillId: fill.id, symbol: order.symbol }, "broker");
++        const filled = { orderId: order.id, fillId: fill.id, symbol: order.symbol, priceSource };
++        await addSessionEvent(session, "order_filled", filled);
++        await appendAudit("session_order_filled", session, filled, "broker");
+         await evaluateAlert({ type: "fill", order: execution.order, fill, symbol: order.symbol }, session.id);
++      } else if (execution.order.status === "rejected" && !execution.idempotent) {
++        // Broker/risk rejections were previously only visible in the audit log,
++        // which made a session that keeps getting blocked look simply idle.
++        const rejected = { orderId: order.id, symbol: order.symbol, reason: execution.order.rejectReason, priceSource };
++        await addSessionEvent(session, "order_rejected", rejected);
+       }
+     }
+     return results;
+@@ -1168,6 +1222,10 @@ export function createSupervisor({
+     const riskEngine = createRiskEngine(session.riskProfileJson);
+     const research = await sessionResearch(session);
+     const queued = [];
++    const pendingSides = new Set(
++      (await repositories.orders.list({ sessionId: session.id, status: "pending", limit: 250 }))
++        .map((order) => `${order.symbol}:${order.side}`)
++    );
+ 
+     for (const symbol of session.symbolsJson) {
+       const gate = scheduleAllows(session.scheduleJson, { now: at, symbol, trigger });
+@@ -1220,6 +1278,9 @@ export function createSupervisor({
+       if (!signal || (signal.action === "buy" && position) || (signal.action === "sell" && !position)) continue;
+       if (signal.action === "buy" && blockEntries) continue;
+       if (signal.action === "sell" && blockedExitSymbols.has(symbol)) continue;
++      // An unfilled order for the same symbol and side is still working; a
++      // second one would double the position when both fill.
++      if (pendingSides.has(`${symbol}:${signal.action}`)) continue;
+ 
+       const markedPosition = accountPortfolio.positions.find((item) => item.symbol === symbol);
+       const sizing = signal.action === "buy"
+@@ -1506,6 +1567,25 @@ export function createSupervisor({
+       await fail(id, error);
+       throw error;
+     }
++    // Crypto and intraday orders do not have to wait a whole bar: when the
++    // market is open, fill new signals now at the fresh live quote.
++    if (signals.some((signal) => !signal.idempotent && signal.order?.status === "pending")) {
++      const immediate = await fillPendingOrders(refreshed, at, { blockEntries: entryBlock });
++      fills.push(...immediate);
++      if (immediate.some((execution) => execution.order?.status === "filled")) {
++        portfolio = await broker.portfolio(session.accountId, { sessionId: session.id, fresh: true, at });
++        if (portfolio.equity !== null) {
++          await repositories.sessions.addEquitySnapshot({
++            sessionId: id,
++            at,
++            equity: portfolio.equity,
++            cash: portfolio.cash,
++            positionValue: portfolio.positionValue ?? 0,
++            drawdownPercent: postFillPeak > 0 ? Math.max(0, ((postFillPeak - portfolio.equity) / postFillPeak) * 100) : 0
++          });
++        }
++      }
++    }
+     eventHub?.publish("session.tick", { sessionId: id, portfolio, failures, fills, signals, protectiveExits, trigger });
+     return {
+       session: await repositories.sessions.getById(id),
+diff --git a/src/charts/scales.ts b/src/charts/scales.ts
+index 48fa4eb..143ffd2 100644
+--- a/src/charts/scales.ts
++++ b/src/charts/scales.ts
+@@ -104,7 +104,16 @@ export function formatPrice(value: number) {
+   }).format(value);
+ }
+ 
++/**
++ * Normalized equity (1.0 = starting value) as a signed percent change. A fixed
++ * three-decimal multiple printed "1.000×" on every gridline for the small moves
++ * a paper session makes, so the axis carried no information.
++ */
+ export function formatEquityMultiple(value: number) {
+-  return `${value.toFixed(3)}×`;
++  const percent = (value - 1) * 100;
++  const absolute = Math.abs(percent);
++  const digits = absolute === 0 ? 0 : absolute < 0.01 ? 4 : absolute < 0.1 ? 3 : absolute < 10 ? 2 : 1;
++  const text = percent.toFixed(digits);
++  return `${percent > 0 ? "+" : ""}${Number(text) === 0 ? "0" : text}%`;
+ }
+ 
+diff --git a/src/components/navigation/StatusBar.tsx b/src/components/navigation/StatusBar.tsx
+index 3e6e597..00cf707 100644
+--- a/src/components/navigation/StatusBar.tsx
++++ b/src/components/navigation/StatusBar.tsx
+@@ -40,7 +40,7 @@ export function StatusBar({ streamStatus }: { streamStatus: StreamStatus }) {
+       </div>
+       <div className="status-stat">
+         <span className="status-inline"><Radio size={13} /> Running</span>
+-        <strong>{overview.data ? `${overview.data.activeSessions.length} sessions` : "—"}</strong>
++        <strong>{overview.data ? `${overview.data.activeSessions.length} ${overview.data.activeSessions.length === 1 ? "session" : "sessions"}` : "—"}</strong>
+       </div>
+       <div className="status-stat">
+         <span className="status-inline"><ShieldCheck size={13} /> Risk used</span>
+diff --git a/src/components/states/DataStates.tsx b/src/components/states/DataStates.tsx
+index 0df0f9e..9b19621 100644
+--- a/src/components/states/DataStates.tsx
++++ b/src/components/states/DataStates.tsx
+@@ -1,9 +1,11 @@
+ import { AlertTriangle, Inbox, RefreshCw } from "lucide-react";
++import type * as React from "react";
+ 
+ type StateProps = {
+   title: string;
+   detail?: string;
+   compact?: boolean;
++  action?: React.ReactNode;
+ };
+ 
+ export function LoadingState({ title = "Loading", compact = false }: Partial<StateProps>) {
+@@ -17,12 +19,13 @@ export function LoadingState({ title = "Loading", compact = false }: Partial<Sta
+   );
+ }
+ 
+-export function EmptyState({ title, detail, compact = false }: StateProps) {
++export function EmptyState({ title, detail, compact = false, action }: StateProps) {
+   return (
+     <div className={`data-state${compact ? " compact" : ""}`}>
+       <Inbox aria-hidden="true" />
+       <strong>{title}</strong>
+       {detail ? <span>{detail}</span> : null}
++      {action ? <div className="data-state-action">{action}</div> : null}
+     </div>
+   );
+ }
+diff --git a/src/features/overview/ActiveSessions.tsx b/src/features/overview/ActiveSessions.tsx
+index 24d9875..131c503 100644
+--- a/src/features/overview/ActiveSessions.tsx
++++ b/src/features/overview/ActiveSessions.tsx
+@@ -1,4 +1,5 @@
+-import { Pause, Square } from "lucide-react";
++import { Pause, Play, Square } from "lucide-react";
++import { Link } from "react-router-dom";
+ import * as React from "react";
+ import { formatMetric } from "../../../packages/shared/format.js";
+ import { StatusPill } from "../../components/data/StatusPill";
+@@ -18,7 +19,7 @@ export function ActiveSessions({ sessions }: { sessions: SessionSummary[] }) {
+   const [busyId, setBusyId] = React.useState<string | null>(null);
+   const [error, setError] = React.useState<string | null>(null);
+ 
+-  const act = async (session: SessionSummary, action: "pause" | "stop") => {
++  const act = async (session: SessionSummary, action: "pause" | "resume" | "stop") => {
+     if (action === "stop" && !window.confirm(`Stop ${session.name}?`)) return;
+     setBusyId(session.id);
+     setError(null);
+@@ -41,13 +42,15 @@ export function ActiveSessions({ sessions }: { sessions: SessionSummary[] }) {
+           {sessions.map((session) => (
+             <tr key={session.id}>
+               <td><StatusPill status={session.status} /></td>
+-              <td><strong>{session.name}</strong>{session.algorithmVersionId ? <small>{session.algorithmVersionId}</small> : null}</td>
++              <td><Link className="table-link" to={`/sessions/${session.id}`}><strong>{session.name}</strong></Link>{session.algorithmVersionId ? <small>{session.algorithmVersionId}</small> : null}</td>
+               <td>{session.symbols.join(", ")}</td>
+               <td className="numeric"><span className={(session.metrics?.returnPercent ?? 0) >= 0 ? "positive" : "negative"}>{formatMetric("returnPercent", session.metrics?.returnPercent)}</span></td>
+               <td className="numeric">{duration(session.startedAt)}</td>
+               <td className="numeric session-controls">
+-                <button className="icon-button" type="button" aria-label={`Pause ${session.name}`} disabled={busyId === session.id} onClick={() => void act(session, "pause")}><Pause size={15} /></button>
+-                <button className="icon-button destructive" type="button" aria-label={`Stop ${session.name}`} disabled={busyId === session.id} onClick={() => void act(session, "stop")}><Square size={13} /></button>
++                {session.status === "paused"
++                  ? <button className="icon-button" type="button" aria-label={`Resume ${session.name}`} title="Resume" disabled={busyId === session.id} onClick={() => void act(session, "resume")}><Play size={15} /></button>
++                  : <button className="icon-button" type="button" aria-label={`Pause ${session.name}`} title="Pause" disabled={busyId === session.id || session.status !== "running"} onClick={() => void act(session, "pause")}><Pause size={15} /></button>}
++                <button className="icon-button destructive" type="button" aria-label={`Stop ${session.name}`} title="Stop" disabled={busyId === session.id} onClick={() => void act(session, "stop")}><Square size={13} /></button>
+               </td>
+             </tr>
+           ))}
+diff --git a/src/features/overview/OverviewPage.tsx b/src/features/overview/OverviewPage.tsx
+index 228622a..2666c3d 100644
+--- a/src/features/overview/OverviewPage.tsx
++++ b/src/features/overview/OverviewPage.tsx
+@@ -1,3 +1,5 @@
++import { Play } from "lucide-react";
++import { Link } from "react-router-dom";
+ import { BudgetMeter } from "../../components/data/BudgetMeter";
+ import { EquitySparkline } from "../../components/data/EquitySparkline";
+ import { Metric } from "../../components/data/Metric";
+@@ -35,10 +37,10 @@ export function OverviewPage() {
+       </section>
+ 
+       <section className="panel overview-sessions">
+-        <header className="panel-header"><h2>Active sessions</h2>{sessions.isStale ? <StaleBadge updatedAt={sessions.updatedAt} /> : null}</header>
++        <header className="panel-header"><h2>Active sessions</h2><Link className="panel-link" to="/sessions">All sessions</Link>{sessions.isStale ? <StaleBadge updatedAt={sessions.updatedAt} /> : null}</header>
+         {sessions.isLoading ? <LoadingState title="Loading active sessions" /> : null}
+         {sessions.error && !sessions.data ? <ErrorState detail={sessions.error.message} onRetry={sessions.refetch} /> : null}
+-        {sessions.data?.length ? <ActiveSessions sessions={sessions.data} /> : sessions.data ? <EmptyState title="No active sessions" detail="Started paper sessions will appear here." /> : null}
++        {sessions.data?.length ? <ActiveSessions sessions={sessions.data} /> : sessions.data ? <EmptyState title="Nothing is trading" detail="Start a paper session to let a strategy trade live prices with simulated money." action={<Link className="button primary" to="/sessions?new=1"><Play size={14} /> New paper session</Link>} /> : null}
+       </section>
+ 
+       <section className="panel overview-risk">
+diff --git a/src/features/selection/SelectionPage.tsx b/src/features/selection/SelectionPage.tsx
+index cec9612..877c054 100644
+--- a/src/features/selection/SelectionPage.tsx
++++ b/src/features/selection/SelectionPage.tsx
+@@ -1,5 +1,6 @@
+ import * as React from "react";
+-import { RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
++import { Play, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
++import { useNavigate } from "react-router-dom";
+ import { CHART_RANGES, isRangeKey } from "../../../packages/shared/ranges.js";
+ import { EmptyState, ErrorState, LoadingState } from "../../components/states/DataStates";
+ import { fetchSymbolSelection } from "../../lib/market";
+@@ -15,13 +16,26 @@ export function SelectionPage() {
+   const [range, setRange] = React.useState("1Y");
+   const [source, setSource] = React.useState<Source>("auto");
+   const [requested, setRequested] = React.useState(false);
++  const [picked, setPicked] = React.useState<Set<string>>(() => new Set());
++  const navigate = useNavigate();
+   const query = useQuery(
+     `selection:${range}:${source}`,
+     () => fetchSymbolSelection(range, source),
+     { enabled: requested, staleAfterMs: 5 * 60_000 }
+   );
+ 
+-  const load = () => setRequested(true);
++  const load = () => {
++    setPicked(new Set());
++    if (requested) query.refetch();
++    else setRequested(true);
++  };
++  const toggle = (symbol: string) => setPicked((current) => {
++    const next = new Set(current);
++    if (next.has(symbol)) next.delete(symbol);
++    else if (next.size < 20) next.add(symbol);
++    return next;
++  });
++  const tradeSelected = () => navigate(`/sessions?new=1&symbols=${encodeURIComponent(Array.from(picked).join(", "))}`);
+   const changeRange = (value: string) => {
+     if (isRangeKey(value)) setRange(value);
+   };
+@@ -34,8 +48,9 @@ export function SelectionPage() {
+           <p className="selection-subtitle">Ranks tradeability and measurement quality; it does not predict returns or start a trade.</p>
+         </div>
+         <div className="page-actions">
+-          <button className="button primary" type="button" onClick={load} disabled={query.isLoading}>
+-            {query.isLoading ? <RefreshCw size={14} className="spin" /> : <Sparkles size={14} />} Rank candidates
++          {query.data ? <button className="button secondary" type="button" onClick={tradeSelected} disabled={picked.size === 0}><Play size={14} /> Paper trade {picked.size ? `${picked.size} selected` : "selected"}</button> : null}
++          <button className="button primary" type="button" onClick={load} disabled={requested && query.isFetching}>
++            {requested && query.isFetching ? <RefreshCw size={14} className="spin" /> : <Sparkles size={14} />} {query.data ? "Re-rank" : "Rank candidates"}
+           </button>
+         </div>
+       </header>
+@@ -43,11 +58,11 @@ export function SelectionPage() {
+       <section className="panel selection-controls" aria-label="Selection inputs">
+         <label><span>Universe</span><select value={source} onChange={(event) => setSource(event.target.value as Source)}><option value="auto">Auto — live screen when available</option><option value="active">Most active stocks</option><option value="local">Local catalogue</option></select></label>
+         <label><span>Window</span><select value={range} onChange={(event) => changeRange(event.target.value)}>{CHART_RANGES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+-        <div className="selection-control-note"><ShieldCheck size={16} /> Recommendations require an explicit next action; no session or backtest is launched here.</div>
++        <div className="selection-control-note"><ShieldCheck size={16} /> Nothing trades from this page. Tick the symbols you want, then choose “Paper trade selected” to set up a session.</div>
+       </section>
+ 
+       {!requested ? <section className="panel"><EmptyState title="Ready to rank candidates" detail="Choose a universe and window, then rank. The screen is deterministic and never uses backtest performance." /></section> : null}
+-      {query.isLoading && !query.data ? <section className="panel"><LoadingState title="Scoring tradeability" /></section> : null}
++      {requested && query.isLoading && !query.data ? <section className="panel"><LoadingState title="Scoring tradeability" /></section> : null}
+       {query.error && !query.data ? <section className="panel"><ErrorState title="Selection unavailable" detail={query.error.message} onRetry={load} /></section> : null}
+       {query.data ? <>
+         <section className="selection-summary panel">
+@@ -58,7 +73,7 @@ export function SelectionPage() {
+         {query.data.universe.forwardTestOnly ? <div className="selection-warning">Forward-test-only universe. {query.data.universe.survivorshipWarning} This view deliberately offers no historical backtest action.</div> : null}
+         <section className="panel">
+           <header className="panel-header"><h2>Recommended for measurement</h2><span>Score · confidence · reason</span></header>
+-          <div className="table-scroll"><table className="data-table selection-table"><thead><tr><th>Symbol</th><th className="numeric">Board B</th><th>Confidence</th><th>Reason</th></tr></thead><tbody>{query.data.recommended.map((candidate) => <tr key={candidate.symbol}><td><strong>{candidate.symbol}</strong>{candidate.forwardTestOnly ? <small>Forward-test only</small> : null}</td><td className="numeric">{score(candidate)}</td><td>{candidate.board.confidence}</td><td>{candidate.board.reasons[0]}</td></tr>)}</tbody></table></div>
++          <div className="table-scroll"><table className="data-table selection-table"><thead><tr><th className="select-cell"><span className="sr-only">Select</span></th><th>Symbol</th><th className="numeric">Score</th><th>Confidence</th><th>Reason</th></tr></thead><tbody>{query.data.recommended.map((candidate) => <tr key={candidate.symbol} className={picked.has(candidate.symbol) ? "selected" : undefined}><td className="select-cell"><input type="checkbox" aria-label={`Select ${candidate.symbol}`} checked={picked.has(candidate.symbol)} onChange={() => toggle(candidate.symbol)} /></td><td><strong>{candidate.symbol}</strong>{candidate.forwardTestOnly ? <small>Forward-test only</small> : null}</td><td className="numeric">{score(candidate)}</td><td>{candidate.board.confidence}</td><td>{candidate.board.reasons[0]}</td></tr>)}</tbody></table></div>
+           {query.data.recommended.length === 0 ? <EmptyState title="No candidates passed the gates" detail="Review the exclusions; gate failures are shown instead of being scored down." /> : null}
+         </section>
+         {query.data.excluded.length ? <section className="panel"><header className="panel-header"><h2>Excluded by hard gates</h2><span>Not scored down</span></header><div className="table-scroll"><table className="data-table selection-table"><thead><tr><th>Symbol</th><th>Blockers</th></tr></thead><tbody>{query.data.excluded.map((candidate) => <tr key={candidate.symbol}><td>{candidate.symbol}</td><td>{candidate.blockers.join("; ")}</td></tr>)}</tbody></table></div></section> : null}
+diff --git a/src/features/sessions/CreateSessionDialog.tsx b/src/features/sessions/CreateSessionDialog.tsx
+index 7933d64..5546ae8 100644
+--- a/src/features/sessions/CreateSessionDialog.tsx
++++ b/src/features/sessions/CreateSessionDialog.tsx
+@@ -3,27 +3,42 @@ import * as React from "react";
+ import { BAR_INTERVALS, CHART_RANGES, getRangeConfig, isRangeKey, type BarInterval, type RangeKey } from "../../../packages/shared/ranges.js";
+ import { ErrorState, LoadingState } from "../../components/states/DataStates";
+ import { api } from "../../lib/api";
++import { describeCadence, isCryptoSymbol } from "../../lib/cadence";
+ import { useQuery } from "../../lib/query";
+-import type { SessionSummary } from "../../lib/types";
++import type { Algorithm, SessionSummary } from "../../lib/types";
+ import { fetchAlgorithms, fetchAlgorithmVersions } from "../strategies/algorithmData";
+ 
+ const SYMBOL_PATTERN = /^[A-Z0-9][A-Z0-9./-]{0,31}$/;
++type ParamValue = number | string | boolean;
+ 
+-export function CreateSessionDialog({ open, initialSymbol = "", initialRange = "3M", onClose, onCreated }: {
++function groupAlgorithms(algorithms: Algorithm[]) {
++  const groups = new Map<string, Algorithm[]>();
++  for (const algorithm of algorithms) {
++    const group = algorithm.id.includes("/") ? algorithm.id.split("/")[0] : "Local methods";
++    groups.set(group, [...(groups.get(group) ?? []), algorithm]);
++  }
++  return Array.from(groups.entries()).sort(([left], [right]) => left.localeCompare(right));
++}
++
++export function CreateSessionDialog({ open, initialSymbol = "", initialRange = "3M", initialName = "", initialAlgorithmId = "", onClose, onCreated }: {
+   open: boolean;
+   initialSymbol?: string;
++  initialAlgorithmId?: string;
+   initialRange?: string;
++  initialName?: string;
+   onClose: () => void;
+   onCreated: (session: SessionSummary) => void;
+ }) {
+   const safeRange = isRangeKey(initialRange) ? initialRange : "3M";
+-  const [name, setName] = React.useState("");
++  const [name, setName] = React.useState(initialName);
+   const [mode, setMode] = React.useState<"paper" | "backtest">("paper");
+   const [symbols, setSymbols] = React.useState(initialSymbol);
+   const [range, setRange] = React.useState<RangeKey>(safeRange);
+   const [interval, setInterval] = React.useState<BarInterval>(getRangeConfig(safeRange).interval);
+   const [algorithmId, setAlgorithmId] = React.useState("");
+   const [versionId, setVersionId] = React.useState("");
++  const [params, setParams] = React.useState<Record<string, ParamValue>>({});
++  const [startNow, setStartNow] = React.useState(true);
+   const [submitting, setSubmitting] = React.useState(false);
+   const [submitError, setSubmitError] = React.useState<string | null>(null);
+   const algorithms = useQuery("algorithms:list", fetchAlgorithms, { enabled: open, staleAfterMs: 60_000 });
+@@ -31,17 +46,36 @@ export function CreateSessionDialog({ open, initialSymbol = "", initialRange = "
+ 
+   React.useEffect(() => {
+     if (!open) return;
++    setName(initialName);
+     setSymbols(initialSymbol);
+     setRange(safeRange);
+     setInterval(getRangeConfig(safeRange).interval);
+     setSubmitError(null);
+-  }, [initialSymbol, open, safeRange]);
++  }, [initialName, initialSymbol, open, safeRange]);
+ 
++  const selectedAlgorithm = algorithms.data?.find((algorithm) => algorithm.id === algorithmId);
++  const preselected = React.useRef(false);
+   React.useEffect(() => {
+-    if (!algorithmId) return setVersionId("");
+-    const current = algorithms.data?.find((algorithm) => algorithm.id === algorithmId)?.version?.id;
++    if (!open) {
++      preselected.current = false;
++      return;
++    }
++    if (preselected.current || !initialAlgorithmId || !algorithms.data) return;
++    preselected.current = true;
++    if (algorithms.data.some((algorithm) => algorithm.id === initialAlgorithmId)) chooseAlgorithm(initialAlgorithmId);
++    // chooseAlgorithm reads the latest form state; it is intentionally not a dependency.
++  }, [algorithms.data, initialAlgorithmId, open]);
++
++  React.useEffect(() => {
++    if (!algorithmId) {
++      setVersionId("");
++      setParams({});
++      return;
++    }
++    const current = selectedAlgorithm?.version?.id;
+     if (current) setVersionId(current);
+-  }, [algorithmId, algorithms.data]);
++    setParams({ ...(selectedAlgorithm?.params ?? {}) });
++  }, [algorithmId, selectedAlgorithm]);
+ 
+   React.useEffect(() => {
+     if (!open) return;
+@@ -51,55 +85,96 @@ export function CreateSessionDialog({ open, initialSymbol = "", initialRange = "
+   }, [onClose, open]);
+ 
+   if (!open) return null;
+-  const selectedAlgorithm = algorithms.data?.find((algorithm) => algorithm.id === algorithmId);
+   const parsedSymbols = symbols.split(",").map((symbol) => symbol.trim().toUpperCase()).filter(Boolean);
+   const symbolsValid = parsedSymbols.length > 0 && parsedSymbols.length <= 20 && parsedSymbols.every((symbol) => SYMBOL_PATTERN.test(symbol));
++  const cryptoOnly = parsedSymbols.length > 0 && parsedSymbols.every(isCryptoSymbol);
++
++  const chooseAlgorithm = (id: string) => {
++    setAlgorithmId(id);
++    // Crypto methods are meant for Bitcoin and benefit from a bar that closes many times a day.
++    if (id.startsWith("crypto-pack/")) {
++      if (!symbols.trim()) setSymbols("BTCUSD");
++      if (["1day", "1week", "1month"].includes(interval)) setInterval("1hour");
++    }
++    if (!name.trim()) {
++      const chosen = algorithms.data?.find((algorithm) => algorithm.id === id);
++      if (chosen) setName(`${chosen.name} — paper`);
++    }
++  };
++
++  const setParam = (key: string, raw: string, kind: string) => {
++    setParams((current) => ({
++      ...current,
++      [key]: kind === "number" ? (raw === "" ? "" : Number(raw)) : kind === "boolean" ? raw === "true" : raw
++    }));
++  };
++  const paramsValid = Object.values(params).every((value) => typeof value !== "number" || Number.isFinite(value)) &&
++    Object.values(params).every((value) => value !== "");
+ 
+   const submit = async (event: React.FormEvent) => {
+     event.preventDefault();
+-    if (!name.trim() || !versionId || !symbolsValid) return;
++    if (!name.trim() || !versionId || !symbolsValid || !paramsValid) return;
+     setSubmitting(true);
+     setSubmitError(null);
+     try {
+       const now = Date.now();
+       const rangeConfig = getRangeConfig(range);
+-      const session = await api.post<SessionSummary>("/sessions", {
++      let session = await api.post<SessionSummary>("/sessions", {
+         name: name.trim(),
+         mode,
+         algorithmVersionId: versionId,
+         symbols: parsedSymbols,
+         barInterval: interval,
+-        params: selectedAlgorithm?.params ?? {},
++        params,
+         ...(mode === "backtest" ? { windowStart: now - rangeConfig.lookbackDays * 86_400_000, windowEnd: now } : {})
+       });
++      if (mode === "backtest" || startNow) {
++        try {
++          session = await api.post<SessionSummary>(`/sessions/${session.id}/start`);
++        } catch (reason) {
++          // The draft exists; send the user to it so the start error is visible there.
++          setSubmitError(reason instanceof Error ? `Draft created, but it could not start: ${reason.message}` : "Draft created, but it could not start.");
++        }
++      }
+       onCreated(session);
+     } catch (reason) {
+-      setSubmitError(reason instanceof Error ? reason.message : "Unable to create draft session.");
++      setSubmitError(reason instanceof Error ? reason.message : "Unable to create session.");
+     } finally {
+       setSubmitting(false);
+     }
+   };
+ 
++  const paramEntries = Object.entries(params);
++  const actionLabel = mode === "backtest" ? "Run backtest" : startNow ? "Start paper trading" : "Create draft";
+   return (
+     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+       <section className="session-dialog" role="dialog" aria-modal="true" aria-labelledby="create-session-title" onMouseDown={(event) => event.stopPropagation()}>
+-        <header><div><h2 id="create-session-title">Create draft session</h2><p>Choose persisted runtime inputs before starting.</p></div><button className="icon-button" type="button" aria-label="Close create session" onClick={onClose}><X size={16} /></button></header>
++        <header><div><h2 id="create-session-title">New session</h2><p>Pick a strategy and the symbols it should trade.</p></div><button className="icon-button" type="button" aria-label="Close create session" onClick={onClose}><X size={16} /></button></header>
+         {algorithms.isLoading ? <LoadingState compact title="Loading algorithms" /> : null}
+         {algorithms.error ? <ErrorState compact title="Algorithms unavailable" detail={algorithms.error.message} onRetry={algorithms.refetch} /> : null}
+         <form onSubmit={submit}>
+           <div className="session-dialog-grid">
+-            <label className="full-field"><span>Name</span><input autoFocus required value={name} onChange={(event) => setName(event.target.value)} placeholder="Session name" /></label>
+-            <label><span>Mode</span><select value={mode} onChange={(event) => setMode(event.target.value as "paper" | "backtest")}><option value="paper">Paper</option><option value="backtest">Backtest</option></select></label>
+-            <label><span>Symbols</span><input required value={symbols} onChange={(event) => setSymbols(event.target.value)} placeholder="SPY, QQQ" /></label>
+-            <label><span>Algorithm</span><select required value={algorithmId} onChange={(event) => setAlgorithmId(event.target.value)}><option value="">Select algorithm</option>{algorithms.data?.map((algorithm) => <option key={algorithm.id} value={algorithm.id}>{algorithm.name}</option>)}</select></label>
+-            <label><span>Version</span><select required value={versionId} onChange={(event) => setVersionId(event.target.value)} disabled={!algorithmId || versions.isLoading}><option value="">Select version</option>{versions.data?.map((version) => <option key={version.id} value={version.id}>{version.id}</option>)}</select></label>
+-            <label><span>Range</span><select value={range} onChange={(event) => { const next = event.target.value; if (isRangeKey(next)) { setRange(next); setInterval(getRangeConfig(next).interval); } }}>{CHART_RANGES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
++            <label className="full-field"><span>Strategy</span><select required value={algorithmId} onChange={(event) => chooseAlgorithm(event.target.value)}><option value="">Select a strategy</option>{groupAlgorithms(algorithms.data ?? []).map(([group, items]) => <optgroup key={group} label={group}>{items.map((algorithm) => <option key={algorithm.id} value={algorithm.id}>{algorithm.name}{algorithm.role && algorithm.role !== "strategy" ? ` (${algorithm.role})` : ""}</option>)}</optgroup>)}</select>{selectedAlgorithm?.description ? <small className="field-hint">{selectedAlgorithm.description}</small> : null}</label>
++            <label><span>Symbols</span><input required value={symbols} onChange={(event) => setSymbols(event.target.value)} placeholder="SPY, QQQ or BTCUSD" /></label>
++            <label><span>Mode</span><select value={mode} onChange={(event) => setMode(event.target.value as "paper" | "backtest")}><option value="paper">Paper (live, simulated money)</option><option value="backtest">Backtest (history)</option></select></label>
+             <label><span>Bar interval</span><select value={interval} onChange={(event) => setInterval(event.target.value as BarInterval)}>{BAR_INTERVALS.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
++            {mode === "backtest" ? <label><span>History window</span><select value={range} onChange={(event) => { const next = event.target.value; if (isRangeKey(next)) { setRange(next); setInterval(getRangeConfig(next).interval); } }}>{CHART_RANGES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label> : <label><span>Version</span><select required value={versionId} onChange={(event) => setVersionId(event.target.value)} disabled={!algorithmId || versions.isLoading}><option value="">Select version</option>{versions.data?.map((version) => <option key={version.id} value={version.id}>{version.id.split(":").pop()}</option>)}</select></label>}
++            <label className="full-field"><span>Name</span><input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Session name" /></label>
++            {paramEntries.length ? <fieldset className="full-field param-fields"><legend>Parameters</legend>{paramEntries.map(([key, value]) => {
++              const kind = typeof (selectedAlgorithm?.params?.[key] ?? value);
++              return <label key={key}><span>{key}</span>{kind === "boolean" ? <select value={String(value)} onChange={(event) => setParam(key, event.target.value, kind)}><option value="true">true</option><option value="false">false</option></select> : <input type={kind === "number" ? "number" : "text"} step="any" value={String(value)} onChange={(event) => setParam(key, event.target.value, kind)} />}</label>;
++            })}</fieldset> : null}
+           </div>
++          {mode === "paper" && parsedSymbols.length ? <p className="dialog-note">{describeCadence(interval, parsedSymbols)}{!cryptoOnly && ["1day", "1week", "1month"].includes(interval) ? " Use 1hour bars for more frequent decisions." : ""}</p> : null}
+           {!symbolsValid && symbols.trim() ? <p className="inline-error" role="alert">Use 1–20 uppercase-compatible symbols separated by commas.</p> : null}
++          {!paramsValid ? <p className="inline-error" role="alert">Every parameter needs a value.</p> : null}
+           {versions.error ? <p className="inline-error" role="alert">{versions.error.message}</p> : null}
+           {submitError ? <p className="inline-error" role="alert">{submitError}</p> : null}
+-          <footer><button className="button secondary" type="button" onClick={onClose}>Cancel</button><button className="button primary" disabled={submitting || !name.trim() || !versionId || !symbolsValid} type="submit"><Play size={14} />{submitting ? "Creating" : "Create draft"}</button></footer>
++          <footer>
++            {mode === "paper" ? <label className="checkbox-field"><input type="checkbox" checked={startNow} onChange={(event) => setStartNow(event.target.checked)} /> Start immediately</label> : null}
++            <button className="button secondary" type="button" onClick={onClose}>Cancel</button>
++            <button className="button primary" disabled={submitting || !name.trim() || !versionId || !symbolsValid || !paramsValid} type="submit"><Play size={14} />{submitting ? "Working" : actionLabel}</button>
++          </footer>
+         </form>
+       </section>
+     </div>
+diff --git a/src/features/sessions/SessionActivity.tsx b/src/features/sessions/SessionActivity.tsx
+new file mode 100644
+index 0000000..745495c
+--- /dev/null
++++ b/src/features/sessions/SessionActivity.tsx
+@@ -0,0 +1,50 @@
++import { AlertTriangle, Clock, Hourglass, Radio } from "lucide-react";
++import { formatMoney } from "../../../packages/shared/format.js";
++import { describeCadence, nextDecision } from "../../lib/cadence";
++import { describeReason } from "../../lib/orderReasons";
++import type { SessionSummary } from "../../lib/types";
++import type { SessionOrder } from "./sessionData";
++
++function when(value?: number | null) {
++  if (!value) return "—";
++  const minutes = Math.round((Date.now() - value) / 60_000);
++  const clock = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(value);
++  if (minutes < 1) return `just now · ${clock}`;
++  if (minutes < 120) return `${minutes} min ago · ${clock}`;
++  return clock;
++}
++
++function lastCheckFrom(equity: unknown) {
++  const points = Array.isArray(equity) ? equity : Array.isArray((equity as { points?: unknown[] })?.points) ? (equity as { points: unknown[] }).points : [];
++  const last = points[points.length - 1] as { at?: number; time?: number } | undefined;
++  return last?.at ?? last?.time ?? null;
++}
++
++/**
++ * Answers "is this session doing anything?" — when it decides, when it last
++ * checked, what is waiting to fill, and why the last order failed.
++ */
++export function SessionActivity({ session, orders, equity }: { session: SessionSummary; orders: SessionOrder[]; equity: unknown }) {
++  const live = session.mode === "paper" && (session.status === "running" || session.status === "paused");
++  const pending = orders.filter((order) => order.status === "pending");
++  const byTime = [...orders].sort((left, right) => (right.filledAt ?? right.submittedAt ?? 0) - (left.filledAt ?? left.submittedAt ?? 0));
++  const lastFilled = byTime.find((order) => order.status === "filled");
++  const lastRejected = byTime.find((order) => order.status === "rejected");
++  const rejectedIsLatest = lastRejected && (!lastFilled || (lastRejected.submittedAt ?? 0) > (lastFilled.submittedAt ?? 0));
++  const lastCheck = lastCheckFrom(equity);
++  return (
++    <section className="panel session-activity" aria-label="Session activity">
++      <header className="panel-header"><h2>Activity</h2><span>{live ? (session.status === "paused" ? "Paused — risk checks only" : "Watching the market") : session.mode === "backtest" ? "Backtest" : "Not running"}</span></header>
++      <div className="activity-grid">
++        <div className="activity-item"><Radio size={15} aria-hidden="true" /><div><span>Cadence</span><p>{session.mode === "paper" ? describeCadence(session.barInterval, session.symbols) : "Ran once over historical bars."}</p></div></div>
++        <div className="activity-item"><Clock size={15} aria-hidden="true" /><div><span>Last check</span><p>{lastCheck ? when(lastCheck) : "Not yet — waiting for the first bar to close"}</p>{live && session.status === "running" ? <small>{nextDecision(session.barInterval, session.symbols)}</small> : null}</div></div>
++        <div className="activity-item"><Hourglass size={15} aria-hidden="true" /><div><span>Waiting to fill</span><p>{pending.length ? pending.map((order) => `${order.side.toUpperCase()} ${order.symbol}`).join(", ") : "Nothing — no open orders"}</p>{pending.length ? <small>{pending[0].signalReason ?? "Signal"} · placed {when(pending[0].submittedAt)}</small> : null}</div></div>
++        <div className={`activity-item${rejectedIsLatest ? " warn" : ""}`}>{rejectedIsLatest ? <AlertTriangle size={15} aria-hidden="true" /> : <Radio size={15} aria-hidden="true" />}<div><span>{rejectedIsLatest ? "Last order failed" : "Last trade"}</span>
++          {rejectedIsLatest && lastRejected ? <><p>{describeReason(lastRejected.rejectReason)}</p><small>{lastRejected.side.toUpperCase()} {lastRejected.symbol} · {when(lastRejected.resolvedAt ?? lastRejected.submittedAt)}</small></>
++            : lastFilled ? <><p>{lastFilled.side.toUpperCase()} {lastFilled.symbol} at {formatMoney(lastFilled.filledAvgPrice)}</p><small>{lastFilled.signalReason ?? "Signal"} · {when(lastFilled.filledAt)}</small></>
++            : <p>No trades yet. A trade happens only when the strategy's entry condition is met.</p>}
++        </div></div>
++      </div>
++    </section>
++  );
++}
+diff --git a/src/features/sessions/SessionDetailPage.tsx b/src/features/sessions/SessionDetailPage.tsx
+index 3e57674..23c492f 100644
+--- a/src/features/sessions/SessionDetailPage.tsx
++++ b/src/features/sessions/SessionDetailPage.tsx
+@@ -1,4 +1,4 @@
+-import { ArrowLeft, Octagon, Play } from "lucide-react";
++import { ArrowLeft, Octagon, Pause, Play } from "lucide-react";
+ import * as React from "react";
+ import { Link, useParams } from "react-router-dom";
+ import { formatMoney, formatPercent, formatQty } from "../../../packages/shared/format.js";
+@@ -7,7 +7,9 @@ import { StatusPill } from "../../components/data/StatusPill";
+ import { Timeline } from "../../components/data/Timeline";
+ import { EmptyState, ErrorState, LoadingState, StaleBadge } from "../../components/states/DataStates";
+ import { api } from "../../lib/api";
++import { describeReason } from "../../lib/orderReasons";
+ import { invalidateQueries, useQuery } from "../../lib/query";
++import { SessionActivity } from "./SessionActivity";
+ import { SessionChartPanel } from "./SessionChartPanel";
+ import {
+   equitySeriesFrom,
+@@ -31,12 +33,31 @@ export function SessionDetailPage() {
+   const [halting, setHalting] = React.useState(false);
+   const [starting, setStarting] = React.useState(false);
+   const [haltError, setHaltError] = React.useState<string | null>(null);
+-  const detail = useQuery(`session:${sessionId}`, () => fetchSession(sessionId), { enabled: Boolean(sessionId), staleAfterMs: 15_000 });
+-  const equity = useQuery(`session:${sessionId}:equity`, () => fetchSessionEquity(sessionId), { enabled: Boolean(sessionId), staleAfterMs: 30_000 });
+-  const orders = useQuery(`session:${sessionId}:orders`, () => fetchSessionOrders(sessionId), { enabled: Boolean(sessionId), staleAfterMs: 15_000 });
+-  const events = useQuery(`session:${sessionId}:events`, () => fetchSessionEvents(sessionId), { enabled: Boolean(sessionId), staleAfterMs: 15_000 });
++  // A running session changes underneath the page; poll so new trades appear without a reload.
++  const live = { enabled: Boolean(sessionId), staleAfterMs: 15_000, refreshMs: 30_000 };
++  const detail = useQuery(`session:${sessionId}`, () => fetchSession(sessionId), live);
++  const equity = useQuery(`session:${sessionId}:equity`, () => fetchSessionEquity(sessionId), live);
++  const orders = useQuery(`session:${sessionId}:orders`, () => fetchSessionOrders(sessionId), live);
++  const events = useQuery(`session:${sessionId}:events`, () => fetchSessionEvents(sessionId), live);
+ 
+   const series = React.useMemo(() => detail.data && equity.data ? equitySeriesFrom(equity.data, detail.data) : [], [detail.data, equity.data]);
++  // Final metrics are only written when a paper session ends; until then derive
++  // the live figures from the equity curve and the order ledger.
++  const liveMetrics = React.useMemo(() => {
++    const points = series[0]?.points ?? [];
++    const values = points.map((point) => Number(point.equity)).filter((value) => Number.isFinite(value) && value > 0);
++    let peak = values[0] ?? 0;
++    let drawdown = 0;
++    for (const value of values) {
++      peak = Math.max(peak, value);
++      if (peak > 0) drawdown = Math.max(drawdown, ((peak - value) / peak) * 100);
++    }
++    return {
++      returnPercent: values.length > 1 ? ((values[values.length - 1] / values[0]) - 1) * 100 : null,
++      maxDrawdown: values.length > 1 ? drawdown : null,
++      tradeCount: orders.data ? orders.data.filter((order) => order.status === "filled").length : null
++    };
++  }, [orders.data, series]);
+   const start = async () => {
+     setStarting(true);
+     setHaltError(null);
+@@ -51,6 +72,19 @@ export function SessionDetailPage() {
+       setStarting(false);
+     }
+   };
++  const setPaused = async (paused: boolean) => {
++    setStarting(true);
++    setHaltError(null);
++    try {
++      await api.post(`/sessions/${sessionId}/${paused ? "pause" : "resume"}`);
++      invalidateQueries(`session:${sessionId}`);
++      invalidateQueries("sessions");
++    } catch (error) {
++      setHaltError(error instanceof Error ? error.message : `Unable to ${paused ? "pause" : "resume"} session.`);
++    } finally {
++      setStarting(false);
++    }
++  };
+   const halt = async () => {
+     if (!detail.data || !window.confirm(`Halt ${detail.data.name}? Open positions will be held.`)) return;
+     setHalting(true);
+@@ -74,18 +108,25 @@ export function SessionDetailPage() {
+     <div className="session-detail page-stack">
+       <header className="detail-heading">
+         <div><Link className="back-link" to="/sessions"><ArrowLeft size={15} /> Sessions</Link><div className="title-row"><h1>{session.name}</h1><StatusPill status={session.status} /></div></div>
+-        {session.status === "draft" ? <button className="button primary" type="button" onClick={() => void start()} disabled={starting}><Play size={15} />{starting ? "Starting" : "Start session"}</button> : session.status === "running" || session.status === "paused" ? <button className="button destructive" type="button" onClick={halt} disabled={halting}><Octagon size={15} />{halting ? "Halting" : "Halt"}</button> : null}
++        <div className="page-actions">
++          {session.status === "draft" ? <button className="button primary" type="button" onClick={() => void start()} disabled={starting}><Play size={15} />{starting ? "Starting" : "Start session"}</button> : null}
++          {session.status === "running" ? <button className="button secondary" type="button" onClick={() => void setPaused(true)} disabled={starting}><Pause size={15} /> Pause</button> : null}
++          {session.status === "paused" ? <button className="button primary" type="button" onClick={() => void setPaused(false)} disabled={starting}><Play size={15} /> Resume</button> : null}
++          {session.status === "running" || session.status === "paused" ? <button className="button destructive" type="button" onClick={halt} disabled={halting}><Octagon size={15} />{halting ? "Halting" : "Halt"}</button> : null}
++        </div>
+       </header>
+       {haltError ? <p className="inline-error" role="alert">{haltError}</p> : null}
+       {session.status === "halted" ? <div className="halt-banner" role="alert"><Octagon size={17} /><strong>Halted</strong><span>{haltReason ?? "The API did not return a halt reason."}</span></div> : null}
+-      <p className="session-meta">{session.barInterval} bars · {timestamp(session.startedAt ?? session.windowStart)}–{timestamp(session.endedAt ?? session.windowEnd)} · {session.algorithmVersionId ?? "version unavailable"}</p>
++      <p className="session-meta">{session.symbols.join(", ")} · {session.mode} · {session.barInterval} bars · {timestamp(session.startedAt ?? session.windowStart)}–{timestamp(session.endedAt ?? session.windowEnd)} · {session.algorithmVersionId ?? "version unavailable"}</p>
++      {session.status === "errored" && session.errorDetail ? <div className="halt-banner" role="alert"><Octagon size={17} /><strong>Errored</strong><span>{session.errorDetail}{/server restarted/i.test(session.errorDetail) ? " Running sessions stop on restart unless the server is started with RESTART_RUNNING_SESSIONS=true." : ""}</span></div> : null}
++      {session.status !== "draft" ? <SessionActivity session={session} orders={orders.data ?? []} equity={equity.data} /> : null}
+ 
+       <section className="metric-strip" aria-label="Session metrics">
+-        <Metric compact metric="returnPercent" label="Return" value={session.metrics?.returnPercent} />
+-        <Metric compact metric="maxDrawdown" label="Max drawdown" value={session.metrics?.maxDrawdown} />
++        <Metric compact metric="returnPercent" label="Return" value={session.metrics?.returnPercent ?? liveMetrics.returnPercent} />
++        <Metric compact metric="maxDrawdown" label="Max drawdown" value={session.metrics?.maxDrawdown ?? liveMetrics.maxDrawdown} />
+         <Metric compact metric="sharpe" label="Sharpe" value={session.metrics?.sharpe} />
+         <Metric compact metric="winRate" label="Win rate" value={session.metrics?.winRate} />
+-        <Metric compact metric="tradeCount" label="Trades" value={session.metrics?.tradeCount} />
++        <Metric compact metric="tradeCount" label={session.metrics?.tradeCount != null ? "Trades" : "Fills"} value={session.metrics?.tradeCount ?? liveMetrics.tradeCount} />
+         <div className="metric compact"><span className="metric-label">vs SPY</span><strong className={`metric-value ${(session.metrics?.vsSpy ?? 0) >= 0 ? "positive" : "negative"}`}>{formatPercent(session.metrics?.vsSpy, { signed: true, precision: 2 })}</strong></div>
+       </section>
+ 
+@@ -93,7 +134,7 @@ export function SessionDetailPage() {
+         <header className="panel-header"><h2>Normalized equity</h2>{equity.isStale ? <StaleBadge updatedAt={equity.updatedAt} /> : null}</header>
+         {equity.isLoading ? <LoadingState title="Loading session equity" /> : null}
+         {equity.error && !equity.data ? <ErrorState detail={equity.error.message} onRetry={equity.refetch} /> : null}
+-        {series.length ? <SessionChartPanel series={series} trades={tradesForChart(orders.data ?? [])} riskEvents={risksForChart(events.data ?? [])} interval={session.barInterval} /> : equity.data ? <EmptyState title="No equity snapshots" detail="This session has no real curve to display." /> : null}
++        {series.length ? <SessionChartPanel series={series} trades={tradesForChart(orders.data ?? [])} riskEvents={risksForChart(events.data ?? [])} interval={session.barInterval} /> : equity.data ? <EmptyState title="No equity yet" detail={session.mode === "paper" && (session.status === "running" || session.status === "paused") ? "The curve starts at the session's first check; see Activity for when that is." : "This session has no recorded equity."} /> : null}
+       </section>
+ 
+       <section className="panel session-ledger">
+@@ -102,8 +143,8 @@ export function SessionDetailPage() {
+         </div>
+         {tab === "trades" ? (
+           orders.isLoading ? <LoadingState title="Loading trades" /> : orders.error && !orders.data ? <ErrorState detail={orders.error.message} onRetry={orders.refetch} /> : orders.data?.length ? (
+-            <div className="table-scroll"><table className="data-table"><thead><tr><th>Time</th><th>Status</th><th>Order</th><th className="numeric">Qty</th><th className="numeric">Fill</th><th>Cause / signal</th></tr></thead><tbody>{orders.data.map((order) => <tr key={order.id}><td>{timestamp(order.filledAt ?? order.submittedAt)}</td><td>{order.status}</td><td>{order.side.toUpperCase()} {order.symbol}</td><td className="numeric">{formatQty(order.qty)}</td><td className="numeric">{formatMoney(order.filledAvgPrice)}</td><td>{order.rejectReason ?? order.signalReason ?? "—"}</td></tr>)}</tbody></table></div>
+-          ) : <EmptyState title="No orders" detail="This session has no persisted orders." />
++            <div className="table-scroll"><table className="data-table"><thead><tr><th>Time</th><th>Status</th><th>Order</th><th className="numeric">Qty</th><th className="numeric">Fill</th><th>Cause / signal</th></tr></thead><tbody>{orders.data.map((order) => <tr key={order.id}><td>{timestamp(order.filledAt ?? order.submittedAt)}</td><td>{order.status}</td><td>{order.side.toUpperCase()} {order.symbol}</td><td className="numeric">{formatQty(order.qty)}</td><td className="numeric">{formatMoney(order.filledAvgPrice)}</td><td>{order.rejectReason ? <span className="negative" title={order.rejectReason}>{describeReason(order.rejectReason)}</span> : order.signalReason ?? "—"}</td></tr>)}</tbody></table></div>
++          ) : <EmptyState title="No orders yet" detail="Orders appear here when the strategy signals. See Activity above for when it next decides." />
+         ) : null}
+         {tab === "events" ? events.isLoading ? <LoadingState title="Loading events" /> : events.error && !events.data ? <ErrorState detail={events.error.message} onRetry={events.refetch} /> : events.data?.length ? <Timeline items={events.data} /> : <EmptyState title="No events" detail="No risk or state events were returned." /> : null}
+         {tab === "config" ? <pre className="config-view">{JSON.stringify({ algorithmVersionId: session.algorithmVersionId, symbols: session.symbols, params: session.params, fillModel: session.fillModel, riskProfile: session.riskProfile, schedule: session.schedule }, null, 2)}</pre> : null}
+diff --git a/src/features/sessions/SessionsPage.tsx b/src/features/sessions/SessionsPage.tsx
+index 7324402..5b7e17f 100644
+--- a/src/features/sessions/SessionsPage.tsx
++++ b/src/features/sessions/SessionsPage.tsx
+@@ -1,6 +1,6 @@
+ import * as React from "react";
+ import { Plus } from "lucide-react";
+-import { useNavigate } from "react-router-dom";
++import { useNavigate, useSearchParams } from "react-router-dom";
+ import { EmptyState, ErrorState, LoadingState, StaleBadge } from "../../components/states/DataStates";
+ import { invalidateQueries, useQuery } from "../../lib/query";
+ import type { SessionSummary } from "../../lib/types";
+@@ -9,13 +9,24 @@ import { SessionTable } from "./SessionTable";
+ import { fetchSessions } from "./sessionData";
+ import { CreateSessionDialog } from "./CreateSessionDialog";
+ 
+-const initialFilters: SessionFilterState = { status: "", mode: "", algorithm: "", days: "7" };
++// "All time" by default: a long-running paper session started more than a week
++// ago is exactly the one you want to see, and a date filter hid it.
++const initialFilters: SessionFilterState = { status: "", mode: "", algorithm: "", days: "" };
+ 
+ export function SessionsPage() {
+   const navigate = useNavigate();
++  const [searchParams, setSearchParams] = useSearchParams();
+   const [filters, setFilters] = React.useState(initialFilters);
+   const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
+-  const [createOpen, setCreateOpen] = React.useState(false);
++  const [createOpen, setCreateOpen] = React.useState(() => searchParams.get("new") === "1");
++  const closeCreate = () => {
++    setCreateOpen(false);
++    if (searchParams.has("new")) {
++      const next = new URLSearchParams(searchParams);
++      next.delete("new");
++      setSearchParams(next, { replace: true });
++    }
++  };
+   const sessions = useQuery("sessions:list", () => fetchSessions("/sessions?limit=100"), {
+     refreshMs: 15_000,
+     staleAfterMs: 20_000
+@@ -46,17 +57,17 @@ export function SessionsPage() {
+     <div className="sessions-page page-stack">
+       <header className="page-heading">
+         <div><h1>Sessions</h1>{sessions.isStale ? <StaleBadge updatedAt={sessions.updatedAt} /> : null}</div>
+-        <div className="page-actions"><button className="button secondary" type="button" onClick={() => setCreateOpen(true)}><Plus size={14} /> New draft</button><button className="button primary" type="button" disabled={selected.size < 2 || selected.size > 4} onClick={compare}>Compare selected ({selected.size}/4)</button></div>
++        <div className="page-actions"><button className="button secondary" type="button" onClick={() => setCreateOpen(true)}><Plus size={14} /> New session</button><button className="button primary" type="button" disabled={selected.size < 2 || selected.size > 4} onClick={compare}>Compare selected ({selected.size}/4)</button></div>
+       </header>
+       <SessionFilters value={filters} algorithms={algorithms} onChange={setFilters} />
+       <section className="panel sessions-list-panel">
+         {sessions.isLoading ? <LoadingState title="Loading sessions" /> : null}
+         {sessions.error && !sessions.data ? <ErrorState title="Sessions unavailable" detail={sessions.error.message} onRetry={sessions.refetch} /> : null}
+-        {sessions.data && filtered.length === 0 ? <EmptyState title="No matching sessions" detail="Adjust the filters or start a real paper or backtest session." /> : null}
++        {sessions.data && filtered.length === 0 ? <EmptyState title={sessions.data.length ? "No matching sessions" : "No sessions yet"} detail={sessions.data.length ? "Adjust the filters to see more." : "A paper session trades a strategy on live prices with simulated money."} action={<button className="button primary" type="button" onClick={() => setCreateOpen(true)}><Plus size={14} /> New session</button>} /> : null}
+         {filtered.length ? <SessionTable sessions={filtered} selected={selected} onSelect={toggle} onOpen={(id) => navigate(`/sessions/${id}`)} /> : null}
+         {sessions.data?.length ? <footer className="table-footer">Showing {filtered.length} of {sessions.data.length} loaded sessions</footer> : null}
+       </section>
+-      <CreateSessionDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(session) => { setCreateOpen(false); invalidateQueries("sessions"); navigate(`/sessions/${session.id}`); }} />
++      <CreateSessionDialog open={createOpen} initialSymbol={searchParams.get("symbols") ?? ""} initialAlgorithmId={searchParams.get("algorithm") ?? ""} onClose={closeCreate} onCreated={(session) => { setCreateOpen(false); invalidateQueries("sessions"); invalidateQueries("overview"); navigate(`/sessions/${session.id}`); }} />
+     </div>
+   );
+ }
+diff --git a/src/features/sessions/sessionData.ts b/src/features/sessions/sessionData.ts
+index b8e5a8e..2044be3 100644
+--- a/src/features/sessions/sessionData.ts
++++ b/src/features/sessions/sessionData.ts
+@@ -1,5 +1,6 @@
+ import type { ChartEquitySeries, ChartRiskEvent, ChartTrade } from "../../charts";
+ import type { Fill, Order } from "../../../packages/shared/schemas.js";
++import { activityFrom } from "../../lib/activity";
+ import { api, listFrom } from "../../lib/api";
+ import type { ActivityItem, EquityPoint, NormalizedEquityPoint, SessionCompare, SessionComparisonEntry, SessionDetail, SessionSummary } from "../../lib/types";
+ 
+@@ -36,23 +37,7 @@ export async function fetchSessionOrders(id: string) {
+ }
+ 
+ export async function fetchSessionEvents(id: string) {
+-  const events = listFrom<Record<string, unknown>>(await api.get<unknown>(`/sessions/${encodeURIComponent(id)}/events`), ["events", "items"]);
+-  return events.map((event, index): ActivityItem => {
+-    const detail = event.detailJson && typeof event.detailJson === "object" ? event.detailJson as Record<string, unknown> : {};
+-    const transition = event.fromStatus && event.toStatus ? `${event.fromStatus} → ${event.toStatus}` : undefined;
+-    const title = event.title ?? event.action ?? event.actionTaken ?? transition ?? event.type;
+-    const description = event.detail ?? detail.message ?? detail.note ?? detail.reason;
+-    return {
+-      id: String(event.id ?? `${event.type ?? "event"}:${event.at ?? index}`),
+-      at: typeof event.at === "number" ? event.at : 0,
+-      type: String(event.type ?? "event"),
+-      severity: event.severity === "warn" || event.severity === "block" || event.severity === "halt" ? event.severity : "info",
+-      title: title == null ? undefined : String(title),
+-      detail: description == null ? (Object.keys(detail).length ? JSON.stringify(detail) : undefined) : String(description),
+-      signalReason: typeof event.signalReason === "string" ? event.signalReason : typeof detail.signalReason === "string" ? detail.signalReason : undefined,
+-      symbol: typeof event.symbol === "string" ? event.symbol : typeof detail.symbol === "string" ? detail.symbol : undefined
+-    };
+-  });
++  return listFrom<unknown>(await api.get<unknown>(`/sessions/${encodeURIComponent(id)}/events`), ["events", "items"]).map(activityFrom);
+ }
+ 
+ function pointFrom(value: unknown) {
+@@ -65,7 +50,11 @@ function pointFrom(value: unknown) {
+ }
+ 
+ export function equitySeriesFrom(payload: unknown, session: SessionSummary): ChartEquitySeries[] {
+-  const rawSeries = listFrom<Record<string, unknown>>(payload, ["series"]);
++  // The equity endpoint returns a bare array of snapshots. listFrom() hands an
++  // array straight back, so only treat entries as series when they carry points;
++  // otherwise every snapshot was read as an empty series and nothing rendered.
++  const rawSeries = listFrom<Record<string, unknown>>(payload, ["series"])
++    .filter((series) => series && typeof series === "object" && Array.isArray(series.points));
+   if (rawSeries.length) {
+     return rawSeries.flatMap((series, index) => {
+       const points = Array.isArray(series.points) ? series.points.map(pointFrom).filter((point) => point !== null) : [];
+diff --git a/src/features/strategies/StrategiesPage.tsx b/src/features/strategies/StrategiesPage.tsx
+index 8dac20b..f86a33c 100644
+--- a/src/features/strategies/StrategiesPage.tsx
++++ b/src/features/strategies/StrategiesPage.tsx
+@@ -16,18 +16,21 @@ export function StrategiesPage() {
+   const [uploading, setUploading] = React.useState(false);
+   const [overwrite, setOverwrite] = React.useState(false);
+   const [scope, setScope] = React.useState<"strategies" | "all">("strategies");
++  const [search, setSearch] = React.useState("");
+   const inputRef = React.useRef<HTMLInputElement>(null);
+   const families = React.useMemo(() => {
+     const groups = new Map<string, Algorithm[]>();
+     for (const algorithm of algorithms.data ?? []) {
+       if (scope === "strategies" && algorithm.role === "control") continue;
++      const needle = search.trim().toLowerCase();
++      if (needle && ![algorithm.name, algorithm.id, algorithm.description ?? ""].some((text) => text.toLowerCase().includes(needle))) continue;
+       const family = algorithm.plugin?.id ?? (algorithm.uploaded ? "Uploaded methods" : "Local methods");
+       groups.set(family, [...(groups.get(family) ?? []), algorithm]);
+     }
+     return [...groups.entries()]
+       .map(([name, methods]) => ({ name, methods: [...methods].sort((left, right) => left.name.localeCompare(right.name)) }))
+       .sort((left, right) => left.name.localeCompare(right.name));
+-  }, [algorithms.data, scope]);
++  }, [algorithms.data, scope, search]);
+ 
+   const toggle = async (algorithm: Algorithm) => {
+     setBusy(algorithm.id);
+@@ -64,18 +67,18 @@ export function StrategiesPage() {
+       <header className="page-heading"><div><h1>Strategies</h1>{algorithms.isStale ? <StaleBadge updatedAt={algorithms.updatedAt} /> : null}</div><div className="page-actions"><a className="button secondary" download href="/stockbot-strategy-template.js"><Download size={14} /> Starter file</a><button className="button primary" type="button" disabled={uploading} onClick={() => inputRef.current?.click()}><FileUp size={14} />{uploading ? "Uploading" : "Upload .js"}</button><input ref={inputRef} className="sr-only" type="file" accept=".js,text/javascript,application/javascript" onChange={(event) => void upload(event.target.files?.[0])} /></div></header>
+       <section className="strategy-onboarding" aria-label="Paper-trading research workflow"><div><span>01</span><strong>Choose a method</strong><small>Browse validated research methods by source pack.</small></div><div><span>02</span><strong>Set the hypothesis</strong><small>Adjust parameters and synchronous buy/sell rules.</small></div><div><span>03</span><strong>Paper test</strong><small>Compare every run with index-fund benchmarks.</small></div></section>
+       <div className="strategy-upload-options"><p className="strategy-upload-note">Uploads require the API mutation token set in <Link to="/settings">Settings</Link>. Strategies stay long-only and run through the paper/backtest engine.</p><label><input type="checkbox" checked={overwrite} onChange={(event) => setOverwrite(event.target.checked)} /> Replace an uploaded file with the same name</label></div>
+-      <div className="strategy-library-filters" role="group" aria-label="Strategy library scope"><span>Library view</span><button className={scope === "strategies" ? "active" : ""} type="button" onClick={() => setScope("strategies")}>Methods only</button><button className={scope === "all" ? "active" : ""} type="button" onClick={() => setScope("all")}>Include peer controls</button></div>
++      <div className="strategy-library-filters" role="group" aria-label="Strategy library scope"><span>Library view</span><button className={scope === "strategies" ? "active" : ""} type="button" onClick={() => setScope("strategies")}>Methods only</button><button className={scope === "all" ? "active" : ""} type="button" onClick={() => setScope("all")}>Include peer controls</button><input className="strategy-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Filter by name, e.g. bitcoin" aria-label="Filter strategies" /></div>
+       {error ? <p className="inline-error" role="alert">{error}</p> : null}
+       {algorithms.isLoading ? <LoadingState title="Loading strategies" /> : null}
+       {algorithms.error && !algorithms.data ? <ErrorState title="Strategies unavailable" detail={algorithms.error.message} onRetry={algorithms.refetch} /> : null}
+-      {algorithms.data && families.length === 0 ? <EmptyState title="No strategies installed" detail="Validated algorithms will appear here." /> : null}
++      {algorithms.data && families.length === 0 ? <EmptyState title={search ? "No strategies match" : "No strategies installed"} detail={search ? "Try a different word." : "Validated algorithms will appear here."} /> : null}
+       {families.map(({ name, methods }) => <section className="strategy-family" key={name}><header><div><h2>{name}</h2><span>{methods.length} {methods.length === 1 ? "method" : "methods"}</span></div></header><div className="strategy-list">{methods.map((algorithm) => (
+         <article className="strategy-row" key={algorithm.id}>
+           <div className="strategy-icon"><Bot size={19} /></div>
+           <div className="strategy-copy"><div className="title-row"><h2>{algorithm.name}</h2>{algorithm.version ? <span className="version-label">{algorithm.version.id}</span> : null}{algorithm.horizon ? <span className="horizon-label">{algorithm.horizon}</span> : null}</div><p>{algorithm.description ?? "No description returned by the API."}</p><small>{algorithm.author ? `By ${algorithm.author}` : "Author unavailable"}</small></div>
+           <div className="strategy-result"><span>{algorithm.role === "control" ? "Peer control" : "Source version"}</span><strong>{algorithm.version?.hash.slice(0, 10) ?? "—"}</strong><small>{algorithm.params ? `${Object.keys(algorithm.params).length} default parameters` : "Parameters unavailable"}</small></div>
+           <button className="icon-button strategy-toggle" type="button" disabled={busy === algorithm.id} aria-label={`${algorithm.enabled ? "Disable" : "Enable"} ${algorithm.name}`} onClick={() => void toggle(algorithm)}>{algorithm.enabled ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}</button>
+-          <Link className="button secondary" to={`/strategies/${algorithm.id}`}>Open <ArrowRight size={14} /></Link>
++          <Link className="button secondary" to={`/strategies/${encodeURIComponent(algorithm.id)}`}>Open <ArrowRight size={14} /></Link>
+         </article>
+       ))}</div></section>)}
+     </div>
+diff --git a/src/features/strategies/StrategyDetailPage.tsx b/src/features/strategies/StrategyDetailPage.tsx
+index db34258..a8bef12 100644
+--- a/src/features/strategies/StrategyDetailPage.tsx
++++ b/src/features/strategies/StrategyDetailPage.tsx
+@@ -66,7 +66,7 @@ export function StrategyDetailPage() {
+   if (!algorithm) return <EmptyState title="Strategy not found" detail="The API did not return this strategy." />;
+   return (
+     <div className="strategy-detail page-stack">
+-      <header className="detail-heading"><div><Link className="back-link" to="/strategies"><ArrowLeft size={15} /> Strategies</Link><h1>{algorithm.name}</h1><p>{algorithm.description ?? "No description returned by the API."}</p></div></header>
++      <header className="detail-heading"><div><Link className="back-link" to="/strategies"><ArrowLeft size={15} /> Strategies</Link><h1>{algorithm.name}</h1><p>{algorithm.description ?? "No description returned by the API."}</p></div>{algorithm.role !== "control" ? <div className="page-actions"><Link className="button primary" to={`/sessions?new=1&algorithm=${encodeURIComponent(algorithm.id)}`}><Play size={14} /> Paper trade this</Link></div> : null}</header>
+       {error ? <p className="inline-error" role="alert">{error}</p> : null}
+       <div className="strategy-detail-grid">
+         <section className="panel params-panel"><header className="panel-header"><h2>Backtest parameters</h2><span>Run override only</span></header>{Object.keys(params).length ? <div className="param-list">{Object.entries(params).map(([key, value]) => <label key={key}><span>{key}</span>{typeof value === "boolean" ? <select value={String(value)} onChange={(event) => updateParam(key, event.target.value)}><option value="true">True</option><option value="false">False</option></select> : <input type={typeof value === "number" ? "number" : "text"} value={String(value)} onChange={(event) => updateParam(key, event.target.value)} />}</label>)}</div> : <EmptyState compact title="No backtest parameters" />}</section>
+diff --git a/src/lib/activity.ts b/src/lib/activity.ts
+new file mode 100644
+index 0000000..95c5745
+--- /dev/null
++++ b/src/lib/activity.ts
+@@ -0,0 +1,70 @@
++import { describeReason } from "./orderReasons";
++import type { ActivityItem } from "./types";
++
++const TITLES: Record<string, string> = {
++  session_created: "Session created",
++  session_start: "Session starting",
++  session_armed: "Session running",
++  session_complete: "Backtest finished",
++  session_signal: "Signal",
++  signal: "Signal",
++  session_order_filled: "Order filled",
++  order_filled: "Order filled",
++  session_order_rejected: "Order rejected",
++  order_rejected: "Order rejected",
++  session_protective_exit: "Protective exit",
++  session_paused: "Session paused",
++  session_resumed: "Session resumed",
++  session_halted: "Session halted",
++  session_stopped: "Session stopped",
++  session_data_stale: "Market data stale — paused",
++  session_bars_unavailable: "Bars unavailable",
++  session_research_unavailable: "Research unavailable",
++  session_restart_resumed: "Resumed after restart",
++  session_restart_error: "Stopped by restart",
++  session_next_open_unavailable: "Opening price unavailable",
++  research_unavailable: "Research unavailable",
++  state_transition: "State changed"
++};
++
++function humanize(code: string) {
++  const text = code.replace(/^session_/, "").replace(/_/g, " ");
++  return text.charAt(0).toUpperCase() + text.slice(1);
++}
++
++function recordOf(value: unknown) {
++  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
++}
++
++/**
++ * Normalizes audit rows, session events and alerts into one timeline shape
++ * with readable titles. Raw audit rows carry `action` rather than a title, and
++ * rendered as blank lines before this.
++ */
++export function activityFrom(raw: unknown, index = 0): ActivityItem {
++  const event = recordOf(raw);
++  const detail = recordOf(event.detailJson ?? event.detail);
++  const code = String(event.action ?? event.actionTaken ?? event.type ?? "event");
++  const transition = event.fromStatus && event.toStatus ? `${event.fromStatus} → ${event.toStatus}` : undefined;
++  const symbol = typeof event.symbol === "string" ? event.symbol : typeof detail.symbol === "string" ? detail.symbol : undefined;
++  const side = typeof detail.action === "string" ? detail.action.toUpperCase() : typeof detail.side === "string" ? detail.side.toUpperCase() : undefined;
++  let title = typeof event.title === "string" ? event.title : TITLES[code] ?? humanize(code);
++  if ((code.endsWith("signal") || code.endsWith("order_filled")) && symbol) title = `${title}: ${side ? `${side} ` : ""}${symbol}`;
++  if (code === "state_transition" && transition) title = `State: ${transition}`;
++  const reason = typeof detail.reason === "string" ? detail.reason : typeof event.rejectReason === "string" ? event.rejectReason : undefined;
++  const described = code.includes("rejected") ? describeReason(reason) : null;
++  const message = typeof event.message === "string" ? event.message : typeof detail.message === "string" ? detail.message : undefined;
++  const severity = event.severity === "warn" || event.severity === "block" || event.severity === "halt"
++    ? event.severity
++    : code.includes("rejected") || code.includes("unavailable") || code.includes("stale") || code.includes("restart_error") ? "warn" : "info";
++  return {
++    id: String(event.id ?? `${code}:${event.at ?? index}`),
++    at: typeof event.at === "number" ? event.at : Number(event.createdAt ?? 0),
++    type: code,
++    severity,
++    title,
++    detail: described ?? message ?? (typeof event.detail === "string" ? event.detail : undefined) ?? (code === "session_created" && Array.isArray(detail.symbols) ? `${detail.mode ?? ""} · ${detail.symbols.join(", ")}`.trim() : undefined),
++    signalReason: typeof event.signalReason === "string" ? event.signalReason : typeof detail.signalReason === "string" ? detail.signalReason : undefined,
++    symbol
++  };
++}
+diff --git a/src/lib/cadence.ts b/src/lib/cadence.ts
+new file mode 100644
+index 0000000..16c808a
+--- /dev/null
++++ b/src/lib/cadence.ts
+@@ -0,0 +1,57 @@
++/** Mirrors server/market/catalog.js isCryptoSymbol for client-side hints. */
++const CRYPTO = new Set(["BTCUSD", "ETHUSD", "SOLUSD", "DOGEUSD"]);
++
++export function isCryptoSymbol(symbol: string) {
++  const normalized = symbol.trim().toUpperCase();
++  return normalized.includes("/") || CRYPTO.has(normalized);
++}
++
++const LABEL: Record<string, string> = {
++  "1min": "every minute",
++  "5min": "every 5 minutes",
++  "15min": "every 15 minutes",
++  "30min": "every 30 minutes",
++  "1hour": "every hour",
++  "1day": "once a day",
++  "1week": "once a week",
++  "1month": "once a month"
++};
++
++/**
++ * How often a paper session gets a chance to act, in words. This is the most
++ * common reason a session looks idle: a daily stock session decides once per
++ * trading day and only fills at the next open.
++ */
++export function describeCadence(interval: string, symbols: string[]) {
++  const every = LABEL[interval] ?? `every ${interval}`;
++  const crypto = symbols.length > 0 && symbols.every(isCryptoSymbol);
++  const higher = ["1day", "1week", "1month"].includes(interval);
++  if (crypto) return `Decides ${every}, around the clock. New orders fill immediately at the live price.`;
++  if (higher) {
++    return `Decides ${every} at the 4:00 pm ET close and fills at the next market open (9:30 am ET). Expect few trades.`;
++  }
++  return `Decides ${every} while the US market is open and fills immediately at the live price.`;
++}
++
++const INTERVAL_MS: Record<string, number> = {
++  "1min": 60_000,
++  "5min": 300_000,
++  "15min": 900_000,
++  "30min": 1_800_000,
++  "1hour": 3_600_000
++};
++
++/** When the scheduler next wakes this session, or a phrase when it is calendar-bound. */
++export function nextDecision(interval: string, symbols: string[], now = Date.now()) {
++  const crypto = symbols.length > 0 && symbols.every(isCryptoSymbol);
++  const step = INTERVAL_MS[interval];
++  if (step) {
++    const at = Math.floor(now / step) * step + step;
++    const clock = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" }).format(at);
++    return crypto ? `Next check ${clock}` : `Next check ${clock} if the market is open`;
++  }
++  if (crypto) {
++    return interval === "1day" ? "Next check at 00:00 UTC" : "Next check at the next UTC period boundary";
++  }
++  return "Next check at the 4:00 pm ET close";
++}
+diff --git a/src/lib/orderReasons.ts b/src/lib/orderReasons.ts
+new file mode 100644
+index 0000000..875d082
+--- /dev/null
++++ b/src/lib/orderReasons.ts
+@@ -0,0 +1,26 @@
++/** Plain-language explanations for the reject and risk codes the API returns. */
++const REASONS: Record<string, string> = {
++  missed_next_bar_open: "Missed the next open — the order could not be filled in the opening window",
++  quote_freshness: "No fresh price — the latest quote was too old to trade on",
++  market_hours: "Market closed when the order was processed",
++  market_data_unavailable: "Market data unavailable",
++  invalid_reference_price: "No valid opening price",
++  price_sanity: "Price moved beyond the sanity band",
++  min_order_notional: "Order below the minimum size",
++  sufficient_funds: "Not enough cash",
++  max_concurrent_positions: "Too many open positions",
++  max_symbol_exposure: "Symbol exposure limit reached",
++  max_position_size: "Position size limit reached",
++  max_orders_per_minute: "Order rate limit reached",
++  max_orders_per_day: "Daily order limit reached",
++  max_exposure: "Account exposure limit reached",
++  max_daily_loss: "Daily loss limit reached",
++  max_drawdown: "Drawdown limit reached",
++  max_account_drawdown: "Account drawdown limit reached",
++  data_staleness: "Market data went stale"
++};
++
++export function describeReason(code?: string | null) {
++  if (!code) return null;
++  return REASONS[code] ?? code.replace(/_/g, " ");
++}
+diff --git a/src/lib/overview.ts b/src/lib/overview.ts
+index bd88f50..7ea4bd0 100644
+--- a/src/lib/overview.ts
++++ b/src/lib/overview.ts
+@@ -1,3 +1,4 @@
++import { activityFrom } from "./activity";
+ import { api, listFrom } from "./api";
+ import { useQuery } from "./query";
+ import type { ActivityItem, OverviewAggregate, Portfolio, ProviderHealth, RiskBudgetItem, SessionSummary } from "./types";
+@@ -44,8 +45,8 @@ export function decodeOverview(payload: unknown): OverviewAggregate {
+     portfolio: source.portfolio && typeof source.portfolio === "object" ? source.portfolio as Portfolio : undefined,
+     activeSessions: listFrom<SessionSummary>(source.activeSessions ?? source.sessions, ["sessions", "items"]),
+     riskBudget,
+-    activity: listFrom<ActivityItem>(source.activity, ["activity", "items", "events"]),
+-    alerts: listFrom<ActivityItem>(source.alerts, ["alerts", "items"]),
++    activity: listFrom<unknown>(source.activity, ["activity", "items", "events"]).map(activityFrom),
++    alerts: listFrom<unknown>(source.alerts, ["alerts", "items"]).map(activityFrom),
+     dataHealth: healthFrom(source.dataHealth ?? source.providers)
+   };
+ }
+diff --git a/src/styles/components.css b/src/styles/components.css
+index 30f483d..97d1657 100644
+--- a/src/styles/components.css
++++ b/src/styles/components.css
+@@ -45,7 +45,7 @@ label > span { color: var(--text-secondary); font-size: 12px; }
+ .status-halted, .status-errored { color: var(--destructive); }.status-halted .status-dot, .status-errored .status-dot { border-radius: 1px; background: currentColor; }
+ .status-draft, .status-stopped { color: var(--text-secondary); }
+ .budget-list { padding: 0 var(--space-4); }
+-.budget-row { min-height: 66px; display: grid; grid-template-columns: minmax(130px, 1fr) 62px minmax(120px, 1.2fr) minmax(92px, auto); align-items: center; gap: var(--space-3); border-bottom: 1px solid var(--border); }
++.budget-row { min-height: 66px; display: grid; grid-template-columns: minmax(130px, 1fr) 78px minmax(120px, 1.2fr) minmax(92px, auto); align-items: center; gap: var(--space-3); border-bottom: 1px solid var(--border); }
+ .budget-row:last-child { border-bottom: 0; }
+ .budget-label { display: flex; justify-content: space-between; gap: var(--space-3); }
+ .budget-label strong { font-family: var(--font-numeric); font-weight: 500; }
+@@ -61,7 +61,7 @@ label > span { color: var(--text-secondary); font-size: 12px; }
+ .severity-warn .timeline-marker { color: var(--warning); }.severity-block .timeline-marker, .severity-halt .timeline-marker { color: var(--destructive); border-radius: 3px; }
+ .timeline-content { min-width: 0; display: flex; flex-direction: column; gap: 2px; }.timeline-content strong { font-size: 12px; }.timeline-content span { color: var(--text-secondary); }.timeline-content small { color: var(--text-muted); }
+ .data-state { min-height: 124px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-4); color: var(--text-secondary); text-align: center; }
+-.data-state.compact { min-height: 76px; }.data-state svg { color: var(--text-muted); }.data-state strong { color: var(--text); font-size: 13px; }.data-state span { max-width: 520px; font-size: 12px; }
++.data-state.compact { min-height: 76px; }.data-state > svg { color: var(--text-muted); }.data-state-action { margin-top: var(--space-2); }.data-state strong { color: var(--text); font-size: 13px; }.data-state span { max-width: 520px; font-size: 12px; }
+ .error-state svg { color: var(--destructive); }
+ .loading-state { align-items: stretch; }
+ .skeleton-line { width: 58%; height: 9px; border-radius: 3px; background: linear-gradient(90deg, #14212b 20%, #1c2d3a 50%, #14212b 80%); background-size: 200% 100%; animation: skeleton 1.4s linear infinite; }.skeleton-line.wide { width: 88%; }.skeleton-line.short { width: 35%; }
+@@ -77,4 +77,7 @@ label > span { color: var(--text-secondary); font-size: 12px; }
+ .command-list button { width: 100%; display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--space-2); padding: 10px; color: var(--text-secondary); background: transparent; border: 0; border-radius: var(--radius-sm); text-align: left; cursor: pointer; }.command-list button.active { color: var(--text); background: var(--surface-selected); }.command-list button span { display: flex; flex-direction: column; }.command-list button small { font-size: 11px; }.command-list kbd { color: var(--text-muted); font-family: var(--font-numeric); }
+ .palette-empty { padding: var(--space-6); color: var(--text-secondary); text-align: center; }
+ .command-palette footer { display: flex; gap: var(--space-4); padding: var(--space-2) var(--space-4); color: var(--text-muted); border-top: 1px solid var(--border); font-size: 10px; }
+-@media (max-width: 759px) { .metric-strip { grid-template-columns: repeat(2, 1fr); }.metric-strip .metric { border-bottom: 1px solid var(--border); }.budget-row { grid-template-columns: 1fr 60px; padding: var(--space-3) 0; }.budget-track { grid-column: 1 / -1; }.budget-limit { display: none; }.timeline-item { grid-template-columns: 54px 28px minmax(0, 1fr); }.data-table th, .data-table td { padding-inline: 10px; } }
++@media (max-width: 759px) { .metric-strip { grid-template-columns: repeat(2, 1fr); }.metric-strip .metric { border-bottom: 1px solid var(--border); }.budget-row { grid-template-columns: 1fr 78px; padding: var(--space-3) 0; }.budget-track { grid-column: 1 / -1; }.budget-limit { display: none; }.timeline-item { grid-template-columns: 54px 28px minmax(0, 1fr); }.data-table th, .data-table td { padding-inline: 10px; } }
++.panel-link { margin-left: auto; color: var(--accent); font-size: 12px; text-decoration: none; }
++.panel-link:hover { text-decoration: underline; }
++.panel-header .panel-link + * { margin-left: var(--space-3); }
+diff --git a/src/styles/selection.css b/src/styles/selection.css
+index 78657ec..ae5999f 100644
+--- a/src/styles/selection.css
++++ b/src/styles/selection.css
+@@ -6,5 +6,6 @@
+ .selection-summary { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); }
+ .selection-summary > div { display: flex; flex-direction: column; gap: 2px; }.selection-summary span, .selection-summary p { color: var(--text-secondary); font-size: 12px; }.selection-summary p { max-width: 440px; }
+ .selection-warning { padding: var(--space-3) var(--space-4); color: var(--warning); border: 1px solid rgba(240, 170, 44, 0.4); border-radius: var(--radius-sm); background: rgba(240, 170, 44, 0.06); font-size: 12px; }
+-.selection-table td:nth-child(2) { font-family: var(--font-numeric); }
++.selection-table td:nth-child(3) { font-family: var(--font-numeric); }
++.selection-table .select-cell { width: 36px; text-align: center; }
+ @media (max-width: 759px) { .selection-controls, .selection-summary { align-items: stretch; flex-direction: column; }.selection-controls label { min-width: 0; }.selection-summary { gap: var(--space-2); } }
+diff --git a/src/styles/sessions.css b/src/styles/sessions.css
+index 879b339..fbf49b9 100644
+--- a/src/styles/sessions.css
++++ b/src/styles/sessions.css
+@@ -25,3 +25,18 @@
+ .session-dialog form > footer { min-height: 60px; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
+ @media (max-width: 759px) { .session-filters { display: grid; grid-template-columns: 1fr 1fr; }.session-filters label { min-width: 0; }.session-chart-panel { padding: 0; }.session-meta { line-height: 1.7; } }
+ @media (max-width: 520px) { .session-dialog-grid { grid-template-columns: 1fr; }.session-dialog-grid .full-field { grid-column: 1; } }
++.session-dialog-grid .field-hint { color: var(--text-secondary); font-size: 11px; line-height: 1.45; }
++.param-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-3); margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); }
++.param-fields legend { padding: 0 6px; color: var(--text-secondary); font-size: 11px; }
++.dialog-note { margin: 0 var(--space-4) var(--space-3); padding: var(--space-2) var(--space-3); border-left: 2px solid var(--accent); background: var(--surface-hover); color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
++.session-dialog form > footer .checkbox-field { display: inline-flex; align-items: center; gap: 8px; margin-right: auto; color: var(--text-secondary); font-size: 12px; }
++.session-activity .activity-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
++.activity-item { display: flex; gap: var(--space-3); min-width: 0; padding: var(--space-3) var(--space-4); border-right: 1px solid var(--border); }
++.activity-item:last-child { border-right: 0; }
++.activity-item > svg { flex: none; margin-top: 2px; color: var(--text-muted); }
++.activity-item span { display: block; margin-bottom: 4px; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
++.activity-item p { color: var(--text); font-size: 12.5px; line-height: 1.45; }
++.activity-item small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11px; line-height: 1.4; }
++.activity-item.warn > svg, .activity-item.warn span { color: var(--warning); }
++@media (max-width: 1099px) { .session-activity .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.activity-item:nth-child(2) { border-right: 0; }.activity-item:nth-child(-n+2) { border-bottom: 1px solid var(--border); } }
++@media (max-width: 559px) { .session-activity .activity-grid { grid-template-columns: 1fr; }.activity-item { border-right: 0; border-bottom: 1px solid var(--border); }.activity-item:last-child { border-bottom: 0; } }
+diff --git a/src/styles/strategies.css b/src/styles/strategies.css
+index 552b2a4..1b6b539 100644
+--- a/src/styles/strategies.css
++++ b/src/styles/strategies.css
+@@ -20,3 +20,5 @@
+ .source-panel pre { max-height: 420px; }
+ @media (max-width: 900px) { .strategy-row { grid-template-columns: 38px 1fr auto; }.strategy-result { grid-column: 2; text-align: left; }.strategy-row > .button { grid-column: 3; grid-row: 1 / 3; }.strategy-toggle { display: none; }.strategy-detail-grid { grid-template-columns: 1fr; } }
+ @media (max-width: 580px) { .strategy-onboarding, .control-checks { grid-template-columns: 1fr; }.strategy-onboarding > div, .control-checks label { border-right: 0; border-bottom: 1px solid var(--border); }.strategy-onboarding > div:last-child, .control-checks label:last-child { border-bottom: 0; }.strategy-upload-options { align-items: flex-start; flex-direction: column; }.strategy-row { grid-template-columns: 36px 1fr; }.strategy-row > .button { grid-column: 1 / -1; grid-row: auto; }.strategy-result { grid-column: 2; }.param-list, .result-metrics { grid-template-columns: 1fr 1fr; }.backtest-controls { grid-template-columns: 1fr 1fr; }.backtest-controls .button { grid-column: 1 / -1; } }
++.strategy-library-filters .strategy-search { width: min(260px, 100%); margin-left: auto; }
++@media (max-width: 759px) { .strategy-library-filters { flex-wrap: wrap; }.strategy-library-filters .strategy-search { width: 100%; margin-left: 0; margin-top: var(--space-2); } }
+diff --git a/test/experiments/selection.test.js b/test/experiments/selection.test.js
+index 7596c06..9828524 100644
+--- a/test/experiments/selection.test.js
++++ b/test/experiments/selection.test.js
+@@ -210,3 +210,12 @@ test("recommendSymbols derives the expected bar count from the range it was give
+   assert.deepEqual(result.excluded.map((entry) => entry.symbol), ["SHORT"]);
+   assert.match(result.excluded[0].blockers.join(" "), /40 of 83 bars/);
+ });
++
++test("crypto is not excluded by share-price gates and is scored on a crypto volatility band", () => {
++  const bitcoin = scoreCandidate(goodFacts({ symbol: "BTCUSD", price: 64_000, atrPercent: 4 }));
++  assert.equal(bitcoin.eligible, true, bitcoin.blockers.join("; "));
++  assert.ok(bitcoin.components.volatility > 0.9);
++  const equity = scoreCandidate(goodFacts({ symbol: "BRK.A", price: 64_000 }));
++  assert.equal(equity.eligible, false);
++  assert.match(equity.blockers.join(" "), /ceiling/);
++});
+diff --git a/test/market/alpaca-bars.test.js b/test/market/alpaca-bars.test.js
+index 053c6c5..43da824 100644
+--- a/test/market/alpaca-bars.test.js
++++ b/test/market/alpaca-bars.test.js
+@@ -21,3 +21,43 @@ for (const symbol of ["AAPL", "BTCUSD"]) {
+     assert.equal(bars.at(-1).time, history.at(-1).t);
+   });
+ }
++
++test("Alpaca quotes use the newer of the last trade and a sane bid/ask midpoint", async () => {
++  const { freshestPrice } = await import("../../server/market/providers/alpaca.js");
++  const trade = { p: 64_000, t: "2026-10-19T10:00:00Z" };
++  const fresher = { bp: 64_100, ap: 64_110, t: "2026-10-19T10:00:30Z" };
++  assert.deepEqual(
++    { price: freshestPrice({ latestTrade: trade, latestQuote: fresher }).price, time: freshestPrice({ latestTrade: trade, latestQuote: fresher }).time },
++    { price: 64_105, time: fresher.t }
++  );
++  const older = { bp: 63_000, ap: 63_010, t: "2026-10-19T09:59:00Z" };
++  assert.equal(freshestPrice({ latestTrade: trade, latestQuote: older }).price, 64_000);
++  const wide = { bp: 60_000, ap: 70_000, t: "2026-10-19T10:01:00Z" };
++  assert.equal(freshestPrice({ latestTrade: trade, latestQuote: wide }).price, 64_000, "a wide spread is ignored");
++  assert.equal(freshestPrice({}), null);
++});
++
++test("Alpaca crypto quote reads the BTC/USD snapshot with the fresher bid/ask", async (t) => {
++  t.mock.method(globalThis, "fetch", async (input) => {
++    const url = new URL(input);
++    assert.equal(url.searchParams.get("symbols"), "BTC/USD");
++    return {
++      ok: true,
++      json: async () => ({
++        snapshots: {
++          "BTC/USD": {
++            latestTrade: { p: 64_000, t: "2026-10-19T10:00:00Z" },
++            latestQuote: { bp: 64_100, ap: 64_110, t: "2026-10-19T10:00:30Z" },
++            dailyBar: { o: 63_000, c: 64_000, v: 12 },
++            prevDailyBar: { c: 62_500 }
++          }
++        }
++      })
++    };
++  });
++  const provider = alpacaProvider({ alpaca: { key: "test", secret: "test", dataBaseUrl: "https://data.alpaca.markets", stockFeed: "iex" } });
++  const quote = await provider.quote("BTCUSD");
++  assert.equal(quote.price, 64_105);
++  assert.equal(quote.at, Date.parse("2026-10-19T10:00:30Z"));
++  assert.equal(quote.status, "real");
++});
+diff --git a/test/plugins/crypto-pack.test.js b/test/plugins/crypto-pack.test.js
+new file mode 100644
+index 0000000..aae1f4a
+--- /dev/null
++++ b/test/plugins/crypto-pack.test.js
+@@ -0,0 +1,122 @@
++import assert from "node:assert/strict";
++import path from "node:path";
++import { fileURLToPath } from "node:url";
++import test from "node:test";
++
++import { loadAlgorithmRegistry } from "../../server/algorithms/registry.js";
++import { EnginePool } from "../../server/engine/pool.js";
++
++const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
++const HOUR = 3_600_000;
++const START = Date.UTC(2026, 0, 5);
++
++function barsFrom(closes) {
++  return closes.map((close, index) => ({
++    time: START + index * HOUR,
++    open: index === 0 ? close : closes[index - 1],
++    high: Math.max(close, index === 0 ? close : closes[index - 1]) + 25,
++    low: Math.min(close, index === 0 ? close : closes[index - 1]) - 25,
++    close,
++    volume: 100 + index
++  }));
++}
++
++/** Independent SMA so the test does not trust the engine's own indicator. */
++function sma(closes, period, index) {
++  if (index + 1 < period) return null;
++  let sum = 0;
++  for (let cursor = index - period + 1; cursor <= index; cursor += 1) sum += closes[cursor];
++  return sum / period;
++}
++
++function expectedCrosses(closes, fast, slow) {
++  const crosses = [];
++  for (let index = 1; index < closes.length; index += 1) {
++    const [f0, s0, f1, s1] = [sma(closes, fast, index - 1), sma(closes, slow, index - 1), sma(closes, fast, index), sma(closes, slow, index)];
++    if ([f0, s0, f1, s1].some((value) => value === null)) continue;
++    if (f0 <= s0 && f1 > s1) crosses.push({ index, side: "buy" });
++    if (f0 >= s0 && f1 < s1) crosses.push({ index, side: "sell" });
++  }
++  return crosses;
++}
++
++async function crossover(t) {
++  const loaded = await loadAlgorithmRegistry({ algorithmsDir: path.join(ROOT, "algorithms"), pluginsDir: path.join(ROOT, "plugins") });
++  assert.deepEqual(loaded.errors, []);
++  const method = loaded.algorithms.find((algorithm) => algorithm.id === "crypto-pack/btc-sma-crossover");
++  assert.ok(method, "the Bitcoin crossover method is registered");
++  const pool = new EnginePool({ size: 1, timeoutMs: 5_000 });
++  t.after(() => pool.close());
++  return { method, pool };
++}
++
++test("Bitcoin SMA crossover buys on the cross above and sells on the cross back below", async (t) => {
++  const { method, pool } = await crossover(t);
++  assert.deepEqual(method.params, { fast: 20, slow: 50 });
++  // Slide, rally, then slide again: exactly one cross up followed by one cross down.
++  const closes = [
++    ...Array.from({ length: 70 }, (_, index) => 60_000 - index * 80),
++    ...Array.from({ length: 60 }, (_, index) => 54_400 + index * 220),
++    ...Array.from({ length: 70 }, (_, index) => 67_600 - index * 260)
++  ];
++  const params = { fast: 20, slow: 50 };
++  const expected = expectedCrosses(closes, params.fast, params.slow);
++  assert.deepEqual(expected.map((cross) => cross.side), ["buy", "sell"], "fixture must contain exactly one round trip");
++
++  const result = await pool.runBacktest({
++    algorithmSource: method.source,
++    filename: method.file,
++    bars: barsFrom(closes),
++    params,
++    interval: "1hour",
++    assetClass: "crypto",
++    symbol: "BTCUSD",
++    startingCash: 100_000
++  });
++  assert.deepEqual(
++    result.trades.map((trade) => ({ index: trade.signalIndex, side: trade.side })),
++    expected
++  );
++  // Next-bar fills: each order executes on the bar after its signal.
++  for (const trade of result.trades) assert.equal(trade.fillIndex, trade.signalIndex + 1);
++});
++
++test("Bitcoin SMA crossover waits for a real cross instead of buying mid-trend", async (t) => {
++  const { method, pool } = await crossover(t);
++  const closes = Array.from({ length: 120 }, (_, index) => 50_000 + index * 150);
++  const result = await pool.runBacktest({
++    algorithmSource: method.source,
++    filename: method.file,
++    bars: barsFrom(closes),
++    interval: "1hour",
++    assetClass: "crypto",
++    symbol: "BTCUSD",
++    startingCash: 100_000
++  });
++  assert.equal(result.trades.length, 0);
++});
++
++test("a live evaluation of the newest closed bar reports the cross", async (t) => {
++  const { method, pool } = await crossover(t);
++  const closes = [
++    ...Array.from({ length: 70 }, (_, index) => 60_000 - index * 80),
++    ...Array.from({ length: 60 }, (_, index) => 54_400 + index * 220)
++  ];
++  const crossIndex = expectedCrosses(closes, 20, 50).find((cross) => cross.side === "buy").index;
++  const evaluated = await pool.evaluateSignal({
++    algorithmSource: method.source,
++    filename: method.file,
++    bars: barsFrom(closes.slice(0, crossIndex + 1)),
++    params: { fast: 20, slow: 50 },
++    position: { qty: 0, entryPrice: 0, entryIndex: -1 }
++  });
++  assert.equal(evaluated.signal?.action, "buy");
++  const before = await pool.evaluateSignal({
++    algorithmSource: method.source,
++    filename: method.file,
++    bars: barsFrom(closes.slice(0, crossIndex)),
++    params: { fast: 20, slow: 50 },
++    position: { qty: 0, entryPrice: 0, entryIndex: -1 }
++  });
++  assert.equal(before.signal, null);
++});
+diff --git a/test/services/supervisor.test.js b/test/services/supervisor.test.js
+index 2fe4e2a..9ead16a 100644
+--- a/test/services/supervisor.test.js
++++ b/test/services/supervisor.test.js
+@@ -839,3 +839,91 @@ test("fixed-window schedules stop durably and finalize paper metrics", async (t)
+   assert.equal(detail.metrics.winRate, null);
+   assert.equal(detail.metrics.profitFactor, null);
+ });
++
++test("an opening bar that is still unpublished after the grace period fills at the live quote", async (t) => {
++  const context = await harness(t);
++  context.setVisibleBars(40);
++  context.setNow(Date.UTC(2025, 1, 10, 21, 0, 2));
++  await context.supervisor.bootstrap();
++  const session = await context.supervisor.create(sessionInput("late-open-bar", {
++    mode: "paper", params: { entry: 39, exit: 45 }
++  }));
++  await context.supervisor.start(session.id);
++  const close = await context.supervisor.tick(session.id, { kind: "market", phase: "close", interval: "1day" });
++  assert.equal(close.signals.length, 1);
++  assert.equal(close.fills.length, 0, "the market is closed; the order waits for the next open");
++
++  context.setNow(Date.UTC(2025, 1, 11, 14, 30, 2));
++  const first = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
++  assert.equal(first.fills.length, 0, "the opening bar gets a grace period before the quote fallback");
++
++  context.quotePrices.set("AAPL", 101.5);
++  context.setNow(Date.UTC(2025, 1, 11, 14, 32, 2));
++  const fallback = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
++  assert.equal(fallback.fills.length, 1);
++  assert.equal(fallback.fills[0].order.status, "filled");
++  assert.equal(fallback.fills[0].fills[0].referencePrice, 10_150);
++  const events = await context.repositories.sessions.listEvents(session.id);
++  assert.ok(events.some((event) => event.type === "order_filled" && JSON.stringify(event).includes("live_quote")));
++});
++
++test("a fallback is never taken outside the opening window", async (t) => {
++  const context = await harness(t);
++  context.setVisibleBars(40);
++  context.setNow(Date.UTC(2025, 1, 10, 21, 0, 2));
++  await context.supervisor.bootstrap();
++  const session = await context.supervisor.create(sessionInput("no-midday-fallback", {
++    mode: "paper", params: { entry: 39, exit: 45 }
++  }));
++  await context.supervisor.start(session.id);
++  await context.supervisor.tick(session.id, { kind: "market", phase: "close", interval: "1day" });
++  context.setNow(Date.UTC(2025, 1, 11, 16, 0, 2));
++  const midday = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
++  assert.equal(midday.fills.length, 0);
++  assert.equal((await context.repositories.orders.list({ sessionId: session.id, status: "pending" })).length, 1);
++});
++
++test("a crypto signal fills in the same tick at the live quote", async (t) => {
++  const context = await harness(t);
++  context.quotePrices.set("BTCUSD", 91.5);
++  context.setVisibleBars(40);
++  context.setNow(Date.UTC(2025, 1, 11, 0, 0, 2));
++  await context.supervisor.bootstrap();
++  const session = await context.supervisor.create(sessionInput("crypto-now", {
++    mode: "paper",
++    symbols: ["BTCUSD"],
++    params: { entry: 39, exit: 45 },
++    riskProfile: { sizing: { mode: "fixed_notional", fixedNotional: 500 } }
++  }));
++  await context.supervisor.start(session.id);
++  const tick = await context.supervisor.tick(session.id, { kind: "bar", phase: "boundary", interval: "1day" });
++  assert.equal(tick.signals.length, 1);
++  assert.equal(tick.fills.length, 1);
++  assert.equal(tick.fills[0].order.status, "filled", tick.fills[0].order.rejectReason);
++  assert.equal(tick.fills[0].fills[0].referencePrice, 9_150);
++  assert.equal((await context.ledger.listOpenPositions(DEFAULT_ACCOUNT_ID, { sessionId: session.id })).length, 1);
++});
++
++test("a second signal does not stack another order behind a pending one", async (t) => {
++  const context = await harness(t);
++  context.setVisibleBars(40);
++  context.setNow(Date.UTC(2025, 1, 10, 21, 0, 2));
++  await context.supervisor.bootstrap();
++  const session = await context.supervisor.create(sessionInput("no-stacking", {
++    mode: "paper", params: { entry: 39, exit: 45 }
++  }));
++  await context.supervisor.start(session.id);
++  await context.broker.queueOrder({
++    accountId: DEFAULT_ACCOUNT_ID,
++    sessionId: session.id,
++    clientOrderId: "already-working",
++    symbol: "AAPL",
++    side: "buy",
++    qty: 1_000_000,
++    signalBarAt: deterministicBars[39].time,
++    submittedAt: Date.UTC(2025, 1, 10, 21, 0, 1)
++  });
++  const tick = await context.supervisor.tick(session.id, { kind: "market", phase: "close", interval: "1day" });
++  assert.equal(tick.signals.length, 0);
++  assert.equal((await context.repositories.orders.list({ sessionId: session.id, status: "pending" })).length, 1);
++});

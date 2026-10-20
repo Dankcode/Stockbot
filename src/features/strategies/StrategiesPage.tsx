@@ -16,18 +16,21 @@ export function StrategiesPage() {
   const [uploading, setUploading] = React.useState(false);
   const [overwrite, setOverwrite] = React.useState(false);
   const [scope, setScope] = React.useState<"strategies" | "all">("strategies");
+  const [search, setSearch] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
   const families = React.useMemo(() => {
     const groups = new Map<string, Algorithm[]>();
     for (const algorithm of algorithms.data ?? []) {
       if (scope === "strategies" && algorithm.role === "control") continue;
+      const needle = search.trim().toLowerCase();
+      if (needle && ![algorithm.name, algorithm.id, algorithm.description ?? ""].some((text) => text.toLowerCase().includes(needle))) continue;
       const family = algorithm.plugin?.id ?? (algorithm.uploaded ? "Uploaded methods" : "Local methods");
       groups.set(family, [...(groups.get(family) ?? []), algorithm]);
     }
     return [...groups.entries()]
       .map(([name, methods]) => ({ name, methods: [...methods].sort((left, right) => left.name.localeCompare(right.name)) }))
       .sort((left, right) => left.name.localeCompare(right.name));
-  }, [algorithms.data, scope]);
+  }, [algorithms.data, scope, search]);
 
   const toggle = async (algorithm: Algorithm) => {
     setBusy(algorithm.id);
@@ -64,18 +67,18 @@ export function StrategiesPage() {
       <header className="page-heading"><div><h1>Strategies</h1>{algorithms.isStale ? <StaleBadge updatedAt={algorithms.updatedAt} /> : null}</div><div className="page-actions"><a className="button secondary" download href="/stockbot-strategy-template.js"><Download size={14} /> Starter file</a><button className="button primary" type="button" disabled={uploading} onClick={() => inputRef.current?.click()}><FileUp size={14} />{uploading ? "Uploading" : "Upload .js"}</button><input ref={inputRef} className="sr-only" type="file" accept=".js,text/javascript,application/javascript" onChange={(event) => void upload(event.target.files?.[0])} /></div></header>
       <section className="strategy-onboarding" aria-label="Paper-trading research workflow"><div><span>01</span><strong>Choose a method</strong><small>Browse validated research methods by source pack.</small></div><div><span>02</span><strong>Set the hypothesis</strong><small>Adjust parameters and synchronous buy/sell rules.</small></div><div><span>03</span><strong>Paper test</strong><small>Compare every run with index-fund benchmarks.</small></div></section>
       <div className="strategy-upload-options"><p className="strategy-upload-note">Uploads require the API mutation token set in <Link to="/settings">Settings</Link>. Strategies stay long-only and run through the paper/backtest engine.</p><label><input type="checkbox" checked={overwrite} onChange={(event) => setOverwrite(event.target.checked)} /> Replace an uploaded file with the same name</label></div>
-      <div className="strategy-library-filters" role="group" aria-label="Strategy library scope"><span>Library view</span><button className={scope === "strategies" ? "active" : ""} type="button" onClick={() => setScope("strategies")}>Methods only</button><button className={scope === "all" ? "active" : ""} type="button" onClick={() => setScope("all")}>Include peer controls</button></div>
+      <div className="strategy-library-filters" role="group" aria-label="Strategy library scope"><span>Library view</span><button className={scope === "strategies" ? "active" : ""} type="button" onClick={() => setScope("strategies")}>Methods only</button><button className={scope === "all" ? "active" : ""} type="button" onClick={() => setScope("all")}>Include peer controls</button><input className="strategy-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Filter by name, e.g. bitcoin" aria-label="Filter strategies" /></div>
       {error ? <p className="inline-error" role="alert">{error}</p> : null}
       {algorithms.isLoading ? <LoadingState title="Loading strategies" /> : null}
       {algorithms.error && !algorithms.data ? <ErrorState title="Strategies unavailable" detail={algorithms.error.message} onRetry={algorithms.refetch} /> : null}
-      {algorithms.data && families.length === 0 ? <EmptyState title="No strategies installed" detail="Validated algorithms will appear here." /> : null}
+      {algorithms.data && families.length === 0 ? <EmptyState title={search ? "No strategies match" : "No strategies installed"} detail={search ? "Try a different word." : "Validated algorithms will appear here."} /> : null}
       {families.map(({ name, methods }) => <section className="strategy-family" key={name}><header><div><h2>{name}</h2><span>{methods.length} {methods.length === 1 ? "method" : "methods"}</span></div></header><div className="strategy-list">{methods.map((algorithm) => (
         <article className="strategy-row" key={algorithm.id}>
           <div className="strategy-icon"><Bot size={19} /></div>
           <div className="strategy-copy"><div className="title-row"><h2>{algorithm.name}</h2>{algorithm.version ? <span className="version-label">{algorithm.version.id}</span> : null}{algorithm.horizon ? <span className="horizon-label">{algorithm.horizon}</span> : null}</div><p>{algorithm.description ?? "No description returned by the API."}</p><small>{algorithm.author ? `By ${algorithm.author}` : "Author unavailable"}</small></div>
           <div className="strategy-result"><span>{algorithm.role === "control" ? "Peer control" : "Source version"}</span><strong>{algorithm.version?.hash.slice(0, 10) ?? "—"}</strong><small>{algorithm.params ? `${Object.keys(algorithm.params).length} default parameters` : "Parameters unavailable"}</small></div>
           <button className="icon-button strategy-toggle" type="button" disabled={busy === algorithm.id} aria-label={`${algorithm.enabled ? "Disable" : "Enable"} ${algorithm.name}`} onClick={() => void toggle(algorithm)}>{algorithm.enabled ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}</button>
-          <Link className="button secondary" to={`/strategies/${algorithm.id}`}>Open <ArrowRight size={14} /></Link>
+          <Link className="button secondary" to={`/strategies/${encodeURIComponent(algorithm.id)}`}>Open <ArrowRight size={14} /></Link>
         </article>
       ))}</div></section>)}
     </div>

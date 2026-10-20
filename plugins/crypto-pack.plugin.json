@@ -1,0 +1,92 @@
+{
+  "kind": "stockbot.plugin.v1",
+  "schemaVersion": 1,
+  "id": "crypto-pack",
+  "name": "Crypto trend methods",
+  "version": "1.0.0",
+  "author": "Stockbot",
+  "license": "MIT",
+  "description": "Trend-following methods intended for Bitcoin (BTCUSD). Crypto trades around the clock, so these sessions make decisions every bar instead of waiting for an exchange open.",
+  "requires": {
+    "capabilities": [
+      "backtest"
+    ],
+    "sources": [],
+    "secrets": [],
+    "promptTemplates": [],
+    "aiCli": false
+  },
+  "methods": [
+    {
+      "id": "btc-sma-crossover",
+      "name": "Bitcoin SMA Crossover",
+      "role": "strategy",
+      "horizon": "weekly",
+      "description": "For BTCUSD. Buys when the short simple moving average of price (default 20 bars) crosses above the long one (default 50 bars); sells when it crosses back below.",
+      "params": {
+        "fast": 20,
+        "slow": 50
+      },
+      "method": {
+        "kind": "rules.v1",
+        "warmup": {
+          "param": "slow"
+        },
+        "indicators": {
+          "fast": {
+            "fn": "sma",
+            "period": {
+              "param": "fast"
+            }
+          },
+          "slow": {
+            "fn": "sma",
+            "period": {
+              "param": "slow"
+            }
+          }
+        },
+        "entry": [
+          {
+            "when": {
+              "crossesAbove": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Short average crossed above the long average"
+          }
+        ],
+        "exit": [
+          {
+            "when": {
+              "crossesBelow": [
+                "fast",
+                "slow"
+              ]
+            },
+            "reason": "Short average crossed back below the long average"
+          }
+        ]
+      }
+    }
+  ],
+  "pairings": [
+    {
+      "strategy": "btc-sma-crossover",
+      "controls": [
+        "core-controls/buy-and-hold",
+        "core-controls/fixed-interval",
+        "core-controls/random-entry"
+      ],
+      "controlParams": {
+        "core-controls/fixed-interval": {
+          "entryEveryBars": 20,
+          "holdBars": 8
+        }
+      },
+      "seeds": 20,
+      "notes": "Run the controls on BTCUSD over the same window and bar interval. Buy-and-hold Bitcoin is the bar to beat."
+    }
+  ]
+}

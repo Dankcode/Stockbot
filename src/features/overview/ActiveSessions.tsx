@@ -1,4 +1,5 @@
-import { Pause, Square } from "lucide-react";
+import { Pause, Play, Square } from "lucide-react";
+import { Link } from "react-router-dom";
 import * as React from "react";
 import { formatMetric } from "../../../packages/shared/format.js";
 import { StatusPill } from "../../components/data/StatusPill";
@@ -18,7 +19,7 @@ export function ActiveSessions({ sessions }: { sessions: SessionSummary[] }) {
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  const act = async (session: SessionSummary, action: "pause" | "stop") => {
+  const act = async (session: SessionSummary, action: "pause" | "resume" | "stop") => {
     if (action === "stop" && !window.confirm(`Stop ${session.name}?`)) return;
     setBusyId(session.id);
     setError(null);
@@ -41,13 +42,15 @@ export function ActiveSessions({ sessions }: { sessions: SessionSummary[] }) {
           {sessions.map((session) => (
             <tr key={session.id}>
               <td><StatusPill status={session.status} /></td>
-              <td><strong>{session.name}</strong>{session.algorithmVersionId ? <small>{session.algorithmVersionId}</small> : null}</td>
+              <td><Link className="table-link" to={`/sessions/${session.id}`}><strong>{session.name}</strong></Link>{session.algorithmVersionId ? <small>{session.algorithmVersionId}</small> : null}</td>
               <td>{session.symbols.join(", ")}</td>
               <td className="numeric"><span className={(session.metrics?.returnPercent ?? 0) >= 0 ? "positive" : "negative"}>{formatMetric("returnPercent", session.metrics?.returnPercent)}</span></td>
               <td className="numeric">{duration(session.startedAt)}</td>
               <td className="numeric session-controls">
-                <button className="icon-button" type="button" aria-label={`Pause ${session.name}`} disabled={busyId === session.id} onClick={() => void act(session, "pause")}><Pause size={15} /></button>
-                <button className="icon-button destructive" type="button" aria-label={`Stop ${session.name}`} disabled={busyId === session.id} onClick={() => void act(session, "stop")}><Square size={13} /></button>
+                {session.status === "paused"
+                  ? <button className="icon-button" type="button" aria-label={`Resume ${session.name}`} title="Resume" disabled={busyId === session.id} onClick={() => void act(session, "resume")}><Play size={15} /></button>
+                  : <button className="icon-button" type="button" aria-label={`Pause ${session.name}`} title="Pause" disabled={busyId === session.id || session.status !== "running"} onClick={() => void act(session, "pause")}><Pause size={15} /></button>}
+                <button className="icon-button destructive" type="button" aria-label={`Stop ${session.name}`} title="Stop" disabled={busyId === session.id} onClick={() => void act(session, "stop")}><Square size={13} /></button>
               </td>
             </tr>
           ))}

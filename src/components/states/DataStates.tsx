@@ -1,9 +1,11 @@
 import { AlertTriangle, Inbox, RefreshCw } from "lucide-react";
+import type * as React from "react";
 
 type StateProps = {
   title: string;
   detail?: string;
   compact?: boolean;
+  action?: React.ReactNode;
 };
 
 export function LoadingState({ title = "Loading", compact = false }: Partial<StateProps>) {
@@ -17,12 +19,13 @@ export function LoadingState({ title = "Loading", compact = false }: Partial<Sta
   );
 }
 
-export function EmptyState({ title, detail, compact = false }: StateProps) {
+export function EmptyState({ title, detail, compact = false, action }: StateProps) {
   return (
     <div className={`data-state${compact ? " compact" : ""}`}>
       <Inbox aria-hidden="true" />
       <strong>{title}</strong>
       {detail ? <span>{detail}</span> : null}
+      {action ? <div className="data-state-action">{action}</div> : null}
     </div>
   );
 }

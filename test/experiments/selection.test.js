@@ -210,3 +210,12 @@ test("recommendSymbols derives the expected bar count from the range it was give
   assert.deepEqual(result.excluded.map((entry) => entry.symbol), ["SHORT"]);
   assert.match(result.excluded[0].blockers.join(" "), /40 of 83 bars/);
 });
+
+test("crypto is not excluded by share-price gates and is scored on a crypto volatility band", () => {
+  const bitcoin = scoreCandidate(goodFacts({ symbol: "BTCUSD", price: 64_000, atrPercent: 4 }));
+  assert.equal(bitcoin.eligible, true, bitcoin.blockers.join("; "));
+  assert.ok(bitcoin.components.volatility > 0.9);
+  const equity = scoreCandidate(goodFacts({ symbol: "BRK.A", price: 64_000 }));
+  assert.equal(equity.eligible, false);
+  assert.match(equity.blockers.join(" "), /ceiling/);
+});

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState, StaleBadge } from "../../components/states/DataStates";
 import { invalidateQueries, useQuery } from "../../lib/query";
 import type { SessionSummary } from "../../lib/types";
@@ -9,13 +9,24 @@ import { SessionTable } from "./SessionTable";
 import { fetchSessions } from "./sessionData";
 import { CreateSessionDialog } from "./CreateSessionDialog";
 
-const initialFilters: SessionFilterState = { status: "", mode: "", algorithm: "", days: "7" };
+// "All time" by default: a long-running paper session started more than a week
+// ago is exactly the one you want to see, and a date filter hid it.
+const initialFilters: SessionFilterState = { status: "", mode: "", algorithm: "", days: "" };
 
 export function SessionsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = React.useState(initialFilters);
   const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
-  const [createOpen, setCreateOpen] = React.useState(false);
+  const [createOpen, setCreateOpen] = React.useState(() => searchParams.get("new") === "1");
+  const closeCreate = () => {
+    setCreateOpen(false);
+    if (searchParams.has("new")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("new");
+      setSearchParams(next, { replace: true });
+    }
+  };
   const sessions = useQuery("sessions:list", () => fetchSessions("/sessions?limit=100"), {
     refreshMs: 15_000,
     staleAfterMs: 20_000
@@ -46,17 +57,17 @@ export function SessionsPage() {
     <div className="sessions-page page-stack">
       <header className="page-heading">
         <div><h1>Sessions</h1>{sessions.isStale ? <StaleBadge updatedAt={sessions.updatedAt} /> : null}</div>
-        <div className="page-actions"><button className="button secondary" type="button" onClick={() => setCreateOpen(true)}><Plus size={14} /> New draft</button><button className="button primary" type="button" disabled={selected.size < 2 || selected.size > 4} onClick={compare}>Compare selected ({selected.size}/4)</button></div>
+        <div className="page-actions"><button className="button secondary" type="button" onClick={() => setCreateOpen(true)}><Plus size={14} /> New session</button><button className="button primary" type="button" disabled={selected.size < 2 || selected.size > 4} onClick={compare}>Compare selected ({selected.size}/4)</button></div>
       </header>
       <SessionFilters value={filters} algorithms={algorithms} onChange={setFilters} />
       <section className="panel sessions-list-panel">
         {sessions.isLoading ? <LoadingState title="Loading sessions" /> : null}
         {sessions.error && !sessions.data ? <ErrorState title="Sessions unavailable" detail={sessions.error.message} onRetry={sessions.refetch} /> : null}
-        {sessions.data && filtered.length === 0 ? <EmptyState title="No matching sessions" detail="Adjust the filters or start a real paper or backtest session." /> : null}
+        {sessions.data && filtered.length === 0 ? <EmptyState title={sessions.data.length ? "No matching sessions" : "No sessions yet"} detail={sessions.data.length ? "Adjust the filters to see more." : "A paper session trades a strategy on live prices with simulated money."} action={<button className="button primary" type="button" onClick={() => setCreateOpen(true)}><Plus size={14} /> New session</button>} /> : null}
         {filtered.length ? <SessionTable sessions={filtered} selected={selected} onSelect={toggle} onOpen={(id) => navigate(`/sessions/${id}`)} /> : null}
         {sessions.data?.length ? <footer className="table-footer">Showing {filtered.length} of {sessions.data.length} loaded sessions</footer> : null}
       </section>
-      <CreateSessionDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(session) => { setCreateOpen(false); invalidateQueries("sessions"); navigate(`/sessions/${session.id}`); }} />
+      <CreateSessionDialog open={createOpen} initialSymbol={searchParams.get("symbols") ?? ""} initialAlgorithmId={searchParams.get("algorithm") ?? ""} onClose={closeCreate} onCreated={(session) => { setCreateOpen(false); invalidateQueries("sessions"); invalidateQueries("overview"); navigate(`/sessions/${session.id}`); }} />
     </div>
   );
 }

@@ -40,7 +40,7 @@ export function StatusBar({ streamStatus }: { streamStatus: StreamStatus }) {
       </div>
       <div className="status-stat">
         <span className="status-inline"><Radio size={13} /> Running</span>
-        <strong>{overview.data ? `${overview.data.activeSessions.length} sessions` : "—"}</strong>
+        <strong>{overview.data ? `${overview.data.activeSessions.length} ${overview.data.activeSessions.length === 1 ? "session" : "sessions"}` : "—"}</strong>
       </div>
       <div className="status-stat">
         <span className="status-inline"><ShieldCheck size={13} /> Risk used</span>

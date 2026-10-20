@@ -42,8 +42,47 @@ const UNIVERSE = Object.freeze([
   { symbol: "SPY", name: "Synthetic S&P 500 Proxy", sector: "Synthetic", price: 520, drift: 0.0004, vol: 0.009, dollarVolume: 30_000_000_000, bars: 900 },
   { symbol: "QQQ", name: "Synthetic Nasdaq-100 Proxy", sector: "Synthetic", price: 470, drift: 0.00055, vol: 0.013, dollarVolume: 18_000_000_000, bars: 900 },
   { symbol: "IWM", name: "Synthetic Russell 2000 Proxy", sector: "Synthetic", price: 210, drift: 0.00025, vol: 0.016, dollarVolume: 4_000_000_000, bars: 900 },
-  { symbol: "DIA", name: "Synthetic Dow Jones Proxy", sector: "Synthetic", price: 430, drift: 0.00035, vol: 0.01, dollarVolume: 2_000_000_000, bars: 900 }
+  { symbol: "DIA", name: "Synthetic Dow Jones Proxy", sector: "Synthetic", price: 430, drift: 0.00035, vol: 0.01, dollarVolume: 2_000_000_000, bars: 900 },
+  { symbol: "BTCUSD", name: "Synthetic Bitcoin", sector: "Crypto", price: 64_000, drift: 0.0003, vol: 0.03, dollarVolume: 25_000_000_000, bars: 900, cycle: 30 }
 ]);
+
+/**
+ * SYNTHETIC_LIVE=1 turns the frozen history into a moving market: bars are spaced
+ * at the range's real interval and end at the current bar, and quotes are stamped
+ * "real" at the current instant. That is what the paper supervisor needs to make
+ * and fill decisions, so a paper session can be watched trading end to end.
+ * Bars are generated from a fixed anchor, so a bar never changes once it closes.
+ */
+const LIVE = process.env.SYNTHETIC_LIVE === "1";
+const LIVE_ANCHOR = Date.UTC(2026, 0, 1);
+const INTERVAL_MS = Object.freeze({ "1min": 60_000, "5min": 300_000, "1hour": 3_600_000, "1day": 86_400_000, "1week": 7 * 86_400_000, "1month": 2_629_746_000 });
+
+function liveBars(spec, intervalMs, limit, now = Date.now()) {
+  const next = rng(seedOf(`${spec.symbol}:${intervalMs}`));
+  const gaussian = () => Math.sqrt(-2 * Math.log(Math.max(1e-9, next()))) * Math.cos(2 * Math.PI * next());
+  const scale = Math.sqrt(Math.min(1, intervalMs / 86_400_000));
+  const lastStart = Math.floor((now - LIVE_ANCHOR) / intervalMs);
+  const firstStart = Math.max(0, lastStart - Math.min(limit, 2_000) + 1);
+  const bars = [];
+  let price = spec.price;
+  for (let index = 0; index <= lastStart; index += 1) {
+    const open = price;
+    const cyclical = spec.cycle ? Math.sin((index / spec.cycle) * Math.PI * 2) * spec.vol * scale * 0.9 : 0;
+    price = Math.max(0.05, price * (1 + spec.drift * scale * scale + cyclical + spec.vol * scale * gaussian()));
+    if (index < firstStart) continue;
+    const close = Number(price.toFixed(4));
+    const wick = Math.abs(close - open) * 0.5;
+    bars.push({
+      time: LIVE_ANCHOR + index * intervalMs,
+      open: Number(open.toFixed(4)),
+      high: Number((Math.max(open, close) + wick).toFixed(4)),
+      low: Number(Math.max(0.01, Math.min(open, close) - wick).toFixed(4)),
+      close,
+      volume: Math.max(1, Math.round(spec.dollarVolume * scale * scale / close))
+    });
+  }
+  return bars;
+}
 
 /** SplitMix32, seeded per symbol so every process serves byte-identical history. */
 function rng(seed) {
@@ -112,9 +151,19 @@ function createSyntheticMarket() {
     return spec;
   }
 
-  async function getBars(symbol, rangeKey = "1D") {
+  async function getBars(symbol, rangeKey = "1D", { minBars = 0 } = {}) {
     const spec = requireSpec(symbol);
     const range = getRangeConfig(rangeKey);
+    if (LIVE) {
+      return {
+        symbol: spec.symbol,
+        range: range.key,
+        interval: range.interval,
+        source: "synthetic-live",
+        bars: liveBars(spec, INTERVAL_MS[range.interval], Math.max(range.limit, Number(minBars) || 0)),
+        diagnostics: { rsi: null, emaFast: null, emaSlow: null, atr: null, vwap: null }
+      };
+    }
     // Honour range.limit exactly as the real provider chain does. A harness that quietly
     // served 900 bars for every range would hide the fact that "1Y" is 80 weekly bars.
     const bars = generate(spec, range.limit, Math.max(range.key === "ALL" ? 2_629_746_000 : 86_400_000, 60_000), endTime);
@@ -130,6 +179,23 @@ function createSyntheticMarket() {
 
   async function getQuote(symbol) {
     const spec = requireSpec(symbol);
+    if (LIVE) {
+      const [previous, last] = liveBars(spec, 60_000, 2);
+      const now = Date.now();
+      return {
+        symbol: spec.symbol,
+        price: last.close,
+        previousClose: previous.close,
+        change: Number((last.close - previous.close).toFixed(4)),
+        changePercent: Number((((last.close - previous.close) / previous.close) * 100).toFixed(4)),
+        volume: last.volume,
+        source: "synthetic-live",
+        status: "real",
+        at: now,
+        quoteTime: now,
+        checkedAt: now
+      };
+    }
     const bars = generate(spec, 2, 86_400_000, endTime);
     const last = bars.at(-1);
     const previous = bars[0];
@@ -176,7 +242,7 @@ function createSyntheticMarket() {
 
 const runtime = await createStockbot({ market: createSyntheticMarket() });
 const server = runtime.app.listen(runtime.config.port, runtime.config.host, () => {
-  process.stderr.write(`SYNTHETIC Stockbot API on http://${runtime.config.host}:${runtime.config.port} — fabricated market data\n`);
+  process.stderr.write(`SYNTHETIC${LIVE ? " LIVE" : ""} Stockbot API on http://${runtime.config.host}:${runtime.config.port} — fabricated market data\n`);
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {

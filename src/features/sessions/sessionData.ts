@@ -1,5 +1,6 @@
 import type { ChartEquitySeries, ChartRiskEvent, ChartTrade } from "../../charts";
 import type { Fill, Order } from "../../../packages/shared/schemas.js";
+import { activityFrom } from "../../lib/activity";
 import { api, listFrom } from "../../lib/api";
 import type { ActivityItem, EquityPoint, NormalizedEquityPoint, SessionCompare, SessionComparisonEntry, SessionDetail, SessionSummary } from "../../lib/types";
 
@@ -36,23 +37,7 @@ export async function fetchSessionOrders(id: string) {
 }
 
 export async function fetchSessionEvents(id: string) {
-  const events = listFrom<Record<string, unknown>>(await api.get<unknown>(`/sessions/${encodeURIComponent(id)}/events`), ["events", "items"]);
-  return events.map((event, index): ActivityItem => {
-    const detail = event.detailJson && typeof event.detailJson === "object" ? event.detailJson as Record<string, unknown> : {};
-    const transition = event.fromStatus && event.toStatus ? `${event.fromStatus} → ${event.toStatus}` : undefined;
-    const title = event.title ?? event.action ?? event.actionTaken ?? transition ?? event.type;
-    const description = event.detail ?? detail.message ?? detail.note ?? detail.reason;
-    return {
-      id: String(event.id ?? `${event.type ?? "event"}:${event.at ?? index}`),
-      at: typeof event.at === "number" ? event.at : 0,
-      type: String(event.type ?? "event"),
-      severity: event.severity === "warn" || event.severity === "block" || event.severity === "halt" ? event.severity : "info",
-      title: title == null ? undefined : String(title),
-      detail: description == null ? (Object.keys(detail).length ? JSON.stringify(detail) : undefined) : String(description),
-      signalReason: typeof event.signalReason === "string" ? event.signalReason : typeof detail.signalReason === "string" ? detail.signalReason : undefined,
-      symbol: typeof event.symbol === "string" ? event.symbol : typeof detail.symbol === "string" ? detail.symbol : undefined
-    };
-  });
+  return listFrom<unknown>(await api.get<unknown>(`/sessions/${encodeURIComponent(id)}/events`), ["events", "items"]).map(activityFrom);
 }
 
 function pointFrom(value: unknown) {
@@ -65,7 +50,11 @@ function pointFrom(value: unknown) {
 }
 
 export function equitySeriesFrom(payload: unknown, session: SessionSummary): ChartEquitySeries[] {
-  const rawSeries = listFrom<Record<string, unknown>>(payload, ["series"]);
+  // The equity endpoint returns a bare array of snapshots. listFrom() hands an
+  // array straight back, so only treat entries as series when they carry points;
+  // otherwise every snapshot was read as an empty series and nothing rendered.
+  const rawSeries = listFrom<Record<string, unknown>>(payload, ["series"])
+    .filter((series) => series && typeof series === "object" && Array.isArray(series.points));
   if (rawSeries.length) {
     return rawSeries.flatMap((series, index) => {
       const points = Array.isArray(series.points) ? series.points.map(pointFrom).filter((point) => point !== null) : [];

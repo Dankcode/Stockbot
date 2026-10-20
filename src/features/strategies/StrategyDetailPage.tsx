@@ -66,7 +66,7 @@ export function StrategyDetailPage() {
   if (!algorithm) return <EmptyState title="Strategy not found" detail="The API did not return this strategy." />;
   return (
     <div className="strategy-detail page-stack">
-      <header className="detail-heading"><div><Link className="back-link" to="/strategies"><ArrowLeft size={15} /> Strategies</Link><h1>{algorithm.name}</h1><p>{algorithm.description ?? "No description returned by the API."}</p></div></header>
+      <header className="detail-heading"><div><Link className="back-link" to="/strategies"><ArrowLeft size={15} /> Strategies</Link><h1>{algorithm.name}</h1><p>{algorithm.description ?? "No description returned by the API."}</p></div>{algorithm.role !== "control" ? <div className="page-actions"><Link className="button primary" to={`/sessions?new=1&algorithm=${encodeURIComponent(algorithm.id)}`}><Play size={14} /> Paper trade this</Link></div> : null}</header>
       {error ? <p className="inline-error" role="alert">{error}</p> : null}
       <div className="strategy-detail-grid">
         <section className="panel params-panel"><header className="panel-header"><h2>Backtest parameters</h2><span>Run override only</span></header>{Object.keys(params).length ? <div className="param-list">{Object.entries(params).map(([key, value]) => <label key={key}><span>{key}</span>{typeof value === "boolean" ? <select value={String(value)} onChange={(event) => updateParam(key, event.target.value)}><option value="true">True</option><option value="false">False</option></select> : <input type={typeof value === "number" ? "number" : "text"} value={String(value)} onChange={(event) => updateParam(key, event.target.value)} />}</label>)}</div> : <EmptyState compact title="No backtest parameters" />}</section>

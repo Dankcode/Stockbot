@@ -839,3 +839,91 @@ test("fixed-window schedules stop durably and finalize paper metrics", async (t)
   assert.equal(detail.metrics.winRate, null);
   assert.equal(detail.metrics.profitFactor, null);
 });
+
+test("an opening bar that is still unpublished after the grace period fills at the live quote", async (t) => {
+  const context = await harness(t);
+  context.setVisibleBars(40);
+  context.setNow(Date.UTC(2025, 1, 10, 21, 0, 2));
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("late-open-bar", {
+    mode: "paper", params: { entry: 39, exit: 45 }
+  }));
+  await context.supervisor.start(session.id);
+  const close = await context.supervisor.tick(session.id, { kind: "market", phase: "close", interval: "1day" });
+  assert.equal(close.signals.length, 1);
+  assert.equal(close.fills.length, 0, "the market is closed; the order waits for the next open");
+
+  context.setNow(Date.UTC(2025, 1, 11, 14, 30, 2));
+  const first = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
+  assert.equal(first.fills.length, 0, "the opening bar gets a grace period before the quote fallback");
+
+  context.quotePrices.set("AAPL", 101.5);
+  context.setNow(Date.UTC(2025, 1, 11, 14, 32, 2));
+  const fallback = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
+  assert.equal(fallback.fills.length, 1);
+  assert.equal(fallback.fills[0].order.status, "filled");
+  assert.equal(fallback.fills[0].fills[0].referencePrice, 10_150);
+  const events = await context.repositories.sessions.listEvents(session.id);
+  assert.ok(events.some((event) => event.type === "order_filled" && JSON.stringify(event).includes("live_quote")));
+});
+
+test("a fallback is never taken outside the opening window", async (t) => {
+  const context = await harness(t);
+  context.setVisibleBars(40);
+  context.setNow(Date.UTC(2025, 1, 10, 21, 0, 2));
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("no-midday-fallback", {
+    mode: "paper", params: { entry: 39, exit: 45 }
+  }));
+  await context.supervisor.start(session.id);
+  await context.supervisor.tick(session.id, { kind: "market", phase: "close", interval: "1day" });
+  context.setNow(Date.UTC(2025, 1, 11, 16, 0, 2));
+  const midday = await context.supervisor.tick(session.id, { kind: "market", phase: "open", interval: "1day" });
+  assert.equal(midday.fills.length, 0);
+  assert.equal((await context.repositories.orders.list({ sessionId: session.id, status: "pending" })).length, 1);
+});
+
+test("a crypto signal fills in the same tick at the live quote", async (t) => {
+  const context = await harness(t);
+  context.quotePrices.set("BTCUSD", 91.5);
+  context.setVisibleBars(40);
+  context.setNow(Date.UTC(2025, 1, 11, 0, 0, 2));
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("crypto-now", {
+    mode: "paper",
+    symbols: ["BTCUSD"],
+    params: { entry: 39, exit: 45 },
+    riskProfile: { sizing: { mode: "fixed_notional", fixedNotional: 500 } }
+  }));
+  await context.supervisor.start(session.id);
+  const tick = await context.supervisor.tick(session.id, { kind: "bar", phase: "boundary", interval: "1day" });
+  assert.equal(tick.signals.length, 1);
+  assert.equal(tick.fills.length, 1);
+  assert.equal(tick.fills[0].order.status, "filled", tick.fills[0].order.rejectReason);
+  assert.equal(tick.fills[0].fills[0].referencePrice, 9_150);
+  assert.equal((await context.ledger.listOpenPositions(DEFAULT_ACCOUNT_ID, { sessionId: session.id })).length, 1);
+});
+
+test("a second signal does not stack another order behind a pending one", async (t) => {
+  const context = await harness(t);
+  context.setVisibleBars(40);
+  context.setNow(Date.UTC(2025, 1, 10, 21, 0, 2));
+  await context.supervisor.bootstrap();
+  const session = await context.supervisor.create(sessionInput("no-stacking", {
+    mode: "paper", params: { entry: 39, exit: 45 }
+  }));
+  await context.supervisor.start(session.id);
+  await context.broker.queueOrder({
+    accountId: DEFAULT_ACCOUNT_ID,
+    sessionId: session.id,
+    clientOrderId: "already-working",
+    symbol: "AAPL",
+    side: "buy",
+    qty: 1_000_000,
+    signalBarAt: deterministicBars[39].time,
+    submittedAt: Date.UTC(2025, 1, 10, 21, 0, 1)
+  });
+  const tick = await context.supervisor.tick(session.id, { kind: "market", phase: "close", interval: "1day" });
+  assert.equal(tick.signals.length, 0);
+  assert.equal((await context.repositories.orders.list({ sessionId: session.id, status: "pending" })).length, 1);
+});

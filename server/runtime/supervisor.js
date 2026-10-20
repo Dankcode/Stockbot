@@ -7,6 +7,7 @@ import { createRepositories } from "../db/repositories/index.js";
 import { computeMetrics } from "../engine/metrics.js";
 import { AppError } from "../http/errors.js";
 import { createRiskEngine } from "../risk/engine.js";
+import { marketSession } from "../risk/market-hours.js";
 import { SessionScheduler } from "./scheduler.js";
 import {
   EXCHANGE_TIMEZONE,
@@ -201,6 +202,36 @@ function intervalSpan(interval, at) {
   const end = new Date(at);
   end.setUTCMonth(end.getUTCMonth() + 1);
   return end.getTime() - start.getTime();
+}
+
+// A pending next-open order waits this long for the provider to publish the
+// opening bar before it falls back to the live quote.
+const OPENING_BAR_GRACE_MS = 120_000;
+const OPENING_FILL_WINDOW_MS = 300_000;
+const MAX_SESSION_GAP_MS = 6 * 86_400_000;
+
+/**
+ * When the bar after the signal bar has not been published yet, a market order
+ * would still execute at the prevailing price. Returns true when this tick is
+ * inside the window where filling at the fresh live quote is equivalent to the
+ * next-open fill: the signal bar is closed, the market is open, and (for
+ * exchange-traded daily/weekly/monthly bars) it is the first minutes of the
+ * immediately following session.
+ */
+export function liveQuoteFillAllowed({ interval, symbol, signalBarAt, submittedAt, at, tolerance }) {
+  if (!marketSession(symbol, at).open) return false;
+  const higherEquityInterval = ["1day", "1week", "1month"].includes(interval) && !isCryptoSymbol(symbol);
+  if (higherEquityInterval) {
+    const openAt = exchangeBarOpen(at);
+    const signalEnd = interval === "1day" ? dailyExchangeClose(signalBarAt) : barEnd(signalBarAt, interval);
+    return signalEnd <= openAt &&
+      openAt - signalEnd <= MAX_SESSION_GAP_MS &&
+      submittedAt <= openAt + tolerance &&
+      at >= openAt + OPENING_BAR_GRACE_MS &&
+      at <= openAt + OPENING_FILL_WINDOW_MS + tolerance;
+  }
+  const signalEnd = barEnd(signalBarAt, interval);
+  return at >= signalEnd && submittedAt <= at && at <= signalEnd + intervalSpan(interval, signalEnd) + tolerance;
 }
 
 function nextOpenTolerance(interval, settleDelayMs) {
@@ -1090,20 +1121,37 @@ export function createSupervisor({
         continue;
       }
       const nextBar = bars[signalIndex + 1];
-      if (!nextBar || nextBar.time > at) continue;
       const submittedAt = Number(order.submittedAt);
-      const higherEquityInterval = ["1day", "1week", "1month"].includes(session.barInterval) &&
-        !isCryptoSymbol(order.symbol);
-      const expectedOpenAt = higherEquityInterval ? exchangeBarOpen(nextBar.time) : nextBar.time;
-      const maxFillAt = expectedOpenAt + (higherEquityInterval ? 300_000 + tolerance : intervalSpan(session.barInterval, nextBar.time) + tolerance);
-      if (expectedOpenAt > at || expectedOpenAt < submittedAt - tolerance || at > maxFillAt) {
-        await rejectMissedOpen(order, {
-          signalBarAt: order.signalBarAt,
-          expectedOpenAt,
+      let referencePrice;
+      let priceSource = "next_bar_open";
+      if (!nextBar || nextBar.time > at) {
+        const fallback = liveQuoteFillAllowed({
+          interval: session.barInterval,
+          symbol: order.symbol,
+          signalBarAt: Number(order.signalBarAt),
           submittedAt,
-          observedAt: at
+          at,
+          tolerance
         });
-        continue;
+        if (!fallback) continue;
+        priceSource = "live_quote";
+      } else {
+        referencePrice = nextBar.open;
+      }
+      if (priceSource === "next_bar_open") {
+        const higherEquityInterval = ["1day", "1week", "1month"].includes(session.barInterval) &&
+          !isCryptoSymbol(order.symbol);
+        const expectedOpenAt = higherEquityInterval ? exchangeBarOpen(nextBar.time) : nextBar.time;
+        const maxFillAt = expectedOpenAt + (higherEquityInterval ? 300_000 + tolerance : intervalSpan(session.barInterval, nextBar.time) + tolerance);
+        if (expectedOpenAt > at || expectedOpenAt < submittedAt - tolerance || at > maxFillAt) {
+          await rejectMissedOpen(order, {
+            signalBarAt: order.signalBarAt,
+            expectedOpenAt,
+            submittedAt,
+            observedAt: at
+          });
+          continue;
+        }
       }
       const execution = await broker.submitOrder({
         clientOrderId: order.clientOrderId,
@@ -1115,7 +1163,7 @@ export function createSupervisor({
         qty: order.qty,
         signalReason: order.signalReason,
         fillModel: session.fillModelJson,
-        referencePrice: nextBar.open,
+        referencePrice,
         riskEngine: createRiskEngine(session.riskProfileJson),
         submittedAt: at,
         filledAt: at
@@ -1123,9 +1171,15 @@ export function createSupervisor({
       results.push(execution);
       if (execution.order.status === "filled" && execution.fills.length > 0) {
         const fill = execution.fills[0];
-        await addSessionEvent(session, "order_filled", { orderId: order.id, fillId: fill.id, symbol: order.symbol });
-        await appendAudit("session_order_filled", session, { orderId: order.id, fillId: fill.id, symbol: order.symbol }, "broker");
+        const filled = { orderId: order.id, fillId: fill.id, symbol: order.symbol, priceSource };
+        await addSessionEvent(session, "order_filled", filled);
+        await appendAudit("session_order_filled", session, filled, "broker");
         await evaluateAlert({ type: "fill", order: execution.order, fill, symbol: order.symbol }, session.id);
+      } else if (execution.order.status === "rejected" && !execution.idempotent) {
+        // Broker/risk rejections were previously only visible in the audit log,
+        // which made a session that keeps getting blocked look simply idle.
+        const rejected = { orderId: order.id, symbol: order.symbol, reason: execution.order.rejectReason, priceSource };
+        await addSessionEvent(session, "order_rejected", rejected);
       }
     }
     return results;
@@ -1168,6 +1222,10 @@ export function createSupervisor({
     const riskEngine = createRiskEngine(session.riskProfileJson);
     const research = await sessionResearch(session);
     const queued = [];
+    const pendingSides = new Set(
+      (await repositories.orders.list({ sessionId: session.id, status: "pending", limit: 250 }))
+        .map((order) => `${order.symbol}:${order.side}`)
+    );
 
     for (const symbol of session.symbolsJson) {
       const gate = scheduleAllows(session.scheduleJson, { now: at, symbol, trigger });
@@ -1220,6 +1278,9 @@ export function createSupervisor({
       if (!signal || (signal.action === "buy" && position) || (signal.action === "sell" && !position)) continue;
       if (signal.action === "buy" && blockEntries) continue;
       if (signal.action === "sell" && blockedExitSymbols.has(symbol)) continue;
+      // An unfilled order for the same symbol and side is still working; a
+      // second one would double the position when both fill.
+      if (pendingSides.has(`${symbol}:${signal.action}`)) continue;
 
       const markedPosition = accountPortfolio.positions.find((item) => item.symbol === symbol);
       const sizing = signal.action === "buy"
@@ -1505,6 +1566,25 @@ export function createSupervisor({
     } catch (error) {
       await fail(id, error);
       throw error;
+    }
+    // Crypto and intraday orders do not have to wait a whole bar: when the
+    // market is open, fill new signals now at the fresh live quote.
+    if (signals.some((signal) => !signal.idempotent && signal.order?.status === "pending")) {
+      const immediate = await fillPendingOrders(refreshed, at, { blockEntries: entryBlock });
+      fills.push(...immediate);
+      if (immediate.some((execution) => execution.order?.status === "filled")) {
+        portfolio = await broker.portfolio(session.accountId, { sessionId: session.id, fresh: true, at });
+        if (portfolio.equity !== null) {
+          await repositories.sessions.addEquitySnapshot({
+            sessionId: id,
+            at,
+            equity: portfolio.equity,
+            cash: portfolio.cash,
+            positionValue: portfolio.positionValue ?? 0,
+            drawdownPercent: postFillPeak > 0 ? Math.max(0, ((postFillPeak - portfolio.equity) / postFillPeak) * 100) : 0
+          });
+        }
+      }
     }
     eventHub?.publish("session.tick", { sessionId: id, portfolio, failures, fills, signals, protectiveExits, trigger });
     return {
