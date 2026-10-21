@@ -1,0 +1,11 @@
+{
+  "market": "US-listed common stocks",
+  "horizon": "weeks to months",
+  "lookbackDays": 7,
+  "maxPostsPerQuery": 25,
+  "queries": [
+    "(stocks OR equities) (catalyst OR earnings OR guidance) lang:en -filter:retweets",
+    "(stocks OR shares) (contract OR approval OR launch) lang:en -filter:retweets",
+    "(stocks OR equities) (dilution OR downgrade OR short thesis) lang:en -filter:retweets"
+  ]
+}

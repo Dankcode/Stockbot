@@ -12,6 +12,7 @@
     "db:backup": "node scripts/database.js backup",
     "db:trades": "node scripts/database.js trades",
     "research": "node scripts/research.js",
+    "research:hermes": "node scripts/hermes-research.js",
     "research:probe": "node scripts/research-probe.js",
     "plugin": "node scripts/plugin.js",
     "horizon:matrix": "node scripts/horizon-matrix.js",

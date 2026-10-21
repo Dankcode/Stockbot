@@ -12,6 +12,10 @@ Both files run byte-identical EMA(9/21) technical rules. The only difference is 
 
 ## Twitter/X is not reachable, and what replaces it
 
+This restriction applies to the `web.page.v1` sentiment pipeline. A separate
+[Hermes research workflow](./HERMES_RESEARCH.md) uses authenticated Twitter CLI
+reads to produce human-reviewed shortlists; it does not feed these plans.
+
 X requires paid API authentication. `web.page.v1` forbids credential-bearing query keys by schema, cannot send custom headers, and always identifies itself as `StockbotResearch/1.0`. There is no configuration of this pipeline that reads X, and scraping x.com would violate its terms regardless. It joins SAM.gov and FPDS in [Research sources](./RESEARCH_SOURCES.md) as a documented dead end.
 
 Three sources take its place:
