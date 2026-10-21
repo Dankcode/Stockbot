@@ -1,0 +1,851 @@
+diff --git a/README.md b/README.md
+index d3d6ac4..94c66cc 100644
+--- a/README.md
++++ b/README.md
+@@ -111,6 +111,8 @@ Five bundles ship in `plugins/`: `core-controls`, `base-methods`, `horizon-pack`
+ 
+ ### 6. Add optional AI research
+ 
++To let **Claude on your Mac operate a Stockbot instance over Tailscale** (create, monitor and control paper sessions through MCP), see [Operating Stockbot from Claude](./docs/CLAUDE_OPERATOR.md).
++
+ For **Hermes multi-agent research using Twitter/X**, see [Hermes stock research](./docs/HERMES_RESEARCH.md). It collects X evidence with `public-clis/twitter-cli` and produces a sourced US-stock shortlist for a weeks-to-months horizon in a separate research workspace.
+ 
+ Stockbot can run strict JSON research plans through two code-owned adapters: a registered-origin HTTPS reader and an operator-configured JSON-in/JSON-out AI CLI. Plans cannot name executables, inject arguments or environment variables, or fetch arbitrary origins. The resulting summaries and source provenance are immutable SQL snapshots that a strategy can read only when they existed by that bar's canonical decision timestamp (`bar.time`).
+diff --git a/docs/CLAUDE_OPERATOR.md b/docs/CLAUDE_OPERATOR.md
+new file mode 100644
+index 0000000..a075d47
+--- /dev/null
++++ b/docs/CLAUDE_OPERATOR.md
+@@ -0,0 +1,106 @@
++# Operating Stockbot from Claude (MCP over Tailscale)
++
++`scripts/mcp/stockbot-mcp.js` is a small, dependency-free [MCP](https://modelcontextprotocol.io) server. It lets Claude on your Mac (the Claude desktop app or Claude Code) operate a Stockbot instance running on another machine in your tailnet, for example the laptop deployment from [LAPTOP_DEPLOYMENT.md](./LAPTOP_DEPLOYMENT.md).
++
++Claude acts as an **operator**. The strategy's own rules make every buy and sell decision, and Stockbot executes them with paper money. Claude creates, starts, monitors, pauses, stops and reports on sessions.
++
++## What Claude can and cannot do
++
++| Tool | Does |
++|---|---|
++| `stockbot_status` | Health, data providers, paper equity, positions and active sessions |
++| `list_strategies` | Installed strategies with default params and current version |
++| `market_quote`, `market_bars` | Latest quote and recent bars for a symbol |
++| `backtest_strategy` | Read-only backtest of an installed strategy vs SPY/QQQ/IWM/DIA controls |
++| `list_sessions`, `session_report` | Sessions; one session's equity, pending/filled/rejected orders (with reasons) and events |
++| `create_paper_session` | Creates and starts a **paper** session with fixed dollar sizing and a catastrophe stop |
++| `session_control` | start, pause, resume, stop, halt (halt keeps positions) |
++| `account_portfolio` | Cash, equity and positions of a paper account |
++
++The tool set is deliberately closed:
++- **No algorithm upload or edit.** Uploaded JavaScript can escape the engine sandbox, so only strategies already installed on the instance can be used.
++- No settings, research plans, liquidate-all, halt-all or raw order placement.
++- Sessions are always paper.
++
++The bridge sends the API token **only** to a Tailscale Serve HTTPS address (`https://<host>.<tailnet>.ts.net`) or loopback. Any other URL is refused, so a typo or an injected value cannot send the token anywhere else. The token lives in `~/.config/stockbot/mcp.env` (mode 600) and never in Claude's own config files.
++
++## Prerequisites
++
++1. **The instance runs current code.** The Bitcoin crossover (`crypto-pack/btc-sma-crossover`) needs the 2026-10-20 changes or later. On the Stockbot host: `git pull && ./scripts/laptop/install.sh`.
++2. **Tailscale is connected on this Mac,** and the host's Serve mapping is up. `tailscale serve status` on the host shows the HTTPS URL to use.
++3. You have the host's `STOCKBOT_API_TOKEN`, from `~/.config/stockbot/stockbot.env` on the host. Read it on the host; don't paste it into a chat.
++
++## Setup (one command, on the Mac)
++
++```bash
++cd ~/Documents/GitHub/Stockbot
++./scripts/mcp/setup-claude.sh --url https://<host>.<tailnet>.ts.net
++```
++
++The script:
++1. checks the URL and that `/api/v1/health` answers;
++2. asks for the token without echoing it and writes `~/.config/stockbot/mcp.env`;
++3. proves the bridge works by calling `stockbot_status` and `list_strategies` through MCP, and tells you if the Bitcoin strategy is missing on the host;
++4. registers `stockbot` in the Claude desktop app's config (`~/Library/Application Support/Claude/claude_desktop_config.json`, backup kept) and, if the `claude` CLI is installed, with Claude Code (`claude mcp add --scope user`).
++
++Then quit and reopen the Claude app and ask Claude to "check Stockbot status".
++
++### Manual registration (if you prefer)
++
++Claude desktop app, inside `mcpServers`:
++
++```json
++"stockbot": {
++  "command": "/absolute/path/to/node",
++  "args": ["/Users/<you>/Documents/GitHub/Stockbot/scripts/mcp/stockbot-mcp.js"],
++  "env": { "STOCKBOT_MCP_ENV": "/Users/<you>/.config/stockbot/mcp.env" }
++}
++```
++
++Claude Code:
++
++```bash
++claude mcp add --scope user stockbot --env STOCKBOT_MCP_ENV=$HOME/.config/stockbot/mcp.env -- "$(command -v node)" "$PWD/scripts/mcp/stockbot-mcp.js"
++```
++
++Use an absolute `node` path. GUI apps often don't inherit your shell's `PATH` (nvm, Homebrew).
++
++## The Bitcoin crossover agent
++
++Rule: compare Bitcoin's recent average price with its longer average. When the shorter average crosses above the longer one, buy; when it crosses back below, sell. This is installed as `crypto-pack/btc-sma-crossover` (simple moving averages, default 20 and 50 bars).
++
++Recommended starting configuration:
++
++| Setting | Value | Why |
++|---|---|---|
++| Symbol | `BTCUSD` | |
++| Bar interval | `1hour` | 20 h vs 50 h averages, a decision every hour, 24/7, so you see activity within days. `1day` with 20/50 is the classic slow version: a few trades a year. |
++| Params | `fast: 20`, `slow: 50` | The strategy's defaults |
++| Sizing | `$10,000` per entry | 10% of the $100k paper account |
++| Catastrophe stop | `15%` | Exits only on a crash between crossovers. For the pure rule (exit only on the cross-down), set it to the maximum, 50. |
++
++Ask Claude, for example:
++
++> Create a paper session named "Claude agent — BTC SMA crossover" for crypto-pack/btc-sma-crossover on BTCUSD, 1hour bars, fast 20 slow 50, $10,000 per entry, and start it. Then show me the session report.
++
++Daily check:
++
++> Give me the report for the BTC crossover session: equity vs start, any trades since yesterday, pending orders, and any rejections with their reasons. Compare its return since start with a QQQ and SPY backtest over the same range.
++
++Notes:
++- Crypto sessions fill in the same tick as the signal at the live quote (since 2026-10-20).
++- **Shared account.** Until per-agent sleeves exist (`PLAN-stockbot-swarm-hub-20261021`, Phase 1), every session trades the shared `default-paper` account. Its exposure and drawdown limits are shared with other running sessions, so use fixed sizing and keep an eye on `account_portfolio`.
++- The session must be running on the host. The bridge is only a remote control, so Claude doesn't need to stay open.
++
++## Troubleshooting
++
++| Message | Fix |
++|---|---|
++| `UNREACHABLE` | Tailscale disconnected on the Mac, the host asleep, or Serve mapping off (`tailscale serve status` on the host) |
++| `CONFIG_UNSAFE_URL` | Use the `https://…ts.net` name from `tailscale serve status`, not an IP or plain `http` |
++| `CONFIG_PERMISSIONS` | `chmod 600 ~/.config/stockbot/mcp.env` |
++| `AUTH_NOT_CONFIGURED` / `AUTH_REQUIRED` | Re-run setup with the host's current `STOCKBOT_API_TOKEN` |
++| `STRATEGY_NOT_INSTALLED` | Update the host: `git pull && ./scripts/laptop/install.sh` |
++| Tools don't appear in Claude | Quit and reopen the Claude app; check the `stockbot` entry in its config |
++
++This bridge is the seed of the swarm hub's MCP server (`PLAN-stockbot-swarm-hub-20261021`, Phase 5). There, each agent gets its own scoped token and sleeve instead of the operator token.
+diff --git a/package.json b/package.json
+index 77ad79e..12f4b23 100644
+--- a/package.json
++++ b/package.json
+@@ -13,6 +13,8 @@
+     "db:trades": "node scripts/database.js trades",
+     "research": "node scripts/research.js",
+     "research:hermes": "node scripts/hermes-research.js",
++    "mcp": "node scripts/mcp/stockbot-mcp.js",
++    "mcp:setup": "./scripts/mcp/setup-claude.sh",
+     "research:probe": "node scripts/research-probe.js",
+     "plugin": "node scripts/plugin.js",
+     "horizon:matrix": "node scripts/horizon-matrix.js",
+diff --git a/scripts/mcp/setup-claude.sh b/scripts/mcp/setup-claude.sh
+new file mode 100755
+index 0000000..53f59e0
+--- /dev/null
++++ b/scripts/mcp/setup-claude.sh
+@@ -0,0 +1,125 @@
++#!/usr/bin/env bash
++#
++# Connect Claude on this Mac to a Stockbot instance over Tailscale.
++#
++#   ./scripts/mcp/setup-claude.sh --url https://<oldlaptop>.<tailnet>.ts.net
++#
++# 1. Checks the URL is a Tailscale HTTPS name (or loopback) and that /api/v1/health answers.
++# 2. Asks for the instance's STOCKBOT_API_TOKEN without echoing it, and writes
++#    ~/.config/stockbot/mcp.env with mode 600. The token never goes into Claude's config.
++# 3. Proves the bridge works by calling stockbot_status and list_strategies through MCP.
++# 4. Registers the bridge with the Claude desktop app (backup first) and, if present,
++#    Claude Code (`claude mcp add --scope user`).
++#
++# Flags: --url URL (required) · --no-desktop · --no-claude-code · --token-stdin (read token from stdin)
++#        --config-dir DIR (default ~/.config/stockbot) · --desktop-config FILE
++
++set -euo pipefail
++cd "$(dirname "$0")/../.."
++REPO="$(pwd)"
++BRIDGE="$REPO/scripts/mcp/stockbot-mcp.js"
++
++URL=""
++DESKTOP=1
++CLAUDE_CODE=1
++TOKEN_STDIN=0
++CONFIG_DIR="$HOME/.config/stockbot"
++DESKTOP_CONFIG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
++while [ $# -gt 0 ]; do
++  case "$1" in
++    --url) URL="${2:-}"; shift 2 ;;
++    --no-desktop) DESKTOP=0; shift ;;
++    --no-claude-code) CLAUDE_CODE=0; shift ;;
++    --token-stdin) TOKEN_STDIN=1; shift ;;
++    --config-dir) CONFIG_DIR="${2:-}"; shift 2 ;;
++    --desktop-config) DESKTOP_CONFIG="${2:-}"; shift 2 ;;
++    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
++    *) echo "Unknown option: $1" >&2; exit 2 ;;
++  esac
++done
++[ -n "$URL" ] || { echo "--url is required, e.g. --url https://oldlaptop.your-tailnet.ts.net" >&2; exit 2; }
++
++NODE="$(command -v node || true)"
++[ -n "$NODE" ] || { echo "Node.js 22+ is required on this Mac." >&2; exit 1; }
++"$NODE" -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 22 ? 0 : 1)' || { echo "Node.js 22+ is required (found $("$NODE" -v))." >&2; exit 1; }
++
++# 1. URL safety + reachability (health is a read-only, unauthenticated route)
++"$NODE" --input-type=module -e "
++  import { validateBaseUrl } from '$BRIDGE';
++  try { validateBaseUrl(process.argv[1]); } catch (error) { console.error(error.message); process.exit(1); }
++" "$URL"
++echo "Checking ${URL%/}/api/v1/health ..."
++if ! curl -fsS -m 10 "${URL%/}/api/v1/health" >/dev/null; then
++  echo "Cannot reach Stockbot at $URL." >&2
++  echo "Check: Tailscale is connected on this Mac (menu bar), the oldlaptop is online, and 'tailscale serve status' on the oldlaptop shows the HTTPS mapping." >&2
++  exit 1
++fi
++echo "Reachable."
++
++# 2. Token → protected file
++if [ "$TOKEN_STDIN" = 1 ]; then
++  IFS= read -r TOKEN
++else
++  printf "Paste the oldlaptop's STOCKBOT_API_TOKEN (input hidden): "
++  IFS= read -rs TOKEN; echo
++fi
++[ "${#TOKEN}" -ge 32 ] || { echo "That token is shorter than 32 characters; check ~/.config/stockbot/stockbot.env on the oldlaptop." >&2; exit 1; }
++umask 077
++mkdir -p "$CONFIG_DIR"
++ENV_FILE="$CONFIG_DIR/mcp.env"
++TMP="$(mktemp "$CONFIG_DIR/.mcp.env.XXXXXX")"
++printf 'STOCKBOT_URL=%s\nSTOCKBOT_API_TOKEN=%s\n' "${URL%/}" "$TOKEN" > "$TMP"
++chmod 600 "$TMP"
++mv -f "$TMP" "$ENV_FILE"
++unset TOKEN
++echo "Wrote $ENV_FILE (mode 600)."
++
++# 3. Prove the bridge end to end through MCP
++STOCKBOT_MCP_ENV="$ENV_FILE" "$NODE" --input-type=module -e "
++  import { spawn } from 'node:child_process';
++  import readline from 'node:readline';
++  const child = spawn(process.execPath, ['$BRIDGE'], { env: { ...process.env }, stdio: ['pipe', 'pipe', 'inherit'] });
++  const waiting = new Map(); let next = 1;
++  readline.createInterface({ input: child.stdout }).on('line', (line) => { const message = JSON.parse(line); waiting.get(message.id)?.(message); });
++  const call = (method, params) => new Promise((resolve) => { const id = next++; waiting.set(id, resolve); child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n'); });
++  await call('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'setup', version: '1' } });
++  const status = await call('tools/call', { name: 'stockbot_status', arguments: {} });
++  const strategies = await call('tools/call', { name: 'list_strategies', arguments: { query: 'crypto-pack' } });
++  child.kill();
++  if (status.result?.isError) { console.error('stockbot_status failed: ' + status.result.content[0].text); process.exit(1); }
++  const parsed = JSON.parse(status.result.content[0].text);
++  console.log('Bridge OK. Providers: ' + parsed.providers.map((p) => p.id + '=' + p.status).join(', ') + '; paper equity: \$' + parsed.portfolio?.equity);
++  const crypto = strategies.result?.isError ? [] : JSON.parse(strategies.result.content[0].text);
++  if (!crypto.some((item) => item.id === 'crypto-pack/btc-sma-crossover')) {
++    console.log('NOTE: crypto-pack/btc-sma-crossover is not installed on that instance yet. On the oldlaptop: git pull && ./scripts/laptop/install.sh');
++  } else {
++    console.log('Bitcoin SMA Crossover strategy is installed.');
++  }
++"
++
++# 4a. Claude desktop app
++if [ "$DESKTOP" = 1 ]; then
++  mkdir -p "$(dirname "$DESKTOP_CONFIG")"
++  if [ -f "$DESKTOP_CONFIG" ]; then cp -p "$DESKTOP_CONFIG" "$DESKTOP_CONFIG.bak-$(date +%Y%m%d%H%M%S)"; fi
++  "$NODE" -e "
++    const fs = require('node:fs');
++    const [file, node, bridge, envFile] = process.argv.slice(1);
++    let config = {};
++    if (fs.existsSync(file)) {
++      try { config = JSON.parse(fs.readFileSync(file, 'utf8') || '{}'); }
++      catch { console.error('Existing Claude desktop config is not valid JSON; left untouched. Add the stockbot server manually (see docs/CLAUDE_OPERATOR.md).'); process.exit(0); }
++    }
++    config.mcpServers = { ...(config.mcpServers || {}), stockbot: { command: node, args: [bridge], env: { STOCKBOT_MCP_ENV: envFile } } };
++    fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\n');
++    console.log('Registered \"stockbot\" in ' + file + ' (backup kept). Quit and reopen the Claude app to load it.');
++  " "$DESKTOP_CONFIG" "$NODE" "$BRIDGE" "$ENV_FILE"
++fi
++
++# 4b. Claude Code
++if [ "$CLAUDE_CODE" = 1 ] && command -v claude >/dev/null 2>&1; then
++  claude mcp remove --scope user stockbot >/dev/null 2>&1 || true
++  claude mcp add --scope user stockbot --env "STOCKBOT_MCP_ENV=$ENV_FILE" -- "$NODE" "$BRIDGE" \
++    && echo "Registered \"stockbot\" with Claude Code (user scope)."
++fi
++
++echo "Done. Ask Claude: \"Check Stockbot status\" to confirm it can see the instance."
+diff --git a/scripts/mcp/stockbot-mcp.js b/scripts/mcp/stockbot-mcp.js
+new file mode 100644
+index 0000000..a6c74ac
+--- /dev/null
++++ b/scripts/mcp/stockbot-mcp.js
+@@ -0,0 +1,464 @@
++#!/usr/bin/env node
++/**
++ * Stockbot MCP bridge — lets a local Claude (Claude Code or the Claude desktop app)
++ * operate a Stockbot instance over Tailscale.
++ *
++ * Zero dependencies: a minimal MCP server speaking JSON-RPC 2.0 over stdio
++ * (newline-delimited), exposing a deliberately small, allowlisted tool set on top of
++ * the existing HTTP API. It is an operator console, not a raw API proxy:
++ *
++ *   - NO algorithm upload or edit (uploaded strategies can escape the node:vm sandbox;
++ *     see the sandbox finding). Only installed strategies can be used.
++ *   - NO settings, research-plan, liquidate-all, halt-all or raw order routes.
++ *   - Paper sessions only; every created session is paper mode.
++ *
++ * Configuration (never pass the token on the command line or in MCP client config):
++ *   STOCKBOT_MCP_ENV   path to a 0600 env file (default ~/.config/stockbot/mcp.env) with
++ *                      STOCKBOT_URL=https://<host>.<tailnet>.ts.net
++ *                      STOCKBOT_API_TOKEN=<the instance's API token>
++ *   Real environment variables override the file.
++ *
++ * The token is only ever sent to a Tailscale Serve HTTPS name (*.ts.net) or to loopback,
++ * so a mistyped or injected URL cannot ship the operator credential to the internet.
++ */
++import { readFile, stat } from "node:fs/promises";
++import os from "node:os";
++import path from "node:path";
++import process from "node:process";
++import readline from "node:readline";
++import { fileURLToPath } from "node:url";
++
++const SERVER_INFO = { name: "stockbot", version: "1.0.0" };
++const SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
++const INTERVALS = ["1min", "5min", "1hour", "1day", "1week", "1month"];
++const RANGES = ["1H", "1D", "1W", "1M", "3M", "1Y", "ALL"];
++
++export class BridgeError extends Error {
++  constructor(message, code = "STOCKBOT_MCP_ERROR") {
++    super(message);
++    this.code = code;
++  }
++}
++
++function parseEnvText(text) {
++  const values = {};
++  for (const raw of text.split(/\r?\n/)) {
++    const line = raw.trim();
++    if (!line || line.startsWith("#")) continue;
++    const index = line.indexOf("=");
++    if (index < 1) continue;
++    const key = line.slice(0, index).trim();
++    let value = line.slice(index + 1).trim();
++    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
++    values[key] = value;
++  }
++  return values;
++}
++
++export async function loadBridgeConfig(environment = process.env) {
++  const file = environment.STOCKBOT_MCP_ENV || path.join(os.homedir(), ".config", "stockbot", "mcp.env");
++  let fromFile = {};
++  try {
++    const metadata = await stat(file);
++    if (!metadata.isFile()) throw new BridgeError(`${file} is not a regular file.`, "CONFIG_INVALID");
++    if (process.platform !== "win32" && (metadata.mode & 0o077) !== 0) {
++      throw new BridgeError(`${file} must be readable only by you (chmod 600).`, "CONFIG_PERMISSIONS");
++    }
++    fromFile = parseEnvText(await readFile(file, "utf8"));
++  } catch (error) {
++    if (error instanceof BridgeError) throw error;
++    if (error?.code !== "ENOENT") throw new BridgeError(`Cannot read ${file}.`, "CONFIG_INVALID");
++  }
++  const merged = { ...fromFile, ...pick(environment, ["STOCKBOT_URL", "STOCKBOT_API_TOKEN"]) };
++  return { baseUrl: validateBaseUrl(merged.STOCKBOT_URL), token: String(merged.STOCKBOT_API_TOKEN ?? ""), file };
++}
++
++function pick(source, keys) {
++  return Object.fromEntries(keys.filter((key) => source[key]).map((key) => [key, source[key]]));
++}
++
++/** Only Tailscale Serve HTTPS names or loopback may receive the operator token. */
++export function validateBaseUrl(value) {
++  if (!value) throw new BridgeError("STOCKBOT_URL is not configured. Put it in ~/.config/stockbot/mcp.env.", "CONFIG_MISSING");
++  let url;
++  try { url = new URL(value); } catch { throw new BridgeError("STOCKBOT_URL is not a valid URL.", "CONFIG_INVALID"); }
++  const loopback = ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
++  const tailnet = url.protocol === "https:" && /^[a-z0-9-]+(\.[a-z0-9-]+)*\.ts\.net$/i.test(url.hostname);
++  if (!(tailnet || (loopback && ["http:", "https:"].includes(url.protocol)))) {
++    throw new BridgeError("STOCKBOT_URL must be a Tailscale Serve HTTPS address (https://<host>.<tailnet>.ts.net) or loopback.", "CONFIG_UNSAFE_URL");
++  }
++  if (url.username || url.password) throw new BridgeError("STOCKBOT_URL must not contain credentials.", "CONFIG_UNSAFE_URL");
++  return `${url.origin}/`;
++}
++
++export function createApi({ baseUrl, token }, { fetchImpl = fetch, timeoutMs = 60_000 } = {}) {
++  async function request(method, route, body) {
++    const mutating = method !== "GET";
++    if (mutating && token.length < 32) {
++      throw new BridgeError("STOCKBOT_API_TOKEN is missing or too short; changes need the instance's API token.", "AUTH_NOT_CONFIGURED");
++    }
++    let response;
++    try {
++      response = await fetchImpl(new URL(`/api/v1${route}`, baseUrl), {
++        method,
++        headers: {
++          accept: "application/json",
++          ...(body === undefined ? {} : { "content-type": "application/json" }),
++          ...(token ? { "x-stockbot-token": token } : {})
++        },
++        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
++        signal: AbortSignal.timeout(timeoutMs)
++      });
++    } catch (error) {
++      throw new BridgeError(
++        `Cannot reach Stockbot at ${baseUrl} (${error?.cause?.code ?? error?.name ?? "network error"}). Is Tailscale connected on this Mac and the oldlaptop online?`,
++        "UNREACHABLE"
++      );
++    }
++    let payload;
++    try { payload = await response.json(); } catch {
++      throw new BridgeError(`Stockbot returned non-JSON HTTP ${response.status}.`, "INVALID_RESPONSE");
++    }
++    if (!response.ok || payload?.error) {
++      throw new BridgeError(payload?.error?.message ?? `Stockbot returned HTTP ${response.status}.`, payload?.error?.code ?? `HTTP_${response.status}`);
++    }
++    return payload.data;
++  }
++  return { get: (route) => request("GET", route), post: (route, body) => request("POST", route, body ?? {}) };
++}
++
++const listOf = (value) => {
++  if (Array.isArray(value)) return value;
++  for (const key of ["items", "algorithms", "sessions", "orders", "events"]) if (Array.isArray(value?.[key])) return value[key];
++  return [];
++};
++const enc = encodeURIComponent;
++const iso = (value) => (Number.isFinite(Number(value)) && Number(value) > 0 ? new Date(Number(value)).toISOString() : null);
++const dollars = (cents) => (Number.isFinite(Number(cents)) ? Math.round(Number(cents)) / 100 : null);
++
++function requireString(args, key, { pattern, max = 200 } = {}) {
++  const value = typeof args?.[key] === "string" ? args[key].trim() : "";
++  if (!value) throw new BridgeError(`${key} is required.`, "INVALID_ARGUMENT");
++  if (value.length > max || (pattern && !pattern.test(value))) throw new BridgeError(`${key} is invalid.`, "INVALID_ARGUMENT");
++  return value;
++}
++const SYMBOL = /^[A-Za-z0-9./-]{1,32}$/;
++const ID = /^[A-Za-z0-9:._/-]{1,160}$/;
++
++function compactSession(session) {
++  return {
++    id: session.id,
++    name: session.name,
++    status: session.status,
++    mode: session.mode,
++    algorithmVersionId: session.algorithmVersionId,
++    symbols: session.symbols ?? session.symbolsJson,
++    barInterval: session.barInterval,
++    accountId: session.accountId,
++    startedAt: iso(session.startedAt),
++    endedAt: iso(session.endedAt),
++    stopReason: session.stopReason ?? null,
++    errorDetail: session.errorDetail ?? null
++  };
++}
++
++function compactOrder(order) {
++  const fill = Array.isArray(order.fills) ? order.fills[0] : null;
++  return {
++    side: order.side,
++    symbol: order.symbol,
++    status: order.status,
++    qty: Number(order.qty) / 1_000_000,
++    fillPrice: fill ? dollars(fill.price) : null,
++    submittedAt: iso(order.submittedAt),
++    filledAt: iso(fill?.filledAt),
++    reason: order.signalReason ?? null,
++    rejectReason: order.rejectReason ?? null
++  };
++}
++
++export const TOOLS = [
++  {
++    name: "stockbot_status",
++    description: "Health of the Stockbot instance, data providers, paper account equity and active sessions. Call this first.",
++    inputSchema: { type: "object", properties: {}, additionalProperties: false },
++    async run(api) {
++      const [health, overview] = await Promise.all([api.get("/health"), api.get("/overview").catch(() => null)]);
++      return {
++        ok: health?.ok ?? null,
++        database: health?.database ?? null,
++        providers: (health?.providers ?? []).map(({ id, status, configured, message }) => ({ id, status, configured, message })),
++        portfolio: overview?.portfolio ? {
++          accountId: overview.portfolio.accountId,
++          equity: dollars(overview.portfolio.equity),
++          cash: dollars(overview.portfolio.cash),
++          positions: (overview.portfolio.positions ?? []).map((position) => ({ symbol: position.symbol, qty: Number(position.qty) / 1_000_000, marketValue: dollars(position.marketValue) }))
++        } : null,
++        activeSessions: listOf(overview?.activeSessions).map(compactSession)
++      };
++    }
++  },
++  {
++    name: "list_strategies",
++    description: "Installed strategies (id, name, description, default params, current version). Optional query filters by name/id/description.",
++    inputSchema: { type: "object", properties: { query: { type: "string", maxLength: 80 } }, additionalProperties: false },
++    async run(api, args) {
++      const needle = String(args?.query ?? "").trim().toLowerCase();
++      return listOf(await api.get("/algorithms"))
++        .filter((algorithm) => !needle || [algorithm.id, algorithm.name, algorithm.description].some((text) => String(text ?? "").toLowerCase().includes(needle)))
++        .map((algorithm) => ({ id: algorithm.id, name: algorithm.name, role: algorithm.role ?? null, description: algorithm.description ?? null, params: algorithm.params ?? {}, enabled: algorithm.enabled ?? null, versionId: algorithm.version?.id ?? null }));
++    }
++  },
++  {
++    name: "market_quote",
++    description: "Latest real quote for a symbol (e.g. BTCUSD, SPY).",
++    inputSchema: { type: "object", properties: { symbol: { type: "string" } }, required: ["symbol"], additionalProperties: false },
++    async run(api, args) {
++      const symbol = requireString(args, "symbol", { pattern: SYMBOL }).toUpperCase();
++      const quote = await api.get(`/market/quote/${enc(symbol)}`);
++      return { ...quote, at: iso(quote?.at) ?? quote?.at };
++    }
++  },
++  {
++    name: "market_bars",
++    description: "Recent OHLCV bars for a symbol. range: 1H|1D|1W(1-hour bars)|1M|3M(daily)|1Y|ALL. Returns at most `limit` most recent bars (default 60).",
++    inputSchema: {
++      type: "object",
++      properties: { symbol: { type: "string" }, range: { type: "string", enum: RANGES }, limit: { type: "integer", minimum: 1, maximum: 500 } },
++      required: ["symbol"],
++      additionalProperties: false
++    },
++    async run(api, args) {
++      const symbol = requireString(args, "symbol", { pattern: SYMBOL }).toUpperCase();
++      const range = RANGES.includes(args?.range) ? args.range : "1W";
++      const limit = Math.min(500, Math.max(1, Number(args?.limit) || 60));
++      const data = await api.get(`/market/bars/${enc(symbol)}?range=${enc(range)}`);
++      const bars = (data?.bars ?? []).slice(-limit).map((bar) => ({ time: iso(bar.time) ?? bar.time, open: bar.open, high: bar.high, low: bar.low, close: bar.close, volume: bar.volume }));
++      return { symbol, range, interval: data?.interval, source: data?.source, count: bars.length, bars };
++    }
++  },
++  {
++    name: "backtest_strategy",
++    description: "Backtest an installed strategy on one symbol over a recent range (read-only; nothing trades). Returns metrics vs controls.",
++    inputSchema: {
++      type: "object",
++      properties: {
++        algorithmId: { type: "string" },
++        symbol: { type: "string" },
++        range: { type: "string", enum: RANGES },
++        params: { type: "object", additionalProperties: { type: ["number", "string", "boolean"] } }
++      },
++      required: ["algorithmId", "symbol"],
++      additionalProperties: false
++    },
++    async run(api, args) {
++      const algorithmId = requireString(args, "algorithmId", { pattern: ID });
++      const symbol = requireString(args, "symbol", { pattern: SYMBOL }).toUpperCase();
++      const result = await api.post(`/algorithms/${enc(algorithmId)}/backtest`, {
++        symbol,
++        ...(RANGES.includes(args?.range) ? { range: args.range } : {}),
++        ...(args?.params ? { params: args.params } : {})
++      });
++      const run = result?.run ?? result?.result ?? result;
++      const readable = (metrics) => metrics ? { ...metrics, finalEquity: dollars(metrics.finalEquity) } : null;
++      return {
++        algorithmId,
++        symbol,
++        note: "Equity in dollars from a $100,000 start. Controls are buy-and-hold index funds over the same window.",
++        metrics: readable(run?.metrics),
++        controls: (run?.controls ?? []).map((control) => ({ id: control.id ?? control.label, metrics: readable(control.metrics) })),
++        comparison: run?.comparison ?? null,
++        trades: Array.isArray(run?.trades) ? run.trades.length : null
++      };
++    }
++  },
++  {
++    name: "list_sessions",
++    description: "Trading sessions (most recent first). Optional status filter: running|paused|halted|stopped|errored|draft.",
++    inputSchema: { type: "object", properties: { status: { type: "string", enum: ["running", "paused", "halted", "stopped", "errored", "draft"] } }, additionalProperties: false },
++    async run(api, args) {
++      const query = args?.status ? `&status=${enc(args.status)}` : "";
++      return listOf(await api.get(`/sessions?limit=100${query}`)).map(compactSession);
++    }
++  },
++  {
++    name: "session_report",
++    description: "Everything about one session: config, latest equity, return since start, open/pending/filled/rejected orders with reasons, and recent events.",
++    inputSchema: { type: "object", properties: { sessionId: { type: "string" } }, required: ["sessionId"], additionalProperties: false },
++    async run(api, args) {
++      const id = requireString(args, "sessionId", { pattern: ID });
++      const [detail, orders, events, equity] = await Promise.all([
++        api.get(`/sessions/${enc(id)}`),
++        api.get(`/sessions/${enc(id)}/orders?limit=100`),
++        api.get(`/sessions/${enc(id)}/events?limit=40`),
++        api.get(`/sessions/${enc(id)}/equity?resolution=200`)
++      ]);
++      const session = detail?.session ?? detail;
++      const points = listOf(equity);
++      const first = Number(points[0]?.equity);
++      const last = Number(points.at(-1)?.equity);
++      const orderList = listOf(orders);
++      return {
++        session: { ...compactSession(session), params: session.params ?? session.paramsJson, riskProfile: session.riskProfile ?? session.riskProfileJson },
++        equity: points.length ? { first: dollars(first), latest: dollars(last), returnPercent: first > 0 ? Number((((last / first) - 1) * 100).toFixed(3)) : null, lastCheck: iso(points.at(-1)?.at), points: points.length } : null,
++        orders: {
++          pending: orderList.filter((order) => order.status === "pending").map(compactOrder),
++          filled: orderList.filter((order) => order.status === "filled").slice(0, 20).map(compactOrder),
++          rejected: orderList.filter((order) => order.status === "rejected").slice(0, 10).map(compactOrder)
++        },
++        recentEvents: listOf(events).slice(0, 25).map((event) => ({ at: iso(event.at), type: event.action ?? event.type, detail: event.detailJson ?? null }))
++      };
++    }
++  },
++  {
++    name: "create_paper_session",
++    description: "Create (and by default start) a PAPER trading session for an installed strategy. The strategy's own rules make every buy/sell decision; Stockbot executes them with simulated money. sizingNotional sets dollars per entry; stopLossPercent is a protective catastrophe stop (default 15).",
++    inputSchema: {
++      type: "object",
++      properties: {
++        name: { type: "string", maxLength: 200 },
++        algorithmId: { type: "string" },
++        symbols: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 20 },
++        barInterval: { type: "string", enum: INTERVALS },
++        params: { type: "object", additionalProperties: { type: ["number", "string", "boolean"] } },
++        sizingNotional: { type: "number", minimum: 10, maximum: 50_000 },
++        stopLossPercent: { type: "number", minimum: 1, maximum: 50 },
++        start: { type: "boolean" }
++      },
++      required: ["name", "algorithmId", "symbols", "barInterval"],
++      additionalProperties: false
++    },
++    async run(api, args) {
++      const name = requireString(args, "name", { max: 200 });
++      const algorithmId = requireString(args, "algorithmId", { pattern: ID });
++      if (!INTERVALS.includes(args?.barInterval)) throw new BridgeError("barInterval is invalid.", "INVALID_ARGUMENT");
++      const symbols = (args?.symbols ?? []).map((symbol) => String(symbol).trim().toUpperCase());
++      if (!symbols.length || symbols.length > 20 || !symbols.every((symbol) => SYMBOL.test(symbol))) throw new BridgeError("symbols are invalid.", "INVALID_ARGUMENT");
++      const algorithm = await api.get(`/algorithms/${enc(algorithmId)}`);
++      const versionId = algorithm?.version?.id;
++      if (!versionId) throw new BridgeError(`Strategy ${algorithmId} has no installed version on this instance.`, "STRATEGY_NOT_INSTALLED");
++      if (algorithm.role && algorithm.role !== "strategy") throw new BridgeError(`${algorithmId} is a ${algorithm.role}, not a strategy.`, "INVALID_ARGUMENT");
++      const notional = Number(args?.sizingNotional ?? 10_000);
++      const stopLoss = Number(args?.stopLossPercent ?? 15);
++      let session = await api.post("/sessions", {
++        name,
++        mode: "paper",
++        algorithmVersionId: versionId,
++        symbols,
++        barInterval: args.barInterval,
++        params: { ...(algorithm.params ?? {}), ...(args?.params ?? {}) },
++        riskProfile: {
++          name: "Claude operator paper",
++          sizing: { mode: "fixed_notional", fixedNotional: notional },
++          rules: { positionStopLoss: { enabled: true, percent: stopLoss } }
++        }
++      });
++      if (args?.start !== false) session = await api.post(`/sessions/${enc(session.id)}/start`);
++      return { created: compactSession(session), params: { ...(algorithm.params ?? {}), ...(args?.params ?? {}) }, sizingNotional: notional, stopLossPercent: stopLoss };
++    }
++  },
++  {
++    name: "session_control",
++    description: "Change a session's state: start | pause | resume | stop | halt. halt keeps open positions (no liquidation).",
++    inputSchema: {
++      type: "object",
++      properties: { sessionId: { type: "string" }, action: { type: "string", enum: ["start", "pause", "resume", "stop", "halt"] }, reason: { type: "string", maxLength: 300 } },
++      required: ["sessionId", "action"],
++      additionalProperties: false
++    },
++    async run(api, args) {
++      const id = requireString(args, "sessionId", { pattern: ID });
++      const action = args?.action;
++      if (!["start", "pause", "resume", "stop", "halt"].includes(action)) throw new BridgeError("action is invalid.", "INVALID_ARGUMENT");
++      const reason = typeof args?.reason === "string" ? args.reason.slice(0, 300) : "Claude operator";
++      const body = action === "halt" ? { liquidate: false, reason } : action === "stop" ? { reason } : undefined;
++      const result = await api.post(`/sessions/${enc(id)}/${action}`, body);
++      return compactSession(result?.session ?? result);
++    }
++  },
++  {
++    name: "account_portfolio",
++    description: "Cash, equity and positions of a paper account (default: default-paper).",
++    inputSchema: { type: "object", properties: { accountId: { type: "string" } }, additionalProperties: false },
++    async run(api, args) {
++      const accountId = typeof args?.accountId === "string" && ID.test(args.accountId) ? args.accountId : "default-paper";
++      const portfolio = await api.get(`/accounts/${enc(accountId)}/portfolio`);
++      return {
++        accountId,
++        equity: dollars(portfolio?.equity),
++        cash: dollars(portfolio?.cash),
++        realizedPnl: dollars(portfolio?.realizedPnl),
++        positions: (portfolio?.positions ?? []).map((position) => ({ symbol: position.symbol, qty: Number(position.qty) / 1_000_000, marketValue: dollars(position.marketValue), unrealizedPnl: dollars(position.unrealizedPnl) }))
++      };
++    }
++  }
++];
++
++const INSTRUCTIONS = "Stockbot is a paper-trading hub. Strategies make the trading decisions; you operate sessions (create, monitor, pause, report). Never claim a trade happened unless session_report shows a filled order. Report rejections with their reasons.";
++
++export function createServer({ getApi, write }) {
++  const tools = new Map(TOOLS.map((tool) => [tool.name, tool]));
++  const reply = (id, result) => write({ jsonrpc: "2.0", id, result });
++  const fail = (id, code, message) => write({ jsonrpc: "2.0", id, error: { code, message } });
++
++  return async function handle(message) {
++    if (!message || message.jsonrpc !== "2.0" || typeof message.method !== "string") {
++      if (message && "id" in message) fail(message.id ?? null, -32600, "Invalid request");
++      return;
++    }
++    const { id, method, params } = message;
++    const isNotification = !("id" in message);
++    try {
++      if (method === "initialize") {
++        const requested = params?.protocolVersion;
++        return reply(id, {
++          protocolVersion: SUPPORTED_PROTOCOLS.includes(requested) ? requested : SUPPORTED_PROTOCOLS[0],
++          capabilities: { tools: { listChanged: false } },
++          serverInfo: SERVER_INFO,
++          instructions: INSTRUCTIONS
++        });
++      }
++      if (isNotification) return; // notifications/initialized, cancelled, etc.
++      if (method === "ping") return reply(id, {});
++      if (method === "tools/list") {
++        return reply(id, { tools: TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) });
++      }
++      if (method === "tools/call") {
++        const tool = tools.get(params?.name);
++        if (!tool) return fail(id, -32602, `Unknown tool: ${params?.name}`);
++        try {
++          const api = await getApi();
++          const result = await tool.run(api, params?.arguments ?? {});
++          return reply(id, { content: [{ type: "text", text: JSON.stringify(result, null, 1) }], isError: false });
++        } catch (error) {
++          const text = `${error?.code ? `${error.code}: ` : ""}${error?.message ?? String(error)}`;
++          return reply(id, { content: [{ type: "text", text }], isError: true });
++        }
++      }
++      return fail(id, -32601, `Method not found: ${method}`);
++    } catch (error) {
++      if (!isNotification) fail(id, -32603, error?.message ?? "Internal error");
++    }
++  };
++}
++
++async function main() {
++  let apiPromise;
++  const getApi = () => (apiPromise ??= loadBridgeConfig().then((config) => createApi(config)).catch((error) => {
++    apiPromise = undefined; // allow fixing the config without restarting the client
++    throw error;
++  }));
++  const write = (payload) => process.stdout.write(`${JSON.stringify(payload)}\n`);
++  const handle = createServer({ getApi, write });
++  const lines = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
++  lines.on("line", (line) => {
++    if (!line.trim()) return;
++    let message;
++    try { message = JSON.parse(line); } catch { write({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }); return; }
++    void handle(message);
++  });
++}
++
++if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++  main();
++}
+diff --git a/test/mcp/stockbot-mcp.test.js b/test/mcp/stockbot-mcp.test.js
+new file mode 100644
+index 0000000..e83125d
+--- /dev/null
++++ b/test/mcp/stockbot-mcp.test.js
+@@ -0,0 +1,106 @@
++import assert from "node:assert/strict";
++import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import path from "node:path";
++import test from "node:test";
++
++import { TOOLS, createApi, createServer, loadBridgeConfig, validateBaseUrl } from "../../scripts/mcp/stockbot-mcp.js";
++
++const TOKEN = "t".repeat(40);
++
++test("the operator token is only sent to Tailscale HTTPS names or loopback", () => {
++  assert.equal(validateBaseUrl("https://oldlaptop.tail1234.ts.net"), "https://oldlaptop.tail1234.ts.net/");
++  assert.equal(validateBaseUrl("http://127.0.0.1:4000"), "http://127.0.0.1:4000/");
++  for (const unsafe of [
++    "http://oldlaptop.tail1234.ts.net",      // plaintext over the tailnet name
++    "https://evil.example.com",
++    "https://ts.net.evil.example",
++    "https://user:pass@oldlaptop.tail1234.ts.net",
++    "ftp://127.0.0.1",
++    "not a url",
++    ""
++  ]) {
++    assert.throws(() => validateBaseUrl(unsafe), /STOCKBOT_URL/, unsafe);
++  }
++});
++
++test("the config file must be owner-only and real env overrides it", async (t) => {
++  const directory = await mkdtemp(path.join(tmpdir(), "stockbot-mcp-"));
++  t.after(() => rm(directory, { recursive: true, force: true }));
++  const file = path.join(directory, "mcp.env");
++  await writeFile(file, `STOCKBOT_URL=https://box.tail1.ts.net\nSTOCKBOT_API_TOKEN=${TOKEN}\n`);
++  await chmod(file, 0o644);
++  await assert.rejects(loadBridgeConfig({ STOCKBOT_MCP_ENV: file }), { code: "CONFIG_PERMISSIONS" });
++  await chmod(file, 0o600);
++  const config = await loadBridgeConfig({ STOCKBOT_MCP_ENV: file, STOCKBOT_URL: "http://127.0.0.1:4000" });
++  assert.equal(config.baseUrl, "http://127.0.0.1:4000/");
++  assert.equal(config.token, TOKEN);
++});
++
++test("no tool can upload code, change settings, liquidate or place raw orders", () => {
++  const names = TOOLS.map((tool) => tool.name);
++  for (const forbidden of ["upload", "algorithm_upload", "settings", "liquidate", "halt_all", "place_order", "research"]) {
++    assert.ok(!names.some((name) => name.includes(forbidden)), forbidden);
++  }
++  const create = TOOLS.find((tool) => tool.name === "create_paper_session");
++  assert.ok(!("mode" in create.inputSchema.properties), "mode is fixed to paper");
++});
++
++function fakeFetch(routes) {
++  const calls = [];
++  const impl = async (url, init) => {
++    const { pathname, search } = new URL(url);
++    const key = `${init.method} ${pathname}${search}`;
++    calls.push({ key, init });
++    const handler = routes[key] ?? routes[`${init.method} ${pathname}`];
++    if (!handler) return { ok: false, status: 404, json: async () => ({ error: { code: "NOT_FOUND", message: key } }) };
++    const data = typeof handler === "function" ? handler(init) : handler;
++    return { ok: true, status: 200, json: async () => ({ data }) };
++  };
++  return { impl, calls };
++}
++
++test("create_paper_session resolves the current version, forces paper mode and fixed sizing, then starts", async () => {
++  const { impl, calls } = fakeFetch({
++    "GET /api/v1/algorithms/crypto-pack%2Fbtc-sma-crossover": { id: "crypto-pack/btc-sma-crossover", role: "strategy", params: { fast: 20, slow: 50 }, version: { id: "v1" } },
++    "POST /api/v1/sessions": (init) => ({ id: "s1", status: "draft", ...JSON.parse(init.body) }),
++    "POST /api/v1/sessions/s1/start": { id: "s1", status: "running", symbols: ["BTCUSD"], barInterval: "1hour" }
++  });
++  const api = createApi({ baseUrl: "https://box.tail1.ts.net/", token: TOKEN }, { fetchImpl: impl });
++  const tool = TOOLS.find((item) => item.name === "create_paper_session");
++  const result = await tool.run(api, { name: "BTC", algorithmId: "crypto-pack/btc-sma-crossover", symbols: ["btcusd"], barInterval: "1hour", params: { fast: 10 } });
++  const created = JSON.parse(calls.find((call) => call.key === "POST /api/v1/sessions").init.body);
++  assert.equal(created.mode, "paper");
++  assert.equal(created.algorithmVersionId, "v1");
++  assert.deepEqual(created.symbols, ["BTCUSD"]);
++  assert.deepEqual(created.params, { fast: 10, slow: 50 });
++  assert.deepEqual(created.riskProfile.sizing, { mode: "fixed_notional", fixedNotional: 10_000 });
++  assert.equal(result.created.status, "running");
++  assert.ok(calls.every((call) => call.init.headers["x-stockbot-token"] === TOKEN));
++});
++
++test("controls refuse to mutate without a usable token, and errors come back as tool errors", async () => {
++  const outputs = [];
++  const { impl } = fakeFetch({});
++  const server = createServer({
++    getApi: async () => createApi({ baseUrl: "http://127.0.0.1:4000/", token: "" }, { fetchImpl: impl }),
++    write: (payload) => outputs.push(payload)
++  });
++  await server({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "session_control", arguments: { sessionId: "s1", action: "pause" } } });
++  assert.equal(outputs[0].result.isError, true);
++  assert.match(outputs[0].result.content[0].text, /AUTH_NOT_CONFIGURED/);
++  await server({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "nope", arguments: {} } });
++  assert.equal(outputs[1].error.code, -32602);
++  await server({ jsonrpc: "2.0", method: "notifications/initialized" });
++  assert.equal(outputs.length, 2, "notifications get no reply");
++});
++
++test("initialize negotiates a supported protocol version", async () => {
++  const outputs = [];
++  const server = createServer({ getApi: async () => null, write: (payload) => outputs.push(payload) });
++  await server({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05" } });
++  await server({ jsonrpc: "2.0", id: 2, method: "initialize", params: { protocolVersion: "1999-01-01" } });
++  assert.equal(outputs[0].result.protocolVersion, "2024-11-05");
++  assert.equal(outputs[1].result.protocolVersion, "2025-06-18");
++  assert.ok(outputs[0].result.capabilities.tools);
++});

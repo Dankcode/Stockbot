@@ -13,6 +13,8 @@
     "db:trades": "node scripts/database.js trades",
     "research": "node scripts/research.js",
     "research:hermes": "node scripts/hermes-research.js",
+    "mcp": "node scripts/mcp/stockbot-mcp.js",
+    "mcp:setup": "./scripts/mcp/setup-claude.sh",
     "research:probe": "node scripts/research-probe.js",
     "plugin": "node scripts/plugin.js",
     "horizon:matrix": "node scripts/horizon-matrix.js",
