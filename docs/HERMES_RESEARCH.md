@@ -35,22 +35,26 @@ npm run research:hermes -- run
 
 `status` performs a live login check and prints no account details. `prepare`
 collects the configured searches and writes evidence and the coordinator prompt
-without invoking a model. `run` collects a fresh bundle and starts Hermes using
-`chat --query-file` with `web,file,delegation`, a 40-turn coordinator limit and a
-15-minute run budget. Child resource use also follows your Hermes delegation
-settings. No model/provider override, scheduling, account posting, or trade
-execution is configured. The selected tools include file access; the mandate
-limits the agents to research, but this is not an OS sandbox.
+without invoking a model. `run` collects a fresh bundle and starts Hermes through the shared launcher
+(`scripts/lib/hermes.js`, also used by the swarm worker): `chat --query-file`
+with only `web,delegation`, a 40-turn coordinator limit, a 15-minute run budget,
+`--ignore-rules`, and the run directory as the working directory. The evidence
+is inlined into the prompt (capped at 60 KB), so no file toolset is granted.
+Before each run the launcher checks `hermes chat --help` for every flag it
+passes and stops with a clear message if one is missing. Child resource use also
+follows your Hermes delegation settings. No model/provider override, scheduling,
+account posting, or trade execution is configured.
 
 Edit [`research/us-equities-twitter.json`](../research/us-equities-twitter.json)
 to tune queries. The defaults collect three sequential searches, at most 25
 posts each, from the last seven UTC dates. Search results are leads, not a
 complete stock universe. Empty results and unverified claims must be reported.
 
-Each run writes an ignored `data/hermes-research/<UTC timestamp>/` directory:
+Each run writes an ignored `data/hermes-research/<UTC timestamp>/` directory
+(override with `STOCKBOT_HERMES_RESEARCH_DIR`):
 
 - `evidence.json`: original structured search results, queries and fetch times.
-- `prompt.md`: the exact coordinator mandate and evidence path.
+- `prompt.md`: the exact coordinator mandate with the inlined evidence.
 - `report.md`: Hermes stdout, saved only after a successful nonempty response.
 
 The runner validates Twitter's version-1 output envelope and stops on any failed

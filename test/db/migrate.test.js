@@ -7,6 +7,7 @@ import { test } from "node:test";
 
 import { createClient } from "../../server/db/client.js";
 import { getAppliedMigrations, migrate } from "../../server/db/migrate.js";
+import { EXPECTED_MIGRATIONS, EXPECTED_TABLES, SWARM_COLUMNS, SWARM_INDEXES } from "./expected-schema.js";
 
 async function temporaryDatabase() {
   const directory = await mkdtemp(join(tmpdir(), "stockbot-db-migrate-"));
@@ -21,51 +22,17 @@ test("initial migration creates the complete schema and is idempotent", async ()
     const first = await migrate(temporary.client, { now: () => 1_700_000_000_000 });
     const second = await migrate(temporary.client, { now: () => 1_800_000_000_000 });
 
-    assert.deepEqual(first, {
-      applied: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research", "0005_experiments"],
-      skipped: []
-    });
-    assert.deepEqual(second, {
-      applied: [],
-      skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research", "0005_experiments"]
-    });
+    assert.deepEqual(first, { applied: [...EXPECTED_MIGRATIONS], skipped: [] });
+    assert.deepEqual(second, { applied: [], skipped: [...EXPECTED_MIGRATIONS] });
 
     const tables = await temporary.client.query(
       "SELECT name FROM sqlite_master WHERE type = ? AND name NOT LIKE ? ORDER BY name",
       ["table", "sqlite_%"]
     );
-    assert.deepEqual(
-      tables.map((row) => row.name),
-      [
-        "accounts",
-        "alert_deliveries",
-        "alerts",
-        "algorithm_versions",
-        "algorithms",
-        "audit_log",
-        "backtest_runs",
-        "equity_snapshots",
-        "experiments",
-        "fills",
-        "orders",
-        "position_lots",
-        "research_documents",
-        "research_plan_versions",
-        "research_plans",
-        "research_runs",
-        "research_snapshots",
-        "risk_events",
-        "risk_profiles",
-        "schema_migrations",
-        "session_events",
-        "session_metrics",
-        "sessions",
-        "settings"
-      ]
-    );
+    assert.deepEqual(tables.map((row) => row.name), [...EXPECTED_TABLES]);
 
     const applied = await getAppliedMigrations(temporary.client);
-    assert.equal(applied.length, 5);
+    assert.equal(applied.length, EXPECTED_MIGRATIONS.length);
     assert.ok(applied.every((migration) => migration.appliedAt === 1_700_000_000_000));
     assert.ok(applied.every((migration) => migration.checksum.length === 64));
 
@@ -86,6 +53,24 @@ test("initial migration creates the complete schema and is idempotent", async ()
     assert.ok(orderForeignKeys.some((foreignKey) =>
       foreignKey.from === "research_snapshot_id" && foreignKey.table === "research_snapshots"
     ));
+
+    for (const [table, columns] of Object.entries(SWARM_COLUMNS)) {
+      const actual = await temporary.client.query(`PRAGMA table_info(${table})`);
+      assert.deepEqual(actual.map((column) => column.name), columns, `${table} columns`);
+    }
+    const swarmIndexes = await temporary.client.query(
+      "SELECT name FROM sqlite_master WHERE type = ? AND (name LIKE ? OR name LIKE ?) ORDER BY name",
+      ["index", "idx_agent%", "idx_retrieval%"]
+    );
+    assert.deepEqual(swarmIndexes.map((index) => index.name), [...SWARM_INDEXES]);
+    const intentForeignKeys = await temporary.client.query("PRAGMA foreign_key_list(agent_intents)");
+    assert.ok(intentForeignKeys.some((foreignKey) => foreignKey.from === "order_id" && foreignKey.table === "orders"));
+    const agentForeignKeys = await temporary.client.query("PRAGMA foreign_key_list(agents)");
+    assert.ok(agentForeignKeys.some((foreignKey) => foreignKey.from === "account_id" && foreignKey.table === "accounts"));
+    // New swarm rows default to "orders off": the column default is the safety default.
+    const intentsDefault = (await temporary.client.query("PRAGMA table_info(agents)"))
+      .find((column) => column.name === "intents_enabled");
+    assert.equal(String(intentsDefault.dflt_value), "0");
 
     const indexes = await temporary.client.query(
       "SELECT name FROM sqlite_master WHERE type = ? AND name LIKE ? AND name NOT LIKE ? ORDER BY name",

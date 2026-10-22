@@ -19,6 +19,9 @@ export function createPaperBroker({
   riskEngine = null,
   fillModel: defaultFillModel,
   quoteFreshnessMs = 5_000,
+  // A quote stamped in the future is as untrustworthy as a stale one: it means
+  // a wrong provider clock or a fabricated timestamp. Allow only clock skew.
+  quoteFutureSkewMs = 1_000,
   eventHub,
   riskEventRecorder,
   clock = () => Date.now(),
@@ -94,6 +97,18 @@ export function createPaperBroker({
         "market_data_unavailable",
         "A fresh real quote is required.",
         { status: quote?.status }
+      );
+    }
+    // Measured against the clock now, not the caller's submittedAt: a session tick
+    // stamps submittedAt before its network calls, so a quote fetched afterwards is
+    // legitimately later than that stamp.
+    const quoteLeadMs = Number(quote.at) - clock();
+    if (Number.isFinite(quoteLeadMs) && quoteLeadMs > quoteFutureSkewMs) {
+      return rejectFor(
+        { ...input, symbol, qty },
+        "quote_future_dated",
+        `Quote is stamped ${quoteLeadMs}ms in the future.`,
+        { observed: quoteLeadMs, threshold: quoteFutureSkewMs }
       );
     }
     const priorTick = priorFreshTick(symbol, quote, now);

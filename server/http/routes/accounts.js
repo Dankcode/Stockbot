@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { asyncHandler, sendData, validate } from "../middleware.js";
+import { asyncHandler, operatorAuth, sendData, validate } from "../middleware.js";
 import { sessionResource } from "../serializers.js";
 
 const OrderSchema = z.object({
@@ -14,8 +14,11 @@ const OrderSchema = z.object({
 const LiquidateSchema = z.object({ operationId: z.string().max(128).optional(), reason: z.string().max(500).optional() }).strict();
 const HaltAllSchema = LiquidateSchema.extend({ liquidate: z.boolean().optional() }).strict();
 
-export function accountsRouter({ broker, supervisor }) {
+export function accountsRouter({ broker, supervisor, config }) {
   const router = Router();
+  // Agent sleeves are private to the operator; agents read their own through /api/v1/agent/portfolio.
+  const sleeveReadAuth = operatorAuth(config);
+  router.get("/:id/portfolio", (request, response, next) => (String(request.params.id).startsWith("sleeve-") ? sleeveReadAuth(request, response, next) : next()));
   router.get("/:id/portfolio", asyncHandler(async (request, response) => sendData(response, await broker.portfolio(request.params.id))));
   router.post("/:id/orders", validate(OrderSchema), asyncHandler(async (request, response) => {
     const result = await broker.submitOrder({ ...request.body, accountId: request.params.id });

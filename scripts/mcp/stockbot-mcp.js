@@ -40,7 +40,7 @@ export class BridgeError extends Error {
   }
 }
 
-function parseEnvText(text) {
+export function parseEnvText(text) {
   const values = {};
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
@@ -396,8 +396,8 @@ export const TOOLS = [
 
 const INSTRUCTIONS = "Stockbot is a paper-trading hub. Strategies make the trading decisions; you operate sessions (create, monitor, pause, report). Never claim a trade happened unless session_report shows a filled order. Report rejections with their reasons.";
 
-export function createServer({ getApi, write }) {
-  const tools = new Map(TOOLS.map((tool) => [tool.name, tool]));
+export function createServer({ getApi, write, tools: toolList = TOOLS, instructions = INSTRUCTIONS, serverInfo = SERVER_INFO }) {
+  const tools = new Map(toolList.map((tool) => [tool.name, tool]));
   const reply = (id, result) => write({ jsonrpc: "2.0", id, result });
   const fail = (id, code, message) => write({ jsonrpc: "2.0", id, error: { code, message } });
 
@@ -414,14 +414,14 @@ export function createServer({ getApi, write }) {
         return reply(id, {
           protocolVersion: SUPPORTED_PROTOCOLS.includes(requested) ? requested : SUPPORTED_PROTOCOLS[0],
           capabilities: { tools: { listChanged: false } },
-          serverInfo: SERVER_INFO,
-          instructions: INSTRUCTIONS
+          serverInfo,
+          instructions
         });
       }
       if (isNotification) return; // notifications/initialized, cancelled, etc.
       if (method === "ping") return reply(id, {});
       if (method === "tools/list") {
-        return reply(id, { tools: TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) });
+        return reply(id, { tools: toolList.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) });
       }
       if (method === "tools/call") {
         const tool = tools.get(params?.name);

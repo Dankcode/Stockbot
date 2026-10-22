@@ -8,6 +8,7 @@ import { createRiskRepository } from "./risk.js";
 import { createResearchRepository } from "./research.js";
 import { createSessionsRepository } from "./sessions.js";
 import { createSettingsRepository } from "./settings.js";
+import { createSwarmRepository } from "./swarm.js";
 
 export {
   createAccountsRepository,
@@ -19,7 +20,8 @@ export {
   createResearchRepository,
   createRiskRepository,
   createSessionsRepository,
-  createSettingsRepository
+  createSettingsRepository,
+  createSwarmRepository
 };
 
 export function createRepositories(client) {
@@ -33,6 +35,7 @@ export function createRepositories(client) {
     research: createResearchRepository(client),
     risk: createRiskRepository(client),
     sessions: createSessionsRepository(client),
-    settings: createSettingsRepository(client)
+    settings: createSettingsRepository(client),
+    swarm: createSwarmRepository(client)
   });
 }

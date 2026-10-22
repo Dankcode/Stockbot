@@ -115,6 +115,8 @@ To let **Claude on your Mac operate a Stockbot instance over Tailscale** (create
 
 For **Hermes multi-agent research using Twitter/X**, see [Hermes stock research](./docs/HERMES_RESEARCH.md). It collects X evidence with `public-clis/twitter-cli` and produces a sourced US-stock shortlist for a weeks-to-months horizon in a separate research workspace.
 
+For the **agent swarm** (one Hermes agent per $100k paper sleeve, Stockbot-performed retrieval with receipts, orders disabled by default, PostgreSQL cutover), see [Agent swarm](./docs/SWARM_AGENTS.md).
+
 Stockbot can run strict JSON research plans through two code-owned adapters: a registered-origin HTTPS reader and an operator-configured JSON-in/JSON-out AI CLI. Plans cannot name executables, inject arguments or environment variables, or fetch arbitrary origins. The resulting summaries and source provenance are immutable SQL snapshots that a strategy can read only when they existed by that bar's canonical decision timestamp (`bar.time`).
 
 ```bash

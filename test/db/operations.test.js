@@ -14,6 +14,7 @@ import {
   tradeLedgerCsv
 } from "../../server/db/operations.js";
 import { createRepositories } from "../../server/db/repositories/index.js";
+import { EXPECTED_MIGRATIONS } from "./expected-schema.js";
 
 async function temporaryClient() {
   const directory = await mkdtemp(join(tmpdir(), "stockbot-db-operations-"));
@@ -28,13 +29,7 @@ test("database initialization is idempotent and validates the durable ledger", a
     const first = await initializeDatabase(temporary.client, { now: () => 1_000 });
     const second = await initializeDatabase(temporary.client, { now: () => 2_000 });
 
-    assert.deepEqual(first.migrations.applied, [
-      "0001_init",
-      "0002_order_signal_bar",
-      "0003_trade_tracker_indexes",
-      "0004_ai_research",
-      "0005_experiments"
-    ]);
+    assert.deepEqual(first.migrations.applied, [...EXPECTED_MIGRATIONS]);
     assert.deepEqual(second.migrations.applied, []);
     assert.equal(second.account.id, "default-paper");
     assert.equal(second.account.createdAt, 1_000);
@@ -183,13 +178,7 @@ test("SQLite online backup is verified, atomic, and refuses unsafe destinations"
     const result = await backupSqliteDatabase(temporary.client, backupPath, { idFactory: () => "test" });
     assert.equal(result.path, backupPath);
     assert.equal(result.verification.integrity, "ok");
-    assert.deepEqual(result.verification.migrations.map((migration) => migration.version), [
-      "0001_init",
-      "0002_order_signal_bar",
-      "0003_trade_tracker_indexes",
-      "0004_ai_research",
-      "0005_experiments"
-    ]);
+    assert.deepEqual(result.verification.migrations.map((migration) => migration.version), [...EXPECTED_MIGRATIONS]);
     await access(backupPath);
     await assert.rejects(
       backupSqliteDatabase(temporary.client, backupPath),

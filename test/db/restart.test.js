@@ -8,6 +8,7 @@ import { test } from "node:test";
 import { createClient } from "../../server/db/client.js";
 import { migrate } from "../../server/db/migrate.js";
 import { createRepositories } from "../../server/db/repositories/index.js";
+import { EXPECTED_MIGRATIONS } from "./expected-schema.js";
 
 test("SQLite data and migration state survive a client restart", async () => {
   const directory = await mkdtemp(join(tmpdir(), "stockbot-db-restart-"));
@@ -58,10 +59,7 @@ test("SQLite data and migration state survive a client restart", async () => {
     await client.close();
 
     client = await createClient(databaseUrl);
-    assert.deepEqual(await migrate(client), {
-      applied: [],
-      skipped: ["0001_init", "0002_order_signal_bar", "0003_trade_tracker_indexes", "0004_ai_research", "0005_experiments"]
-    });
+    assert.deepEqual(await migrate(client), { applied: [], skipped: [...EXPECTED_MIGRATIONS] });
     repositories = createRepositories(client);
     assert.equal((await repositories.accounts.getById("account-restart")).cash, 1_000_000);
     assert.equal((await repositories.settings.get("restart_marker")).value, "present");

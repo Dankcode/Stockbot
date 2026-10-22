@@ -24,6 +24,9 @@ import { SessionScheduler } from "./runtime/scheduler.js";
 import { createSupervisor } from "./runtime/supervisor.js";
 import { createDatabaseSettingsService } from "./settings/database-service.js";
 import { createSettingsService } from "./settings/service.js";
+import { createIntentService } from "./swarm/intents.js";
+import { createSwarmScheduler } from "./swarm/scheduler.js";
+import { createSwarmService } from "./swarm/service.js";
 
 const STANDARD_FILL_MODEL = Object.freeze({
   slippageBps: 5,
@@ -110,7 +113,8 @@ export async function createStockbot(options = {}) {
     fillModel: STANDARD_FILL_MODEL,
     quoteFreshnessMs: config.quoteFreshnessMs,
     eventHub,
-    riskEventRecorder: recordRiskEvent
+    riskEventRecorder: recordRiskEvent,
+    quoteFutureSkewMs: config.quoteFutureSkewMs ?? 1_000
   });
   const supervisor = createSupervisor({
     client,
@@ -131,6 +135,13 @@ export async function createStockbot(options = {}) {
   const accountId = startup.account?.id ?? DEFAULT_ACCOUNT_ID;
   const experiments = createExperimentService({ repositories, algorithms, supervisor, accountId });
   const selection = createSelectionService({ market });
+  const swarm = createSwarmService({ client, repositories, market, broker, researchAdapters });
+  const intents = createIntentService({ client, repositories, market, broker, ledger, swarm });
+  const scheduler = options.swarmScheduler ?? createSwarmScheduler({ repositories, intents });
+  // Opt-in, so a second process (a CLI, a test, a disposable restore check) never
+  // schedules work. The production supervisor sets SWARM_SCHEDULER=1, and the
+  // database lease keeps even two such processes from both scheduling.
+  if (config.swarmScheduler) scheduler.start();
   const database = databaseHealth(client);
   const databaseSettings = options.databaseSettings ?? createDatabaseSettingsService({ config, repositories });
   const context = {
@@ -151,6 +162,9 @@ export async function createStockbot(options = {}) {
     ledger,
     broker,
     supervisor,
+    swarm,
+    intents,
+    scheduler,
     accountId,
     startup
   };
@@ -159,6 +173,7 @@ export async function createStockbot(options = {}) {
     ...context,
     app,
     async close() {
+      await scheduler.stop();
       await supervisor.close();
       await enginePool.close();
       await client.close();

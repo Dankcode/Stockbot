@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import path from "node:path";
 import { accountsRouter } from "./routes/accounts.js";
+import { agentRouter } from "./routes/agent.js";
 import { alertsRouter } from "./routes/alerts.js";
 import { algorithmsRouter } from "./routes/algorithms.js";
 import { experimentsRouter } from "./routes/experiments.js";
@@ -12,6 +13,7 @@ import { researchRouter } from "./routes/research.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { selectionRouter } from "./routes/selection.js";
 import { settingsRouter } from "./routes/settings.js";
+import { swarmRouter } from "./routes/swarm.js";
 import { systemRouter } from "./routes/system.js";
 import { errorHandler, mutationAuth, notFound, requestContext } from "./middleware.js";
 
@@ -55,6 +57,9 @@ export function createHttpApp(context) {
   app.use(cors({ origin: (origin, callback) => callback(null, localOrigin(origin)), credentials: false }));
   app.use(express.json({ limit: "1mb", strict: true }));
   app.use(requestContext);
+  // Agent routes are mounted before the operator mutation guard and end in their
+  // own 404, so nothing under /api/v1/agent can fall through to operator routes.
+  if (context.swarm) app.use("/api/v1/agent", agentRouter(context));
   app.use(mutationAuth(context.config));
 
   const api = express.Router();
@@ -70,6 +75,7 @@ export function createHttpApp(context) {
   api.use("/alerts", alertsRouter(context.repositories.alerts, context.accountId));
   api.use("/settings", settingsRouter(context.settings, context.market, context.databaseSettings));
   api.use("/overview", overviewRouter(context));
+  if (context.swarm) api.use("/swarm", swarmRouter(context));
   api.get("/stream", (request, response) => context.eventHub.attach(response, request.get("last-event-id") || request.query.lastEventId));
   app.use("/api/v1", api);
 

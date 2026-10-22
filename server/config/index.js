@@ -107,6 +107,8 @@ export function loadConfig() {
     priceSanityPercent: number("PRICE_SANITY_PERCENT", 10, { min: 0.1, max: 100 }),
     settleDelayMs: integer("BAR_SETTLE_DELAY_MS", 2_000, { min: 0, max: 60_000 }),
     restartRunningSessions: bool("RESTART_RUNNING_SESSIONS", false),
+    swarmScheduler: bool("SWARM_SCHEDULER", false),
+    quoteFutureSkewMs: integer("QUOTE_FUTURE_SKEW_MS", 1_000, { min: 0, max: 60_000 }),
     settingsEncryptionKey: secret("STOCKBOT_SETTINGS_KEY"),
     researchWebSources: record("RESEARCH_WEB_SOURCES_JSON"),
     aiCli: Object.freeze({

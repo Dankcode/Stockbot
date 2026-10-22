@@ -221,3 +221,33 @@ test("liquidation closes only symbols with successful fresh real quotes", async 
   assert.deepEqual(result.remaining.map((item) => item.symbol), ["NVDA"]);
   assert.equal((await context.repositories.orders.getByClientOrderId("liquidate:panic:NVDA")).status, "rejected");
 });
+
+test("every order path rejects a quote stamped in the future, not only the swarm", async (t) => {
+  const context = await harness();
+  t.after(() => context.client.close());
+  await context.broker.ensureDefaultAccount({ id: "future", startingCash: 1_000_000 });
+  for (const [lead, expected] of [[60_000, "rejected"], [1_001, "rejected"], [1_000, "filled"], [0, "filled"]]) {
+    const result = await context.broker.submitOrder({
+      accountId: "future",
+      clientOrderId: `future-${lead}`,
+      symbol: "AAPL",
+      side: "buy",
+      qty: 1_000_000,
+      quote: { symbol: "AAPL", status: "real", price: 50, at: NOW + lead, source: "stub" }
+    });
+    assert.equal(result.order.status, expected, `lead ${lead}ms`);
+    if (expected === "rejected") assert.equal(result.order.rejectReason, "quote_future_dated");
+  }
+});
+
+test("a quote fetched after the caller stamped submittedAt is not mistaken for a future quote", async (t) => {
+  const context = await harness();
+  t.after(() => context.client.close());
+  await context.broker.ensureDefaultAccount({ id: "late", startingCash: 1_000_000 });
+  // The session supervisor stamps submittedAt at the start of its tick, then makes network calls.
+  const result = await context.broker.submitOrder({
+    accountId: "late", clientOrderId: "late-1", symbol: "AAPL", side: "buy", qty: 1_000_000,
+    submittedAt: NOW - 2_000, quote: { symbol: "AAPL", status: "real", price: 50, at: NOW, source: "stub" }
+  });
+  assert.equal(result.order.status, "filled");
+});

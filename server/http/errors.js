@@ -76,6 +76,8 @@ export function asAppError(error) {
     SQLITE_CONSTRAINT_UNIQUE: 409
   }[code];
   if (knownStatus) return new AppError(code, error instanceof Error ? error.message : code, knownStatus, error?.detail);
+  // PostgreSQL unique violation: the same conflict SQLite reports as SQLITE_CONSTRAINT_UNIQUE.
+  if (code === "23505") return new AppError("CONFLICT", "That record already exists or was changed concurrently.", 409);
   return new AppError("INTERNAL_ERROR", error instanceof Error ? error.message : "Unexpected error", 500);
 }
 

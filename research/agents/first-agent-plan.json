@@ -1,0 +1,11 @@
+{
+  "kind": "stockbot.agent-plan.v1",
+  "name": "Large-cap and index watch (first agent)",
+  "description": "First swarm agent. Reads quotes and daily bars Stockbot retrieves itself and records a decision per symbol. Orders stay disabled until the operator enables them.",
+  "universe": { "symbols": ["SPY", "QQQ", "AAPL", "MSFT", "NVDA"] },
+  "cadence": [
+    { "task": "research", "schedule": { "type": "daily", "at": "16:15", "timezone": "America/New_York", "weekdays": [1, 2, 3, 4, 5] }, "expiresAfterMinutes": 120 }
+  ],
+  "sources": ["market.quote", "market.bars"],
+  "decision": { "minScore": 7, "positionPercent": 8, "stopLossPercent": 8, "maxHoldDays": 40 }
+}
