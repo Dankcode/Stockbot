@@ -286,6 +286,8 @@ export const bundledAlgorithmGolden = Object.freeze({
   "horizon-yearly-donchian": noTrades,
   "horizon-yearly-ema": noTrades,
   "horizon-yearly-rsi": noTrades,
+  // Needs 252 bars of history; the 46-bar fixture is too short for it to trade.
+  "rotation-momentum": noTrades,
   "rsi-mean-reversion": rsiMeanReversion,
   "sentiment-gated-momentum": noTrades,
   "trend-pullback": noTrades

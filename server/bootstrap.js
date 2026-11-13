@@ -20,6 +20,7 @@ import { createResearchAdapterRegistry } from "./research/adapters/registry.js";
 import { createWebPageAdapter } from "./research/adapters/web-page.js";
 import { createResearchService } from "./research/service.js";
 import { createSelectionService } from "./selection/service.js";
+import { createRotationService } from "./selection/rotation-service.js";
 import { SessionScheduler } from "./runtime/scheduler.js";
 import { createSupervisor } from "./runtime/supervisor.js";
 import { createDatabaseSettingsService } from "./settings/database-service.js";
@@ -135,6 +136,7 @@ export async function createStockbot(options = {}) {
   const accountId = startup.account?.id ?? DEFAULT_ACCOUNT_ID;
   const experiments = createExperimentService({ repositories, algorithms, supervisor, accountId });
   const selection = createSelectionService({ market });
+  const rotation = createRotationService({ market });
   const swarm = createSwarmService({ client, repositories, market, broker, researchAdapters });
   const intents = createIntentService({ client, repositories, market, broker, ledger, swarm });
   const scheduler = options.swarmScheduler ?? createSwarmScheduler({ repositories, intents });
@@ -157,6 +159,7 @@ export async function createStockbot(options = {}) {
     algorithms,
     experiments,
     selection,
+    rotation,
     research,
     researchAdapters,
     ledger,

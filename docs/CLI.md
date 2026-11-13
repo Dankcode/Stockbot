@@ -15,6 +15,7 @@ For the dashboard walkthrough, see [Usage guide](./USAGE.md).
 - [AI research](#ai-research)
 - [Database operations](#database-operations)
 - [Horizon matrix](#horizon-matrix)
+- [Rotation](#rotation)
 - [macOS service](#macos-service)
 - [Environment variables](#environment-variables)
 - [Exit codes and error codes](#exit-codes-and-error-codes)
@@ -291,6 +292,31 @@ All twelve variants read the same `1day` bars. Daily/weekly/monthly/yearly is th
 `control-horizon-fixed.js` and `control-horizon-random.js` take the same `horizon` parameter, so turnover and exposure are matched band by band. Comparing a yearly strategy against a daily control measures transaction costs, not skill.
 
 More: [Horizon pack](./HORIZON_PACK.md).
+
+---
+
+## Rotation
+
+```
+npm run rotation -- screen   [--top 10] [--weighting inverse_vol|equal] [--json] [--env-file PATH]
+npm run rotation -- backtest [--years 3] [--rebalance 5] [--stop 0.15] [--top 10] [--json] [--env-file PATH]
+```
+
+Ranks the rotation universe on momentum and trend through the running API, or replays the rules walk-forward. Read-only: nothing is ordered.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--top` | `10` | Positions to hold, 1–40 |
+| `--weighting` | `inverse_vol` | `inverse_vol` or `equal` |
+| `--years` | `3` | Backtest span, 1–7 years of daily bars |
+| `--rebalance` | `5` | Trading days between rebalances |
+| `--stop` | `0.15` | Trailing stop from the highest close; `0` disables |
+| `--json` | off | Machine-readable output |
+| `--env-file` | project `.env` | Alternate environment |
+
+Exits `1` with the reason when SPY or other bars are unavailable, for example with no data provider configured.
+
+More: [Momentum rotation](./ROTATION.md).
 
 ---
 

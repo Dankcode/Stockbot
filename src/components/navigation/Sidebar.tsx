@@ -1,4 +1,4 @@
-import { Bot, ChartNoAxesCombined, CircleGauge, Settings, SlidersHorizontal, Sparkles, TimerReset } from "lucide-react";
+import { Bot, ChartNoAxesCombined, CircleGauge, Repeat, Settings, SlidersHorizontal, Sparkles, TimerReset } from "lucide-react";
 import * as React from "react";
 import { NavLink } from "react-router-dom";
 
@@ -8,6 +8,7 @@ export const destinations: Destination[] = [
   { path: "/", label: "Overview", icon: CircleGauge, end: true },
   { path: "/markets", label: "Markets", icon: ChartNoAxesCombined },
   { path: "/selection", label: "Selector", icon: Sparkles },
+  { path: "/rotation", label: "Rotation", icon: Repeat },
   { path: "/strategies", label: "Strategies", icon: Bot },
   { path: "/sessions", label: "Sessions", icon: TimerReset },
   { path: "/settings", label: "Settings", icon: Settings }

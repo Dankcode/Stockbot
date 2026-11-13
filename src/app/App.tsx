@@ -9,6 +9,7 @@ import "../styles/sessions.css";
 import "../styles/strategies.css";
 import "../styles/settings.css";
 import "../styles/selection.css";
+import "../styles/rotation.css";
 import { AppRoutes } from "./routes";
 
 export function App() {

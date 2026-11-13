@@ -19,6 +19,7 @@
     "swarm:worker": "node scripts/swarm/worker.js",
     "mcp:agent": "node scripts/mcp/stockbot-agent-mcp.js",
     "research:probe": "node scripts/research-probe.js",
+    "rotation": "node scripts/rotation.js",
     "plugin": "node scripts/plugin.js",
     "horizon:matrix": "node scripts/horizon-matrix.js",
     "experiment": "node scripts/experiment.js",

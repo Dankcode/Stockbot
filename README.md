@@ -129,6 +129,15 @@ Research is disabled until the server operator configures at least one exact HTT
 
 Four plans ship in `research-plans/`: `sec-edgar-filings` (8-K, Form 4, full-text search), `gov-contracts-defense` (daily DoD contract announcements plus USAspending agency activity), `market-news-sentiment` (Nasdaq and Finviz), and `catalyst-composite`, which combines all three and is the one intended for session pinning. The single-source plans exist so you can attribute an edge to a specific source rather than to the bundle. `npm run research:probe` issues one real request per scrape step through the adapter's actual guardrails and names whichever guardrail rejected a source. See [Research sources](./docs/RESEARCH_SOURCES.md) for per-source authorization status and the two documented dead ends — SAM.gov's required API key and FPDS's unsupported content type.
 
+### Let it pick the stocks: momentum rotation
+
+The **Rotation** page ranks about 120 liquid stocks and ETFs on momentum and trend every run, owns the top ten with inverse-volatility weights, and holds cash when SPY is below its 200-day mean. A walk-forward backtest compares it with SPY and Cash, and **Paper trade** opens a session on the picks with the bundled `rotation-momentum` strategy. See [Momentum rotation](./docs/ROTATION.md).
+
+```bash
+npm run rotation -- screen
+npm run rotation -- backtest --years 3
+```
+
 ## Tested methods
 
 Every ad-hoc strategy backtest calculates all three methods from real provider bars. Checkmarks in the result panel choose what is visible in the comparison; they do not skip or alter the benchmark calculation.
@@ -277,6 +286,7 @@ All routes live under `/api/v1` and use validated `{ data, meta }` or `{ error }
 | `/health`, `/overview` | Runtime, database/provider health, portfolio, sessions, and risk summary |
 | `/market/*` | Search, movers, quotes, provider health, and real bars |
 | `/algorithms/*` | Uploads, versions, enablement, and benchmarked backtests |
+| `/rotation`, `/rotation/backtest` | Momentum rotation: ranked universe, target weights, regime, walk-forward backtest |
 | `/research/*` | Protected adapter inventory, plan validation/versioning, runs, snapshots, and provenance |
 | `/sessions/*` | Draft, start, pause, resume, stop, halt, compare, and export |
 | `/accounts/*` | Paper portfolio, simulated orders, liquidation, and account halt |
@@ -307,6 +317,7 @@ All routes live under `/api/v1` and use validated `{ data, meta }` or `{ error }
 - [Plugin surface design system](./docs/PLUGIN_DESIGN_SYSTEM.md)
 - [Algorithm format](./algorithms/README.md)
 - [Control group and how to read a result](./docs/CONTROL_GROUP.md)
+- [Momentum rotation — active stock selection across a universe](./docs/ROTATION.md)
 - [Horizon pack — daily/weekly/monthly/yearly with matched controls](./docs/HORIZON_PACK.md)
 - [Sentiment pack — news and social, gated vs blind](./docs/SENTIMENT_PACK.md)
 - [AI research pipeline](./docs/AI_RESEARCH.md)
