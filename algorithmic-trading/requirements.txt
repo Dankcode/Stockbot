@@ -1,0 +1,10 @@
+alpaca-py
+matplotlib
+numpy
+pandas
+pandas-datareader
+pytest
+quantstats
+requests
+yfinance
+# optional: lumibot (needed only for lumibot_*.py; fails to build on some Python versions)

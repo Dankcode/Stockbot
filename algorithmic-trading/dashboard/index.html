@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rotation Ledger</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="wordmark">Rotation<em>Ledger</em></span>
+    <span class="sub">active stock selection · momentum rotation</span>
+  </div>
+  <div class="meta">
+    <span class="chip" id="chip-mode">—</span>
+    <span class="chip" id="chip-source">—</span>
+    <span class="chip" id="chip-asof">as of —</span>
+    <span class="chip regime" id="chip-regime">regime —</span>
+  </div>
+</header>
+
+<main id="app">
+  <section class="hero">
+    <div class="panel figure">
+      <div class="label" id="hero-label">Universe</div>
+      <div class="big"><span id="hero-value">—</span><span class="unit" id="hero-unit"></span></div>
+      <div class="row-stats" id="hero-stats"></div>
+    </div>
+    <div class="panel regime-chart">
+      <div class="label">Regime <span class="dim" id="regime-desc">benchmark vs 200-day mean</span></div>
+      <div class="chart" id="regime-svg"></div>
+      <div class="legend"><i class="k bench"></i>benchmark <i class="k sma"></i>200d mean <i class="k on"></i>risk on <i class="k off"></i>risk off</div>
+    </div>
+    <div class="panel targets">
+      <div class="label">Target portfolio <span class="dim" id="targets-note"></span></div>
+      <div id="targets-list" class="targets-list"></div>
+      <div class="sector-row" id="sector-row"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="panel rankings">
+      <div class="panel-head">
+        <div class="label">Ranked universe <span class="dim" id="rank-count"></span></div>
+        <div class="filters">
+          <button data-filter="all" class="on">all</button>
+          <button data-filter="passes">passing</button>
+          <button data-filter="selected">selected</button>
+          <input id="search" type="search" placeholder="symbol or sector" spellcheck="false">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="rank-table">
+          <thead>
+            <tr>
+              <th class="num">#</th><th>symbol</th><th>sector</th><th>score</th>
+              <th class="num">12–1m</th><th class="num">6m</th><th class="num">3m</th>
+              <th class="num">vol</th><th class="num">rsi</th><th class="num">52w</th>
+              <th>60d</th><th class="num">weight</th><th>gates</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="panel controls">
+        <div class="label">Run</div>
+        <div class="ctl-grid">
+          <label>source
+            <select id="ctl-source">
+              <option value="yfinance">yfinance (live)</option>
+              <option value="cache">cache</option>
+              <option value="synthetic">synthetic</option>
+            </select></label>
+          <label>positions <input id="ctl-top" type="number" min="1" max="40" value="10"></label>
+          <label>weighting
+            <select id="ctl-weighting"><option value="inverse_vol">inverse vol</option><option value="equal">equal</option></select></label>
+          <label>years <input id="ctl-years" type="number" min="1" max="15" step="0.5" value="3"></label>
+          <label>rebalance (days) <input id="ctl-rebalance" type="number" min="1" max="60" value="5"></label>
+          <label>trailing stop <input id="ctl-stop" type="number" min="0" max="0.5" step="0.01" value="0.15"></label>
+        </div>
+        <div class="btn-row">
+          <button class="btn" data-cmd="screen">screen</button>
+          <button class="btn" data-cmd="backtest">backtest</button>
+          <button class="btn" data-cmd="paper">paper · dry run</button>
+          <button class="btn danger" data-cmd="paper-live">paper · submit</button>
+        </div>
+        <pre id="job-log" class="log" hidden></pre>
+      </div>
+
+      <div class="panel account" id="account-panel" hidden>
+        <div class="label">Paper account <span class="dim" id="acct-id"></span></div>
+        <div class="acct-grid" id="acct-grid"></div>
+        <table class="mini" id="positions"><thead><tr><th>symbol</th><th class="num">qty</th><th class="num">value</th><th class="num">p/l</th></tr></thead><tbody></tbody></table>
+        <div class="label small">Orders</div>
+        <table class="mini" id="orders"><thead><tr><th>symbol</th><th>side</th><th class="num">notional</th><th>status</th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="panel method">
+        <div class="label">Method</div>
+        <ol class="method-list" id="method-list"></ol>
+      </div>
+    </aside>
+  </section>
+
+  <section class="panel backtest" id="backtest-panel" hidden>
+    <div class="panel-head">
+      <div class="label">Walk-forward backtest <span class="dim" id="bt-range"></span></div>
+      <div class="legend"><i class="k strat"></i>strategy <i class="k bench"></i>benchmark</div>
+    </div>
+    <div class="bt-grid">
+      <div class="chart tall" id="equity-svg"></div>
+      <div class="stats" id="bt-stats"></div>
+    </div>
+    <div class="chart short" id="dd-svg"></div>
+    <div class="bt-bottom">
+      <div>
+        <div class="label small">Recent trades</div>
+        <div class="table-wrap short-wrap">
+        <table class="mini" id="trades"><thead><tr><th>date</th><th>symbol</th><th>side</th><th class="num">qty</th><th class="num">price</th><th>reason</th><th class="num">return</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+      <div>
+        <div class="label small">Rebalances</div>
+        <div class="table-wrap short-wrap">
+        <table class="mini" id="rebalances"><thead><tr><th>date</th><th>regime</th><th>selection</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="empty panel" id="empty" hidden>
+    <div class="big-serif">No state yet.</div>
+    <p>Run <code>python run.py screen</code> or press <b>screen</b> above.</p>
+  </div>
+</main>
+
+<footer class="foot"><span id="generated"></span><span class="dim">paper trading research tool · not investment advice</span></footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -138,6 +138,15 @@ npm run rotation -- screen
 npm run rotation -- backtest --years 3
 ```
 
+### Python research lab
+
+`algorithmic-trading/` holds the standalone Python prototype of the rotation strategy, with its own pandas backtester, an Alpaca paper-order adapter, an offline synthetic-data mode and a small dashboard. It is separate from the Node app and needs only Python. See [algorithmic-trading/README.md](./algorithmic-trading/README.md).
+
+```bash
+cd algorithmic-trading && pip install -r requirements.txt
+python run.py backtest --source synthetic
+```
+
 ## Tested methods
 
 Every ad-hoc strategy backtest calculates all three methods from real provider bars. Checkmarks in the result panel choose what is visible in the comparison; they do not skip or alter the benchmark calculation.
@@ -318,6 +327,7 @@ All routes live under `/api/v1` and use validated `{ data, meta }` or `{ error }
 - [Algorithm format](./algorithms/README.md)
 - [Control group and how to read a result](./docs/CONTROL_GROUP.md)
 - [Momentum rotation — active stock selection across a universe](./docs/ROTATION.md)
+- [Python research lab — the rotation prototype in pandas](./algorithmic-trading/README.md)
 - [Horizon pack — daily/weekly/monthly/yearly with matched controls](./docs/HORIZON_PACK.md)
 - [Sentiment pack — news and social, gated vs blind](./docs/SENTIMENT_PACK.md)
 - [AI research pipeline](./docs/AI_RESEARCH.md)
