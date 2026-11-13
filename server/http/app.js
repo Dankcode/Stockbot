@@ -12,6 +12,7 @@ import { riskRouter } from "./routes/risk.js";
 import { researchRouter } from "./routes/research.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { selectionRouter } from "./routes/selection.js";
+import { rotationRouter } from "./routes/rotation.js";
 import { settingsRouter } from "./routes/settings.js";
 import { swarmRouter } from "./routes/swarm.js";
 import { systemRouter } from "./routes/system.js";
@@ -68,6 +69,7 @@ export function createHttpApp(context) {
   api.use("/algorithms", algorithmsRouter(context.algorithms));
   api.use("/experiments", experimentsRouter(context.experiments));
   api.use("/selection", selectionRouter(context.selection));
+  if (context.rotation) api.use("/rotation", rotationRouter(context.rotation));
   api.use("/sessions", sessionsRouter(context.supervisor));
   api.use("/accounts", accountsRouter(context));
   api.use("/risk", riskRouter(context.repositories.risk, context.accountId));
