@@ -28,6 +28,8 @@ import { createSettingsService } from "./settings/service.js";
 import { createIntentService } from "./swarm/intents.js";
 import { createSwarmScheduler } from "./swarm/scheduler.js";
 import { createSwarmService } from "./swarm/service.js";
+import { createDiscoveryService } from "./discovery/service.js";
+import { createDiscoverySources } from "./discovery/sources.js";
 
 const STANDARD_FILL_MODEL = Object.freeze({
   slippageBps: 5,
@@ -144,6 +146,13 @@ export async function createStockbot(options = {}) {
   // schedules work. The production supervisor sets SWARM_SCHEDULER=1, and the
   // database lease keeps even two such processes from both scheduling.
   if (config.swarmScheduler) scheduler.start();
+  const discovery = options.discovery ?? createDiscoveryService({
+    repositories,
+    sources: options.discoverySources ?? createDiscoverySources(config),
+    researchAdapters,
+    webSources: config.researchWebSources ?? {}
+  });
+  await discovery.recover();
   const database = databaseHealth(client);
   const databaseSettings = options.databaseSettings ?? createDatabaseSettingsService({ config, repositories });
   const context = {
@@ -167,6 +176,7 @@ export async function createStockbot(options = {}) {
     supervisor,
     swarm,
     intents,
+    discovery,
     scheduler,
     accountId,
     startup

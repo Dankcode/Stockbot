@@ -5,6 +5,7 @@ import { accountsRouter } from "./routes/accounts.js";
 import { agentRouter } from "./routes/agent.js";
 import { alertsRouter } from "./routes/alerts.js";
 import { algorithmsRouter } from "./routes/algorithms.js";
+import { discoveryRouter } from "./routes/discovery.js";
 import { experimentsRouter } from "./routes/experiments.js";
 import { marketRouter } from "./routes/market.js";
 import { overviewRouter } from "./routes/overview.js";
@@ -78,6 +79,7 @@ export function createHttpApp(context) {
   api.use("/settings", settingsRouter(context.settings, context.market, context.databaseSettings));
   api.use("/overview", overviewRouter(context));
   if (context.swarm) api.use("/swarm", swarmRouter(context));
+  if (context.discovery) api.use("/discovery", discoveryRouter(context));
   api.get("/stream", (request, response) => context.eventHub.attach(response, request.get("last-event-id") || request.query.lastEventId));
   app.use("/api/v1", api);
 

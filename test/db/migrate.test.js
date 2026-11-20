@@ -7,7 +7,7 @@ import { test } from "node:test";
 
 import { createClient } from "../../server/db/client.js";
 import { getAppliedMigrations, migrate } from "../../server/db/migrate.js";
-import { EXPECTED_MIGRATIONS, EXPECTED_TABLES, SWARM_COLUMNS, SWARM_INDEXES } from "./expected-schema.js";
+import { DISCOVERY_COLUMNS, EXPECTED_MIGRATIONS, EXPECTED_TABLES, SWARM_COLUMNS, SWARM_INDEXES } from "./expected-schema.js";
 
 async function temporaryDatabase() {
   const directory = await mkdtemp(join(tmpdir(), "stockbot-db-migrate-"));
@@ -54,7 +54,7 @@ test("initial migration creates the complete schema and is idempotent", async ()
       foreignKey.from === "research_snapshot_id" && foreignKey.table === "research_snapshots"
     ));
 
-    for (const [table, columns] of Object.entries(SWARM_COLUMNS)) {
+    for (const [table, columns] of Object.entries({ ...SWARM_COLUMNS, ...DISCOVERY_COLUMNS })) {
       const actual = await temporary.client.query(`PRAGMA table_info(${table})`);
       assert.deepEqual(actual.map((column) => column.name), columns, `${table} columns`);
     }
@@ -77,6 +77,8 @@ test("initial migration creates the complete schema and is idempotent", async ()
       ["index", "%research%", "sqlite_autoindex_%"]
     );
     assert.deepEqual(indexes.map((index) => index.name), [
+      "idx_discovery_research_status",
+      "idx_discovery_research_symbol",
       "idx_orders_research_snapshot",
       "idx_research_documents_content",
       "idx_research_documents_run",

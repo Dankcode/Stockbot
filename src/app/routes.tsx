@@ -12,6 +12,7 @@ const SessionDetailPage = React.lazy(() => import("../features/sessions/SessionD
 const SessionComparePage = React.lazy(() => import("../features/sessions/SessionComparePage").then((module) => ({ default: module.SessionComparePage })));
 const SettingsPage = React.lazy(() => import("../features/settings/SettingsPage").then((module) => ({ default: module.SettingsPage })));
 const RotationPage = React.lazy(() => import("../features/rotation/RotationPage").then((module) => ({ default: module.RotationPage })));
+const DiscoveryPage = React.lazy(() => import("../features/discovery/DiscoveryPage").then((module) => ({ default: module.DiscoveryPage })));
 const SelectionPage = React.lazy(() => import("../features/selection/SelectionPage").then((module) => ({ default: module.SelectionPage })));
 
 function RouteFallback() {
@@ -25,6 +26,7 @@ export function AppRoutes() {
         <Route element={<AppShell />}>
           <Route index element={<OverviewPage />} />
           <Route path="markets" element={<MarketsPage />} />
+          <Route path="discover" element={<DiscoveryPage />} />
           <Route path="selection" element={<SelectionPage />} />
           <Route path="rotation" element={<RotationPage />} />
           <Route path="strategies" element={<StrategiesPage />} />

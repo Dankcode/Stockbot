@@ -41,7 +41,7 @@ export function fixtureMarket({ provider = "synthetic-fixture", clock = () => Da
 }
 
 /** The real Stockbot (migrations, repositories, routes, auth) on a scratch SQLite file. */
-export async function bootStockbot(t, { market = fixtureMarket(), configOverrides = {} } = {}) {
+export async function bootStockbot(t, { market = fixtureMarket(), configOverrides = {}, stockbotOptions = {} } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "stockbot-swarm-"));
   const databaseUrl = pathToFileURL(join(directory, "stockbot.db")).href;
   const config = {
@@ -53,7 +53,7 @@ export async function bootStockbot(t, { market = fixtureMarket(), configOverride
     swarmScheduler: false,
     ...configOverrides
   };
-  const runtime = await createStockbot({ config, market });
+  const runtime = await createStockbot({ config, market, ...stockbotOptions });
   const server = await new Promise((resolve) => {
     const listening = runtime.app.listen(0, "127.0.0.1", () => resolve(listening));
   });

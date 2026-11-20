@@ -1,0 +1,46 @@
+.discovery-page h1 { display: flex; align-items: center; gap: var(--space-2); }
+.discovery-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--space-3) var(--space-4); padding: var(--space-4); align-items: end; }
+.discovery-controls label { display: flex; flex-direction: column; gap: var(--space-1); font-size: 12px; color: var(--text-secondary); }
+.discovery-controls label small { color: var(--text-tertiary, var(--text-secondary)); font-size: 10px; }
+.discovery-controls label.check { flex-direction: row; align-items: center; gap: var(--space-2); }
+.discovery-run { display: flex; justify-content: flex-end; }
+.discovery-preset { grid-column: 1 / -1; }
+.discovery-preset select { max-width: 320px; }
+.discovery-gates, .discovery-rules { grid-column: 1 / -1; margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm, 6px); }
+.discovery-gates { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--space-3) var(--space-4); }
+.discovery-gates legend, .discovery-rules legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: 0 var(--space-1); font-size: 12px; color: var(--text); }
+.discovery-gates legend small, .discovery-rules legend small { color: var(--text-secondary); font-size: 11px; }
+.discovery-rules { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.discovery-rule { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 12px; }
+.discovery-rule select:first-child { max-width: 300px; }
+.discovery-rule input { width: 90px; }
+.discovery-unverified { color: var(--text-secondary); }
+.discovery-unverified small { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; }
+.discovery-unit { min-width: 24px; color: var(--text-secondary); }
+.discovery-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-5, 24px); padding: var(--space-3) var(--space-4); font-size: 12px; }
+.discovery-summary > div { display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+.discovery-summary span, .discovery-summary p { color: var(--text-secondary); }
+.discovery-summary p { display: flex; align-items: center; gap: 6px; }
+.discovery-details { padding: var(--space-2) var(--space-4); font-size: 12px; color: var(--text-secondary); }
+.discovery-details summary { cursor: pointer; color: var(--text); }
+.discovery-details ul { margin: var(--space-2) 0 0; padding-left: var(--space-4); columns: 2; }
+.discovery-lens { border-bottom: 0; }
+.discovery-table td.numeric, .discovery-table th.numeric { text-align: right; font-family: var(--font-numeric); white-space: nowrap; }
+.discovery-score { font-weight: 650; }
+.discovery-score small { font-weight: 400; color: var(--text-secondary); }
+.positive { color: var(--positive); }
+.negative { color: var(--destructive); }
+.discovery-why { max-width: 420px; color: var(--text-secondary); }
+.discovery-why small { display: block; }
+.watch-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--text-secondary); font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: middle; }
+.watch-tag.shortlisted, .watch-tag.completed { color: var(--positive); border-color: var(--positive); }
+.watch-tag.researching, .watch-tag.claimed, .watch-tag.pending { color: var(--accent); border-color: var(--accent); }
+.watch-tag.rejected, .watch-tag.failed { color: var(--destructive); border-color: var(--destructive); }
+.discovery-actions { display: flex; gap: var(--space-2); justify-content: flex-end; white-space: nowrap; }
+.discovery-ask { display: inline-flex; gap: var(--space-2); }
+.discovery-ask input { min-width: 240px; }
+.discovery-research-banner { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); font-size: 12px; }
+.discovery-research-banner svg { flex: 0 0 auto; margin-top: 2px; color: var(--accent); }
+.discovery-research-banner p { margin: 2px 0 0; color: var(--text-secondary); }
+.table-footer svg { vertical-align: -2px; margin-right: 4px; }
+@media (max-width: 759px) { .discovery-details ul { columns: 1; } .discovery-actions { flex-wrap: wrap; } .discovery-ask input { min-width: 0; } }

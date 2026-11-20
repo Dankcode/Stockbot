@@ -2,6 +2,7 @@ import { createAccountsRepository } from "./accounts.js";
 import { createAlertsRepository } from "./alerts.js";
 import { createAlgorithmsRepository } from "./algorithms.js";
 import { createAuditRepository } from "./audit.js";
+import { createDiscoveryRepository } from "./discovery.js";
 import { createExperimentsRepository } from "./experiments.js";
 import { createOrdersRepository } from "./orders.js";
 import { createRiskRepository } from "./risk.js";
@@ -15,6 +16,7 @@ export {
   createAlertsRepository,
   createAlgorithmsRepository,
   createAuditRepository,
+  createDiscoveryRepository,
   createExperimentsRepository,
   createOrdersRepository,
   createResearchRepository,
@@ -30,6 +32,7 @@ export function createRepositories(client) {
     alerts: createAlertsRepository(client),
     algorithms: createAlgorithmsRepository(client),
     audit: createAuditRepository(client),
+    discovery: createDiscoveryRepository(client),
     experiments: createExperimentsRepository(client),
     orders: createOrdersRepository(client),
     research: createResearchRepository(client),

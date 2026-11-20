@@ -7,7 +7,8 @@ export const EXPECTED_MIGRATIONS = Object.freeze([
   "0003_trade_tracker_indexes",
   "0004_ai_research",
   "0005_experiments",
-  "0006_swarm"
+  "0006_swarm",
+  "0007_discovery"
 ]);
 
 export const EXPECTED_TABLES = Object.freeze([
@@ -25,11 +26,19 @@ export const EXPECTED_TABLES = Object.freeze([
   "algorithms",
   "audit_log",
   "backtest_runs",
+  "discovery_candidates",
+  "discovery_research_requests",
+  "discovery_runs",
+  "discovery_watchlist",
   "equity_snapshots",
   "experiments",
   "fills",
+  "fundamentals_cache",
+  "market_daily",
+  "market_daily_dates",
   "orders",
   "position_lots",
+  "reference_lists",
   "report_evidence",
   "research_documents",
   "research_plan_versions",
@@ -71,3 +80,15 @@ export const SWARM_INDEXES = Object.freeze([
   "idx_agent_tokens_agent",
   "idx_retrieval_receipts_task"
 ]);
+
+/** Exact column order of every table 0007 creates. */
+export const DISCOVERY_COLUMNS = Object.freeze({
+  reference_lists: ["name", "source", "as_of", "symbols_json", "fetched_at"],
+  market_daily: ["date", "symbol", "open", "high", "low", "close", "volume", "vwap"],
+  market_daily_dates: ["date", "rows", "source", "fetched_at"],
+  fundamentals_cache: ["symbol", "source", "payload_json", "fetched_at"],
+  discovery_runs: ["id", "status", "params_json", "progress_json", "stats_json", "error", "created_at", "completed_at"],
+  discovery_candidates: ["run_id", "symbol", "name", "exchange", "growth_score", "hold_score", "metrics_json", "fundamentals_json", "scores_json"],
+  discovery_watchlist: ["symbol", "status", "note", "source_run_id", "added_at", "updated_at"],
+  discovery_research_requests: ["id", "symbol", "status", "question", "researcher", "scrapers_json", "result_json", "error", "created_at", "claimed_at", "completed_at"]
+});

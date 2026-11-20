@@ -28,7 +28,7 @@ import { DEFAULT_MIGRATIONS_DIRECTORY, getAppliedMigrations, migrate, readMigrat
 import { createRepositories } from "../../server/db/repositories/index.js";
 import { PRE_SWARM_TABLES, fingerprintTables as fingerprint } from "../../server/db/fingerprint.js";
 import { fixtureMarket, PLAN } from "../swarm/fixture.js";
-import { EXPECTED_MIGRATIONS, SWARM_COLUMNS } from "./expected-schema.js";
+import { DISCOVERY_COLUMNS, EXPECTED_MIGRATIONS, SWARM_COLUMNS } from "./expected-schema.js";
 
 const exec = promisify(execFile);
 const ADMIN_URL = process.env.STOCKBOT_TEST_POSTGRES_URL;
@@ -115,10 +115,10 @@ test("PostgreSQL: migrate a restored pre-swarm backup, preserve every record, ru
   const cutover = await createClient(databaseUrl(names.cutover));
   cleanups.push(() => cutover.close());
   assert.deepEqual(await fingerprint(cutover, PRE_SWARM_TABLES), before, "the restore matches the source before migrating");
-  assert.deepEqual(await migrate(cutover), { applied: ["0006_swarm"], skipped: EXPECTED_MIGRATIONS.slice(0, 5) });
+  assert.deepEqual(await migrate(cutover), { applied: EXPECTED_MIGRATIONS.slice(5), skipped: EXPECTED_MIGRATIONS.slice(0, 5) });
   assert.deepEqual(await fingerprint(cutover, PRE_SWARM_TABLES), before, "0006 changes no existing row");
   assert.deepEqual((await getAppliedMigrations(cutover)).map((entry) => entry.version), [...EXPECTED_MIGRATIONS]);
-  for (const [table, columns] of Object.entries(SWARM_COLUMNS)) {
+  for (const [table, columns] of Object.entries({ ...SWARM_COLUMNS, ...DISCOVERY_COLUMNS })) {
     const actual = await cutover.query(
       "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? ORDER BY ordinal_position",
       [table]

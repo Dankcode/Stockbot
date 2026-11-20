@@ -127,7 +127,8 @@ export function loadConfig() {
       dataBaseUrl: process.env.ALPACA_DATA_BASE_URL || "https://data.alpaca.markets",
       stockFeed: process.env.ALPACA_STOCK_FEED || "iex"
     },
-    polygon: { key: process.env.POLYGON_API_KEY || "" },
+    polygon: { key: process.env.POLYGON_API_KEY || "", baseUrl: process.env.POLYGON_BASE_URL || "https://api.polygon.io" },
+    discovery: { historicalFeed: process.env.DISCOVERY_HISTORICAL_FEED || "sip" },
     finnhub: { key: process.env.FINNHUB_API_KEY || "" }
   });
 }
