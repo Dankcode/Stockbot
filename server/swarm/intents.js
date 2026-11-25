@@ -4,6 +4,7 @@ import { AppError } from "../http/errors.js";
 import { canonicalHash } from "../research/canonical.js";
 import { createRiskEngine } from "../risk/engine.js";
 import { DEFAULT_RISK_PROFILE } from "../risk/profile.js";
+import { taskSymbols } from "./universe.js";
 
 const TERMINAL = new Set(["filled", "rejected", "broker_rejected"]);
 const OPEN = ["received", "submitting"];
@@ -128,7 +129,12 @@ export function createIntentService({
     if (clock() - decision.createdAt > SWARM_CEILINGS.maxReportAgeMs) return ["decision_stale", "The decision is older than 24 hours."];
     if (await repo.countLiveIntentsForDecision(decision.id, intent.id) > 0) return ["decision_already_used", "This decision already backs an order intent."];
     const plan = await repo.getActivePlan(agent.id);
-    if (!plan?.planJson.universe.symbols.includes(intent.symbol)) return ["symbol_not_in_plan", "The symbol is outside the active plan."];
+    if (!plan) return ["symbol_not_in_plan", "The agent has no active plan."];
+    // The decision's own task fixed what may be traded; a task created before universes
+    // were frozen falls back to the active plan's pinned symbols.
+    const task = await repo.getTask(decision.taskId);
+    const allowed = task?.universeJson ? taskSymbols(task, null) : taskSymbols(null, plan.planJson);
+    if (!allowed.includes(intent.symbol)) return ["symbol_not_in_plan", "The symbol is outside this task's universe."];
     if (intent.side === "buy" && !(Number(decision.score) >= plan.planJson.decision.minScore)) {
       return ["score_below_plan", `A buy needs a score of at least ${plan.planJson.decision.minScore} under the active plan.`];
     }
@@ -217,6 +223,30 @@ export function createIntentService({
     return process(agent, intent);
   }
 
+  /**
+   * What was known about a stock when the agent chose to buy it: its place in
+   * the task's universe and, for a Discovery pick, the candidate's metrics and
+   * scores. Recorded on the intent so a later review can learn which inputs
+   * preceded good and bad trades. A pinned or held symbol records no features
+   * rather than invented ones.
+   */
+  async function entryFeatures(agent, request) {
+    const decision = await repo.getDecision(request.decisionId);
+    if (!decision || decision.agentId !== agent.id) return null;
+    const task = await repo.getTask(decision.taskId);
+    const entry = task?.universeJson?.entries?.find((item) => item.symbol === request.symbol);
+    return {
+      source: entry?.source ?? "unknown",
+      rank: entry?.rank ?? null,
+      score: entry?.score ?? null,
+      lens: entry?.lens ?? null,
+      discoveryRunId: entry?.source === "discovery" ? task.universeJson.discovery?.runId ?? null : null,
+      decisionScore: decision.score ?? null,
+      taskId: decision.taskId,
+      features: entry?.features ?? null
+    };
+  }
+
   async function submit(agent, input) {
     const parsed = IntentSubmissionSchema.safeParse(input);
     if (!parsed.success) throw new AppError("INTENT_INVALID", "Request validation failed.", 422, parsed.error.flatten());
@@ -231,7 +261,8 @@ export function createIntentService({
       const id = idFactory();
       const intent = await repo.insertIntent({
         id, agentId: agent.id, decisionId: request.decisionId, idempotencyKey, requestHash, symbol: request.symbol, side: request.side,
-        notionalCents: request.notional === undefined ? null : Math.round(request.notional * 100), clientOrderId: `intent:${id}`, createdAt: clock()
+        notionalCents: request.notional === undefined ? null : Math.round(request.notional * 100), clientOrderId: `intent:${id}`, createdAt: clock(),
+        entryFeatures: request.side === "buy" ? await entryFeatures(agent, request) : null
       });
       if (intent.id !== id) return reconcile(agent, intent);
       return process(agent, intent);

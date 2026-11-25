@@ -43,11 +43,67 @@ const IntervalScheduleSchema = z.object({
 
 export const AGENT_SOURCE_KINDS = Object.freeze(["market.quote", "market.bars", "web.page"]);
 
+/** Discovery metric keys a learned model may weight or exclude on (raw units, as stored on candidates). */
+const FeatureKeySchema = z.string().regex(/^[A-Za-z][A-Za-z0-9]{0,39}$/);
+
+/**
+ * A learned discovery lens: fixed, reviewed scoring code with weights and
+ * exclusion rules fitted by the swarm review. It is data, never code.
+ */
+export const LearnedModelSchema = z.object({
+  modelId: IdSchema,
+  base: z.enum(["growth", "hold"]),
+  components: z.array(z.object({
+    key: FeatureKeySchema,
+    weight: z.number().positive().max(1),
+    direction: z.union([z.literal(1), z.literal(-1)]),
+    kind: z.enum(["rank", "flag"])
+  }).strict()).min(1).max(20),
+  exclude: z.array(z.object({
+    metric: FeatureKeySchema,
+    condition: z.enum(["less_than", "greater_than"]),
+    value: z.number().finite()
+  }).strict()).max(10).default([])
+}).strict();
+
+export const DEFAULT_UNIVERSE_CAP = 10;
+export const DiscoveryUniverseSchema = z.object({
+  score: z.enum(["growth", "hold", "learned"]),
+  top: z.number().int().min(1).max(25),
+  minScore: z.number().min(0).max(100).optional(),
+  learned: LearnedModelSchema.optional()
+}).strict().superRefine((value, context) => {
+  if (value.score === "learned" && !value.learned) context.addIssue({ code: "custom", path: ["learned"], message: "A learned score needs its model." });
+  if (value.score !== "learned" && value.learned) context.addIssue({ code: "custom", path: ["learned"], message: "Only a learned score carries a model." });
+});
+
+/**
+ * Pinned symbols, a daily Discovery pick, or both. `totalCap` bounds pinned +
+ * discovery (default 10); the agent's current holdings are always added on top
+ * so a position can be exited after it leaves the screen.
+ */
+export const UniverseSchema = z.object({
+  symbols: z.array(SymbolSchema).max(25).optional(),
+  discovery: DiscoveryUniverseSchema.optional(),
+  totalCap: z.number().int().min(1).max(25).optional()
+}).strict().superRefine((value, context) => {
+  if (!(value.symbols?.length) && !value.discovery) {
+    context.addIssue({ code: "custom", path: ["symbols"], message: "A universe needs pinned symbols, a discovery pick, or both." });
+  }
+  if (value.symbols && new Set(value.symbols).size !== value.symbols.length) {
+    context.addIssue({ code: "custom", path: ["symbols"], message: "Pinned symbols must be unique." });
+  }
+  const cap = value.totalCap ?? (value.discovery ? DEFAULT_UNIVERSE_CAP : 25);
+  if ((value.symbols?.length ?? 0) > cap) {
+    context.addIssue({ code: "custom", path: ["totalCap"], message: `More pinned symbols than the universe cap of ${cap}.` });
+  }
+});
+
 export const AgentPlanSchema = z.object({
   kind: z.literal("stockbot.agent-plan.v1"),
   name: TextSchema(200),
   description: z.string().trim().max(2_000).optional(),
-  universe: z.object({ symbols: z.array(SymbolSchema).min(1).max(25) }).strict(),
+  universe: UniverseSchema,
   cadence: z.array(z.object({
     task: z.literal("research"),
     schedule: z.discriminatedUnion("type", [DailyScheduleSchema, IntervalScheduleSchema]),

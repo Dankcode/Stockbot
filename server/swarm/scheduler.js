@@ -88,6 +88,7 @@ export function openSlots(plan, now) {
 export function createSwarmScheduler({
   repositories,
   intents,
+  jobs = null,
   clock = () => Date.now(),
   idFactory = () => crypto.randomUUID(),
   holder = `supervisor:${crypto.randomUUID()}`,
@@ -123,7 +124,9 @@ export function createSwarmScheduler({
       }
     }
     const reconciled = intents ? (await intents.reconcileStranded()).length : 0;
-    return { leader: true, created, expired, reconciled };
+    // Daily experiment jobs; a failure is logged and never stops task scheduling.
+    const ran = jobs ? await jobs.tick(at).catch((error) => { logger.error?.("Swarm jobs failed:", error); return [{ error: error.message }]; }) : null;
+    return ran ? { leader: true, created, expired, reconciled, jobs: ran } : { leader: true, created, expired, reconciled };
   }
 
   /** Operator-triggered pass. A process that is not the running supervisor gives the lease straight back. */

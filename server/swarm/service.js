@@ -9,7 +9,9 @@ import {
 import { createRepositories } from "../db/repositories/index.js";
 import { AppError } from "../http/errors.js";
 import { canonicalHash } from "../research/canonical.js";
+import { discoveryFreshSince } from "./calendar.js";
 import { generateAgentToken, hashAgentToken, looksLikeAgentToken } from "./tokens.js";
+import { resolveTaskUniverse, taskSymbols } from "./universe.js";
 
 export const GLOBAL_INTENTS_SETTING = "swarm.intents_enabled";
 const TASK_LEASE_MS = 30 * 60 * 1_000;
@@ -36,6 +38,7 @@ export function createSwarmService({
   repositories,
   market,
   broker,
+  ledger = null,
   researchAdapters,
   clock = () => Date.now(),
   idFactory = () => crypto.randomUUID()
@@ -206,9 +209,45 @@ export function createSwarmService({
     const task = await requireOwnTask(agent, taskId, { claimed: false });
     const claimed = await repo.claimTask({ id: taskId, agentId: agent.id, at: clock(), leaseMs: TASK_LEASE_MS });
     if (!claimed) throw new AppError("TASK_NOT_CLAIMABLE", `Task is ${task.status} or not yet due.`, 409);
-    const fresh = await repo.getTask(taskId);
-    const plan = await repo.getPlan(fresh.planId);
-    return { task: fresh, plan: { id: plan.id, version: plan.version, ...plan.planJson } };
+    const plan = await repo.getPlan(task.planId);
+    const fresh = await freezeUniverse(agent, await repo.getTask(taskId), plan.planJson);
+    return { task: fresh, plan: presentPlan(plan, fresh) };
+  }
+
+  /**
+   * Resolves the task's universe once, on its first claim, and stores it on the
+   * task. Every later retrieval, report and intent check reads that stored list,
+   * so a Discovery run finishing mid-cycle cannot change what the agent may act on.
+   */
+  async function freezeUniverse(agent, task, planJson) {
+    if (task.universeJson) return task;
+    const at = clock();
+    let run = null;
+    let candidates = [];
+    if (planJson.universe.discovery) {
+      run = await repositories.discovery.latestCompletedRun();
+      if (run) candidates = await repositories.discovery.listCandidates(run.id, { limit: 1_000 });
+    }
+    const holdings = ledger ? (await ledger.listOpenPositions(agent.accountId)).map((position) => position.symbol) : [];
+    const universe = resolveTaskUniverse({ universe: planJson.universe, run, candidates, holdings, freshSince: discoveryFreshSince(at), now: at });
+    await repo.setTaskUniverse(task.id, universe);
+    await audit(repositories, "agent_task_universe", "agent_task", task.id, {
+      symbols: universe.symbols, discoveryRunId: universe.discovery?.runId ?? null, fallback: universe.discovery?.fallback ?? null
+    }, "scheduler");
+    return repo.getTask(task.id);
+  }
+
+  /** The plan as the agent sees it for one task: its universe is the task's frozen list. */
+  function presentPlan(plan, task) {
+    const frozen = task.universeJson;
+    const universe = frozen
+      ? {
+        symbols: frozen.symbols,
+        entries: frozen.entries.map(({ symbol, source, rank, score, lens }) => ({ symbol, source, ...(rank ? { rank, score, lens } : {}) })),
+        ...(frozen.discovery ? { discovery: { lens: frozen.discovery.lens, runId: frozen.discovery.runId, fallback: frozen.discovery.fallback } } : {})
+      }
+      : plan.planJson.universe;
+    return { id: plan.id, version: plan.version, ...plan.planJson, universe };
   }
 
   async function currentTask(agent) {
@@ -217,7 +256,7 @@ export function createSwarmService({
     const plan = await repo.getPlan(claimed.planId);
     return {
       task: claimed,
-      plan: { id: plan.id, version: plan.version, ...plan.planJson },
+      plan: presentPlan(plan, claimed),
       receipts: (await repo.listReceiptsForTask(claimed.id)).map(receiptSummary)
     };
   }
@@ -288,7 +327,7 @@ export function createSwarmService({
     const request = parseWith(RetrievalRequestSchema, input, "RETRIEVAL_INVALID");
     const plan = (await repo.getPlan(task.planId)).planJson;
     if (!plan.sources.includes(request.kind)) throw invalid("RETRIEVAL_NOT_IN_PLAN", `The plan does not declare ${request.kind}.`);
-    if (request.symbol && request.kind !== "web.page" && !plan.universe.symbols.includes(request.symbol)) {
+    if (request.symbol && request.kind !== "web.page" && !taskSymbols(task, plan).includes(request.symbol)) {
       throw invalid("SYMBOL_NOT_IN_PLAN", `${request.symbol} is outside the plan universe.`);
     }
     const fetched = await performRetrieval(request);
@@ -321,7 +360,7 @@ export function createSwarmService({
       const receipts = new Map((await scoped.swarm.listReceiptsForTask(taskId)).map((receipt) => [receipt.id, receipt]));
       const cited = new Set();
       for (const decision of body.decisions) {
-        if (!plan.universe.symbols.includes(decision.symbol)) {
+        if (!taskSymbols(task, plan).includes(decision.symbol)) {
           throw invalid("SYMBOL_NOT_IN_PLAN", `${decision.symbol} is outside the plan universe.`);
         }
         for (const receiptId of decision.evidence) {
@@ -416,6 +455,7 @@ export function createSwarmService({
     globalIntentsEnabled, setGlobalIntents, validatePlan, savePlan, createTask, listAgentTasks,
     claimTask, currentTask, getOwnTask, retrieve, submitReport, failOwnTask, portfolio, agentDetail,
     listAgents: () => repo.listAgents({ includeRetired: true }),
-    requireAgent
+    requireAgent,
+    presentPlan
   });
 }

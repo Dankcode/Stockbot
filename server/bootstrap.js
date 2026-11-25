@@ -28,6 +28,9 @@ import { createSettingsService } from "./settings/service.js";
 import { createIntentService } from "./swarm/intents.js";
 import { createSwarmScheduler } from "./swarm/scheduler.js";
 import { createSwarmService } from "./swarm/service.js";
+import { createExperimentService as createSwarmExperimentService } from "./swarm/experiments.js";
+import { createSwarmJobs } from "./swarm/jobs.js";
+import { createReviewService } from "./swarm/review.js";
 import { createDiscoveryService } from "./discovery/service.js";
 import { createDiscoverySources } from "./discovery/sources.js";
 
@@ -139,13 +142,8 @@ export async function createStockbot(options = {}) {
   const experiments = createExperimentService({ repositories, algorithms, supervisor, accountId });
   const selection = createSelectionService({ market });
   const rotation = createRotationService({ market });
-  const swarm = createSwarmService({ client, repositories, market, broker, researchAdapters });
+  const swarm = createSwarmService({ client, repositories, market, broker, ledger, researchAdapters });
   const intents = createIntentService({ client, repositories, market, broker, ledger, swarm });
-  const scheduler = options.swarmScheduler ?? createSwarmScheduler({ repositories, intents });
-  // Opt-in, so a second process (a CLI, a test, a disposable restore check) never
-  // schedules work. The production supervisor sets SWARM_SCHEDULER=1, and the
-  // database lease keeps even two such processes from both scheduling.
-  if (config.swarmScheduler) scheduler.start();
   const discovery = options.discovery ?? createDiscoveryService({
     repositories,
     sources: options.discoverySources ?? createDiscoverySources(config),
@@ -153,6 +151,14 @@ export async function createStockbot(options = {}) {
     webSources: config.researchWebSources ?? {}
   });
   await discovery.recover();
+  const swarmExperiments = createSwarmExperimentService({ repositories, swarm, broker, ledger, market });
+  const swarmReview = createReviewService({ repositories, experiments: swarmExperiments, swarm });
+  const swarmJobs = options.swarmJobs ?? createSwarmJobs({ repositories, experiments: swarmExperiments, review: swarmReview, discovery });
+  const scheduler = options.swarmScheduler ?? createSwarmScheduler({ repositories, intents, jobs: swarmJobs });
+  // Opt-in, so a second process (a CLI, a test, a disposable restore check) never
+  // schedules work. The production supervisor sets SWARM_SCHEDULER=1, and the
+  // database lease keeps even two such processes from both scheduling.
+  if (config.swarmScheduler) scheduler.start();
   const database = databaseHealth(client);
   const databaseSettings = options.databaseSettings ?? createDatabaseSettingsService({ config, repositories });
   const context = {
@@ -176,6 +182,9 @@ export async function createStockbot(options = {}) {
     supervisor,
     swarm,
     intents,
+    swarmExperiments,
+    swarmReview,
+    swarmJobs,
     discovery,
     scheduler,
     accountId,

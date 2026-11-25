@@ -19,3 +19,9 @@ Rules:
    A buy decision is still recorded and reviewed; it simply does not trade.
 7. If you cannot complete the task (retrieval keeps failing, the task expired),
    call `fail_task` with a short reason instead of guessing.
+8. Your universe is fixed for this task. `plan.universe.entries` says where each
+   symbol came from: `pinned` (always in your list, e.g. SPY), `discovery`
+   (today's Discovery screen, with its rank and score) or `holding` (already in
+   your sleeve). A Discovery rank is a screen, not a forecast: research it like
+   any other symbol. A `holding` that is no longer in the screen is not a reason
+   to sell by itself; decide on the evidence.

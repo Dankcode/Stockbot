@@ -5,6 +5,8 @@ const TOKEN_JSON = ["scopesJson"];
 const RECEIPT_JSON = ["requestJson", "contentJson"];
 const REPORT_JSON = ["reportJson", "provenanceJson"];
 const DECISION_JSON = ["evidenceJson"];
+const TASK_JSON = ["universeJson"];
+const INTENT_JSON = ["entryFeaturesJson"];
 
 function bool(row, field) {
   if (row) row[field] = Number(row[field]) === 1;
@@ -131,7 +133,7 @@ export function createSwarmRepository(client) {
       return result.changes > 0;
     },
     async getTask(id) {
-      return first(await client.query("SELECT * FROM agent_tasks WHERE id = ?", [id]));
+      return first(await client.query("SELECT * FROM agent_tasks WHERE id = ?", [id]), TASK_JSON);
     },
     async listTasks({ agentId, status, limit } = {}) {
       const clauses = [];
@@ -140,7 +142,15 @@ export function createSwarmRepository(client) {
       if (status) { clauses.push("status = ?"); params.push(status); }
       params.push(boundedLimit(limit));
       const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-      return hydrateRows(await client.query(`SELECT * FROM agent_tasks ${where} ORDER BY due_at DESC, id LIMIT ?`, params));
+      return hydrateRows(await client.query(`SELECT * FROM agent_tasks ${where} ORDER BY due_at DESC, id LIMIT ?`, params), TASK_JSON);
+    },
+    /** Freezes a task's universe once; a later call never replaces it. Returns whether it was written. */
+    async setTaskUniverse(id, universe) {
+      const result = await client.execute(
+        "UPDATE agent_tasks SET universe_json = ? WHERE id = ? AND universe_json IS NULL",
+        [toJson(universe), id]
+      );
+      return result.changes > 0;
     },
     async claimTask({ id, agentId, at, leaseMs }) {
       const result = await client.execute(
@@ -242,19 +252,20 @@ export function createSwarmRepository(client) {
     },
 
     async getIntentByKey(agentId, idempotencyKey) {
-      return first(await client.query("SELECT * FROM agent_intents WHERE agent_id = ? AND idempotency_key = ?", [agentId, idempotencyKey]));
+      return first(await client.query("SELECT * FROM agent_intents WHERE agent_id = ? AND idempotency_key = ?", [agentId, idempotencyKey]), INTENT_JSON);
     },
     async getIntent(id) {
-      return first(await client.query("SELECT * FROM agent_intents WHERE id = ?", [id]));
+      return first(await client.query("SELECT * FROM agent_intents WHERE id = ?", [id]), INTENT_JSON);
     },
     async insertIntent(input) {
       await client.execute(
         `INSERT INTO agent_intents (id, agent_id, decision_id, idempotency_key, request_hash, symbol, side, notional_cents, qty,
-           status, client_order_id, order_id, reject_code, reject_message, attempts, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'received', ?, NULL, NULL, NULL, 0, ?, ?)
+           status, client_order_id, order_id, reject_code, reject_message, attempts, created_at, updated_at, entry_features_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'received', ?, NULL, NULL, NULL, 0, ?, ?, ?)
          ON CONFLICT (agent_id, idempotency_key) DO NOTHING`,
         [input.id, input.agentId, input.decisionId ?? null, input.idempotencyKey, input.requestHash, input.symbol, input.side,
-          input.notionalCents ?? null, input.clientOrderId, input.createdAt, input.createdAt]
+          input.notionalCents ?? null, input.clientOrderId, input.createdAt, input.createdAt,
+          input.entryFeatures ? toJson(input.entryFeatures) : null]
       );
       return repository.getIntentByKey(input.agentId, input.idempotencyKey);
     },
@@ -293,13 +304,13 @@ export function createSwarmRepository(client) {
       return hydrateRows(await client.query(
         `SELECT * FROM agent_intents WHERE status IN (${placeholders}) AND updated_at <= ? ORDER BY updated_at, id LIMIT 100`,
         [...statuses, updatedBefore]
-      ));
+      ), INTENT_JSON);
     },
     async listIntents({ agentId, limit } = {}) {
       return hydrateRows(await client.query(
         "SELECT * FROM agent_intents WHERE agent_id = ? ORDER BY created_at DESC, id LIMIT ?",
         [agentId, boundedLimit(limit)]
-      ));
+      ), INTENT_JSON);
     },
 
     /** Leader lease so only one supervisor process schedules tasks. */

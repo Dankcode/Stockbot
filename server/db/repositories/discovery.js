@@ -87,6 +87,9 @@ export function createDiscoveryRepository(client) {
     async listRuns(limit) {
       return hydrateRows(await client.query("SELECT * FROM discovery_runs ORDER BY created_at DESC LIMIT ?", [boundedLimit(limit, 20, 100)]), RUN_JSON);
     },
+    async latestCompletedRun() {
+      return first(await client.query("SELECT * FROM discovery_runs WHERE status = 'completed' ORDER BY completed_at DESC, id LIMIT 1"), RUN_JSON);
+    },
     async runningRun() {
       return first(await client.query("SELECT * FROM discovery_runs WHERE status = 'running' ORDER BY created_at DESC LIMIT 1"), RUN_JSON);
     },
