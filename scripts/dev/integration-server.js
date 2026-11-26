@@ -164,9 +164,10 @@ function createSyntheticMarket() {
         diagnostics: { rsi: null, emaFast: null, emaSlow: null, atr: null, vwap: null }
       };
     }
-    // Honour range.limit exactly as the real provider chain does. A harness that quietly
-    // served 900 bars for every range would hide the fact that "1Y" is 80 weekly bars.
-    const bars = generate(spec, range.limit, Math.max(range.key === "ALL" ? 2_629_746_000 : 86_400_000, 60_000), endTime);
+    // Honour range.limit exactly as the real provider chain does (raised only by minBars,
+    // as chain.js does). A harness that quietly served 900 bars for every range would
+    // hide the fact that "1Y" is 80 weekly bars.
+    const bars = generate(spec, Math.max(range.limit, Math.min(2_000, Number(minBars) || 0)), Math.max(range.key === "ALL" ? 2_629_746_000 : 86_400_000, 60_000), endTime);
     return {
       symbol: spec.symbol,
       range: range.key,

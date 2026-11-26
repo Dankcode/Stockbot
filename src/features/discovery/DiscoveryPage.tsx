@@ -1,6 +1,8 @@
 import * as React from "react";
 import { BookmarkPlus, FlaskConical, Play, Plus, RefreshCw, Search, ShieldCheck, Telescope, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { AutoPickResults } from "../sessions/AutoPickResults";
+import { isAutopickDisabled, MAX_AUTO_SYMBOLS, requestStrategyPicks, type PickJob } from "../../lib/strategyPicks";
 import { EmptyState, ErrorState, LoadingState } from "../../components/states/DataStates";
 import {
   applyPreset, cancelResearch, DEFAULT_PARAMS, fetchDiscoveryRun, fetchLatestDiscovery, fetchResearchConfig, fetchScreeningOptions, fetchWatchlist, removeWatch,
@@ -97,6 +99,8 @@ function FindTab() {
   const [picked, setPicked] = React.useState<Set<string>>(() => new Set());
   const [busy, setBusy] = React.useState<string | null>(null);
   const [presetId, setPresetId] = React.useState("balanced");
+  const [pickJob, setPickJob] = React.useState<PickJob | null>(null);
+  const [pickError, setPickError] = React.useState<string | null>(null);
   const options = useQuery("discovery:screening", fetchScreeningOptions, { staleAfterMs: 300_000 });
   const presets = options.data?.presets ?? [];
   const choosePreset = (id: string) => {
@@ -140,6 +144,22 @@ function FindTab() {
       query.refetch();
     } finally { setBusy(null); }
   };
+
+  const manualTrade = () => navigate(`/sessions?new=1&algorithm=manual&symbols=${encodeURIComponent(Array.from(picked).join(", "))}`);
+  // Stockbot chooses the strategy for each ticker itself; the manual dialog is the
+  // fallback when automatic selection is turned off on the server.
+  const autoTrade = async () => {
+    setBusy("trade");
+    setPickError(null);
+    try {
+      setPickJob(await requestStrategyPicks(Array.from(picked)));
+      setPicked(new Set());
+    } catch (error) {
+      if (isAutopickDisabled(error)) manualTrade();
+      else setPickError(error instanceof Error ? error.message : String(error));
+    } finally { setBusy(null); }
+  };
+  const tooMany = picked.size > MAX_AUTO_SYMBOLS;
 
   const run = query.data?.run;
   const stats = run?.statsJson;
@@ -202,9 +222,13 @@ function FindTab() {
           </div>
           <div className="page-actions">
             <button className="button secondary small" type="button" disabled={!picked.size || busy !== null} onClick={watchSelected}><BookmarkPlus size={14} /> Watch {picked.size || ""}</button>
-            <button className="button secondary small" type="button" disabled={!picked.size} onClick={() => navigate(`/sessions?new=1&symbols=${encodeURIComponent(Array.from(picked).join(", "))}`)}><Play size={14} /> Paper trade</button>
+            <button className="button primary small" type="button" disabled={!picked.size || tooMany || busy !== null} title={tooMany ? `Automatic strategy selection takes up to ${MAX_AUTO_SYMBOLS} stocks at a time` : "Stockbot picks the strategy for each stock and starts paper trading it"} onClick={autoTrade}><Play size={14} /> {busy === "trade" ? "Starting…" : "Paper trade"}</button>
+            <button className="button secondary small" type="button" disabled={!picked.size} onClick={manualTrade}>Pick strategy myself</button>
           </div>
         </header>
+        {tooMany ? <p className="inline-error">Select at most {MAX_AUTO_SYMBOLS} stocks for automatic strategy selection.</p> : null}
+        {pickError ? <p className="inline-error" role="alert">{pickError}</p> : null}
+        {pickJob ? <AutoPickResults job={pickJob} /> : null}
         <div className="table-scroll"><table className="data-table discovery-table">
           <thead><tr><th className="select-cell"><span className="sr-only">Select</span></th><th>Stock</th><th className="numeric">Growth</th><th className="numeric">Hold</th><th className="numeric">Price</th><th className="numeric">6 mo</th><th className="numeric">12 mo</th><th className="numeric">From high</th><th className="numeric" title="ADX(14): above 25 is a trending stock">ADX</th><th className="numeric">Rev growth</th><th className="numeric">Mkt cap</th><th>Why it scored</th></tr></thead>
           <tbody>{candidates.map((candidate: DiscoveryCandidate) => {

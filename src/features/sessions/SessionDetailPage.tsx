@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState, StaleBadge } from "../../componen
 import { api } from "../../lib/api";
 import { describeReason } from "../../lib/orderReasons";
 import { invalidateQueries, useQuery } from "../../lib/query";
+import { fetchPickForSession } from "../../lib/strategyPicks";
 import { SessionActivity } from "./SessionActivity";
 import { SessionChartPanel } from "./SessionChartPanel";
 import {
@@ -39,6 +40,7 @@ export function SessionDetailPage() {
   const equity = useQuery(`session:${sessionId}:equity`, () => fetchSessionEquity(sessionId), live);
   const orders = useQuery(`session:${sessionId}:orders`, () => fetchSessionOrders(sessionId), live);
   const events = useQuery(`session:${sessionId}:events`, () => fetchSessionEvents(sessionId), live);
+  const autoPick = useQuery(`session:${sessionId}:auto-pick`, () => fetchPickForSession(sessionId), { staleAfterMs: 300_000 });
 
   const series = React.useMemo(() => detail.data && equity.data ? equitySeriesFrom(equity.data, detail.data) : [], [detail.data, equity.data]);
   // Final metrics are only written when a paper session ends; until then derive
@@ -118,6 +120,7 @@ export function SessionDetailPage() {
       {haltError ? <p className="inline-error" role="alert">{haltError}</p> : null}
       {session.status === "halted" ? <div className="halt-banner" role="alert"><Octagon size={17} /><strong>Halted</strong><span>{haltReason ?? "The API did not return a halt reason."}</span></div> : null}
       <p className="session-meta">{session.symbols.join(", ")} · {session.mode} · {session.barInterval} bars · {timestamp(session.startedAt ?? session.windowStart)}–{timestamp(session.endedAt ?? session.windowEnd)} · {session.algorithmVersionId ?? "version unavailable"}</p>
+      {autoPick.data ? <p className="session-meta auto-pick-note">Strategy chosen automatically{autoPick.data.outcome === "fallback" ? " (fallback)" : ""}: {autoPick.data.reason}{autoPick.data.selectionExperimentId ? ` Evidence: experiments ${autoPick.data.selectionExperimentId}${autoPick.data.holdoutExperimentId ? ` and ${autoPick.data.holdoutExperimentId}` : ""}.` : ""}</p> : null}
       {session.status === "errored" && session.errorDetail ? <div className="halt-banner" role="alert"><Octagon size={17} /><strong>Errored</strong><span>{session.errorDetail}{/server restarted/i.test(session.errorDetail) ? " Running sessions stop on restart unless the server is started with RESTART_RUNNING_SESSIONS=true." : ""}</span></div> : null}
       {session.status !== "draft" ? <SessionActivity session={session} orders={orders.data ?? []} equity={equity.data} /> : null}
 

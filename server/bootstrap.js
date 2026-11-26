@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import path from "node:path";
 import { createAlertEvaluator } from "./alerts/evaluator.js";
 import { createInAppChannel } from "./alerts/channels/in-app.js";
 import { createAlgorithmService } from "./algorithms/service.js";
@@ -21,6 +22,8 @@ import { createWebPageAdapter } from "./research/adapters/web-page.js";
 import { createResearchService } from "./research/service.js";
 import { createSelectionService } from "./selection/service.js";
 import { createRotationService } from "./selection/rotation-service.js";
+import { createStrategyPickService } from "./selection/strategy-pick-service.js";
+import { loadPluginRegistry } from "./plugins/registry.js";
 import { SessionScheduler } from "./runtime/scheduler.js";
 import { createSupervisor } from "./runtime/supervisor.js";
 import { createDatabaseSettingsService } from "./settings/database-service.js";
@@ -142,6 +145,19 @@ export async function createStockbot(options = {}) {
   const experiments = createExperimentService({ repositories, algorithms, supervisor, accountId });
   const selection = createSelectionService({ market });
   const rotation = createRotationService({ market });
+  // STRATEGY_AUTOPICK=0 turns automatic strategy selection off; the UI then falls back
+  // to the manual strategy dropdown.
+  const strategyPicks = createStrategyPickService({
+    repositories,
+    algorithms,
+    experiments,
+    supervisor,
+    market,
+    accountId,
+    enabled: options.strategyAutopick ?? process.env.STRATEGY_AUTOPICK !== "0",
+    loadPlugins: () => loadPluginRegistry(path.join(config.workspaceRoot, "plugins"))
+  });
+  await strategyPicks.recover();
   const swarm = createSwarmService({ client, repositories, market, broker, ledger, researchAdapters });
   const intents = createIntentService({ client, repositories, market, broker, ledger, swarm });
   const discovery = options.discovery ?? createDiscoveryService({
@@ -175,6 +191,7 @@ export async function createStockbot(options = {}) {
     experiments,
     selection,
     rotation,
+    strategyPicks,
     research,
     researchAdapters,
     ledger,
@@ -196,6 +213,7 @@ export async function createStockbot(options = {}) {
     app,
     async close() {
       await scheduler.stop();
+      await strategyPicks.drain();
       await supervisor.close();
       await enginePool.close();
       await client.close();

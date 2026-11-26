@@ -4,6 +4,7 @@ import path from "node:path";
 import { accountsRouter } from "./routes/accounts.js";
 import { agentRouter } from "./routes/agent.js";
 import { alertsRouter } from "./routes/alerts.js";
+import { strategyPicksRouter } from "./routes/strategy-picks.js";
 import { algorithmsRouter } from "./routes/algorithms.js";
 import { discoveryRouter } from "./routes/discovery.js";
 import { experimentsRouter } from "./routes/experiments.js";
@@ -70,6 +71,7 @@ export function createHttpApp(context) {
   api.use("/algorithms", algorithmsRouter(context.algorithms));
   api.use("/experiments", experimentsRouter(context.experiments));
   api.use("/selection", selectionRouter(context.selection));
+  if (context.strategyPicks) api.use("/strategy-picks", strategyPicksRouter(context.strategyPicks));
   if (context.rotation) api.use("/rotation", rotationRouter(context.rotation));
   api.use("/sessions", sessionsRouter(context.supervisor));
   api.use("/accounts", accountsRouter(context));

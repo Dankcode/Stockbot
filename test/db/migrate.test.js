@@ -7,7 +7,7 @@ import { test } from "node:test";
 
 import { createClient } from "../../server/db/client.js";
 import { getAppliedMigrations, migrate } from "../../server/db/migrate.js";
-import { DISCOVERY_COLUMNS, EXPECTED_MIGRATIONS, EXPECTED_TABLES, EXPERIMENT_COLUMNS, SWARM_COLUMNS, SWARM_INDEXES } from "./expected-schema.js";
+import { DISCOVERY_COLUMNS, EXPECTED_MIGRATIONS, EXPECTED_TABLES, EXPERIMENT_COLUMNS, STRATEGY_PICK_COLUMNS, SWARM_COLUMNS, SWARM_INDEXES } from "./expected-schema.js";
 
 async function temporaryDatabase() {
   const directory = await mkdtemp(join(tmpdir(), "stockbot-db-migrate-"));
@@ -54,7 +54,7 @@ test("initial migration creates the complete schema and is idempotent", async ()
       foreignKey.from === "research_snapshot_id" && foreignKey.table === "research_snapshots"
     ));
 
-    for (const [table, columns] of Object.entries({ ...SWARM_COLUMNS, ...DISCOVERY_COLUMNS, ...EXPERIMENT_COLUMNS })) {
+    for (const [table, columns] of Object.entries({ ...SWARM_COLUMNS, ...DISCOVERY_COLUMNS, ...EXPERIMENT_COLUMNS, ...STRATEGY_PICK_COLUMNS })) {
       const actual = await temporary.client.query(`PRAGMA table_info(${table})`);
       assert.deepEqual(actual.map((column) => column.name), columns, `${table} columns`);
     }

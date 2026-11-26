@@ -73,7 +73,18 @@ function rangeForInterval(interval) {
   }[interval];
 }
 
-function paperBarOptions(session) {
+/** Trading periods per calendar day, used to size a backtest's history request from its window. */
+const PERIODS_PER_CALENDAR_DAY = Object.freeze({ "1hour": 6.5 * 252 / 365, "1day": 252 / 365, "1week": 1 / 7, "1month": 1 / 30.44 });
+
+function paperBarOptions(session, now = Date.now()) {
+  if (session.mode === "backtest") {
+    // A windowed backtest needs history back to its window start. Without this the
+    // range's default limit (140 daily bars) silently truncates an older window to empty.
+    const perDay = PERIODS_PER_CALENDAR_DAY[session.barInterval];
+    const start = Number(session.windowStart);
+    if (!perDay || session.windowStart == null || !Number.isFinite(start) || start >= now) return {};
+    return { minBars: Math.min(2000, Math.ceil(((now - start) / 86_400_000) * perDay) + 20) };
+  }
   if (session.mode !== "paper") return {};
   // Chart windows are too short for slow methods (e.g. EMA200 on daily
   // bars). Include indicator warmup and holding-period history for paper runs.
@@ -647,7 +658,7 @@ export function createSupervisor({
     if (!range) throw new AppError("INVALID_BAR_INTERVAL", `Unsupported interval: ${session.barInterval}`, 400);
     const marketData = await Promise.all(
       session.symbolsJson.map(async (symbol) => {
-        const historical = await market.getBars(symbol, range, paperBarOptions(session));
+        const historical = await market.getBars(symbol, range, paperBarOptions(session, clock()));
         if (!historical?.bars?.length || historical.source === "unavailable") {
           throw new AppError("MARKET_DATA_UNAVAILABLE", `No real bars available for ${symbol}.`, 503);
         }

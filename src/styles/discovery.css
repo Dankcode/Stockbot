@@ -44,3 +44,14 @@
 .discovery-research-banner p { margin: 2px 0 0; color: var(--text-secondary); }
 .table-footer svg { vertical-align: -2px; margin-right: 4px; }
 @media (max-width: 759px) { .discovery-details ul { columns: 1; } .discovery-actions { flex-wrap: wrap; } .discovery-ask input { min-width: 0; } }
+
+/* Automatic strategy selection results */
+.auto-pick-results { margin: 12px 0; display: grid; gap: 8px; }
+.auto-pick-intro { display: flex; gap: 6px; align-items: flex-start; color: var(--muted, #6b7280); font-size: 13px; margin: 0; }
+.auto-pick-results ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.auto-pick-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; padding: 8px 10px; border: 1px solid var(--border, #e5e7eb); border-radius: 8px; }
+.auto-pick-row small { flex-basis: 100%; color: var(--muted, #6b7280); }
+.auto-pick-status { display: inline-flex; gap: 4px; align-items: center; color: var(--muted, #6b7280); }
+.auto-pick-strategy { font-weight: 600; }
+.auto-pick-strategy.fallback { color: var(--muted, #6b7280); }
+.auto-pick-note { font-style: italic; }

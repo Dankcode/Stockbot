@@ -9,7 +9,8 @@ export const EXPECTED_MIGRATIONS = Object.freeze([
   "0005_experiments",
   "0006_swarm",
   "0007_discovery",
-  "0008_swarm_experiments"
+  "0008_swarm_experiments",
+  "0009_strategy_picks"
 ]);
 
 export const EXPECTED_TABLES = Object.freeze([
@@ -54,6 +55,7 @@ export const EXPECTED_TABLES = Object.freeze([
   "session_metrics",
   "sessions",
   "settings",
+  "strategy_picks",
   "swarm_arms",
   "swarm_benchmark_closes",
   "swarm_equity_snapshots",
@@ -108,4 +110,9 @@ export const EXPERIMENT_COLUMNS = Object.freeze({
   swarm_benchmark_closes: ["symbol", "date", "close", "source", "fetched_at"],
   swarm_reviews: ["id", "experiment_id", "as_of_date", "trading_days", "verdicts_json", "lessons_json", "lessons_md", "created_arm_id", "created_at"],
   swarm_job_runs: ["job", "slot", "status", "detail_json", "started_at", "finished_at"]
+});
+
+/** Exact column order of the table 0009 creates. */
+export const STRATEGY_PICK_COLUMNS = Object.freeze({
+  strategy_picks: ["id", "job_id", "symbol", "status", "bar_interval", "outcome", "algorithm_id", "algorithm_version_id", "params_json", "reason", "selection_experiment_id", "holdout_experiment_id", "evidence_json", "session_id", "error", "created_at", "updated_at", "completed_at"]
 });
