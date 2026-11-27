@@ -17,6 +17,7 @@ export function strategyPicksRouter(service) {
     response.status(202);
     sendData(response, await service.request(request.body));
   }));
+  router.get("/active", asyncHandler(async (_request, response) => sendData(response, await service.active())));
   router.get("/jobs/:jobId", asyncHandler(async (request, response) => sendData(response, await service.getJob(request.params.jobId))));
   router.get("/by-session/:sessionId", asyncHandler(async (request, response) => sendData(response, await service.getBySession(request.params.sessionId))));
   return router;

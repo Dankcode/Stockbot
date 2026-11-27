@@ -2,7 +2,7 @@ import * as React from "react";
 import { BookmarkPlus, FlaskConical, Play, Plus, RefreshCw, Search, ShieldCheck, Telescope, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AutoPickResults } from "../sessions/AutoPickResults";
-import { isAutopickDisabled, MAX_AUTO_SYMBOLS, requestStrategyPicks, type PickJob } from "../../lib/strategyPicks";
+import { fetchActivePickJobs, isAutopickDisabled, MAX_AUTO_SYMBOLS, requestStrategyPicks, type PickJob } from "../../lib/strategyPicks";
 import { EmptyState, ErrorState, LoadingState } from "../../components/states/DataStates";
 import {
   applyPreset, cancelResearch, DEFAULT_PARAMS, fetchDiscoveryRun, fetchLatestDiscovery, fetchResearchConfig, fetchScreeningOptions, fetchWatchlist, removeWatch,
@@ -101,6 +101,12 @@ function FindTab() {
   const [presetId, setPresetId] = React.useState("balanced");
   const [pickJob, setPickJob] = React.useState<PickJob | null>(null);
   const [pickError, setPickError] = React.useState<string | null>(null);
+  // A pick job keeps running on the server after this page is left; show it again on return.
+  React.useEffect(() => {
+    let cancelled = false;
+    fetchActivePickJobs().then((jobs) => { if (!cancelled && jobs.length) setPickJob((current) => current ?? jobs[0]); }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
   const options = useQuery("discovery:screening", fetchScreeningOptions, { staleAfterMs: 300_000 });
   const presets = options.data?.presets ?? [];
   const choosePreset = (id: string) => {
@@ -214,6 +220,7 @@ function FindTab() {
         </ul></details> : null}
       </> : null}
 
+      {pickJob && run?.status !== "completed" ? <section className="panel"><AutoPickResults job={pickJob} /></section> : null}
       {run?.status === "completed" ? <section className="panel">
         <header className="panel-header">
           <div className="tab-list discovery-lens" role="tablist">

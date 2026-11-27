@@ -132,3 +132,79 @@ test("validation and restart recovery", async (t) => {
   assert.equal(await service.recover(), 1);
   assert.equal((await repositories.strategyPicks.getById("stuck")).status, "failed");
 });
+
+test("runs arm backtests in parallel up to the limit, survives a failing arm and records progress", async (t) => {
+  const { service, calls } = await harness(t, { verdicts: {
+    selection: { "base-methods/ema-momentum": "worth-recording", "base-methods/rsi-mean-reversion": "inside-noise" },
+    holdout: { "base-methods/ema-momentum": "worth-recording", "base-methods/rsi-mean-reversion": "worth-recording" }
+  } });
+  // Give the stub experiments real arm sessions so the service runs them itself.
+  void service; void calls;
+  let inFlight = 0;
+  let peak = 0;
+  const started = [];
+  const harnessed = await harnessWithSessions(t, {
+    onStart: async (id) => {
+      inFlight += 1; peak = Math.max(peak, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      started.push(id);
+      if (id === "arm-3") throw new Error("engine timeout");
+    }
+  });
+  const job = await harnessed.service.request({ symbols: ["NVDA"], startNow: false });
+  await harnessed.service.drain();
+  const [pick] = (await harnessed.service.getJob(job.jobId)).picks;
+  assert.equal(pick.status, "completed");
+  assert.ok(peak > 1 && peak <= 2, `peak parallelism ${peak} should respect the limit of 2`);
+  const progress = pick.evidenceJson.progress;
+  assert.equal(progress.phase, "done");
+  assert.ok(Number.isFinite(pick.evidenceJson.timings.selectionMs));
+  assert.ok(Number.isFinite(pick.evidenceJson.timings.totalMs));
+  assert.ok(started.length >= 6, "every arm of both phases was started");
+});
+
+async function harnessWithSessions(t, { onStart }) {
+  const directory = await mkdtemp(join(tmpdir(), "stockbot-autopick-arms-"));
+  const client = await createClient(pathToFileURL(join(directory, "stockbot.db")).href);
+  t.after(async () => { await client.close(); await rm(directory, { recursive: true, force: true }); });
+  await migrate(client);
+  const repositories = createRepositories(client);
+  const created = [];
+  let armCounter = 0;
+  let counter = 0;
+  const service = createStrategyPickService({
+    repositories,
+    accountId: "default",
+    seeds: 2,
+    concurrency: 2,
+    idFactory: () => `id-${String(++counter).padStart(4, "0")}-xxxxxxxx`,
+    logger: null,
+    loadPlugins: async () => ({ plugins: PLUGINS }),
+    algorithms: {
+      list: async () => ({ algorithms: METHODS }),
+      get: async (id) => METHODS.find((m) => m.id === id)
+    },
+    market: { getBars: async () => ({ source: "synthetic", bars: Array.from({ length: 300 }, (_, i) => ({ time: Date.UTC(2024, 0, 1) + i * DAY })) }) },
+    experiments: {
+      async create(input) {
+        created.push(input);
+        const sessions = input.plan.arms.map((arm) => ({ id: `arm-${++armCounter}`, experimentArmId: arm.id }));
+        return { experiment: { id: `exp-${created.length}` }, sessions };
+      },
+      async start() { throw new Error("service must start arms itself when sessions are returned"); },
+      async report(id) {
+        const input = created[Number(id.split("-")[1]) - 1];
+        return { report: { groups: input.plan.groups.map((group) => ({
+          strategy: { algorithmId: group.strategy.algorithmId, name: group.strategy.name, params: group.strategy.params },
+          verdict: "worth-recording", percentile: 95, metrics: { returnPercent: 4, sharpe: 1, maxDrawdown: 5, closedTradeCount: 7 }
+        })) } };
+      }
+    },
+    supervisor: {
+      async create(input) { return { id: "paper-1", ...input }; },
+      async start(id) { await onStart(id); return { id }; }
+    }
+  });
+  return { service };
+}

@@ -55,3 +55,6 @@
 .auto-pick-strategy { font-weight: 600; }
 .auto-pick-strategy.fallback { color: var(--muted, #6b7280); }
 .auto-pick-note { font-style: italic; }
+.auto-pick-count { color: var(--muted, #6b7280); font-variant-numeric: tabular-nums; }
+.auto-pick-bar { flex-basis: 100%; width: 100%; height: 6px; }
+.auto-pick-row.stalled { border-color: var(--negative, #dc2626); }

@@ -28,7 +28,12 @@ const SYMBOL = /^[A-Z0-9][A-Z0-9./-]{0,31}$/;
 export const MAX_SYMBOLS_PER_JOB = 10;
 /** About two years of daily bars: ~16 months to select on, ~8 months to confirm on. */
 const DEFAULT_LOOKBACK_BARS = 504;
-const DEFAULT_SEEDS = 20;
+/** CONTROL_GROUP.md's minimum. 20 seeds made a pick ~165 sequential backtests per symbol. */
+const DEFAULT_SEEDS = 10;
+/** Backtests run in parallel per experiment; the experiment CLI already runs 4 at once. */
+const DEFAULT_CONCURRENCY = 4;
+/** Progress is written at most this often, so a fast run does not hammer the database. */
+const PROGRESS_INTERVAL_MS = 1_000;
 const EVIDENCE_TOP = 10;
 
 function jobStatus(picks) {
@@ -48,6 +53,7 @@ export function createStrategyPickService({
   enabled = true,
   seeds = DEFAULT_SEEDS,
   lookbackBars = DEFAULT_LOOKBACK_BARS,
+  concurrency = DEFAULT_CONCURRENCY,
   idFactory = crypto.randomUUID,
   clock = Date.now,
   logger = console
@@ -62,7 +68,32 @@ export function createStrategyPickService({
     if (!enabled) throw new AppError("STRATEGY_AUTOPICK_DISABLED", "Automatic strategy selection is turned off (STRATEGY_AUTOPICK=0).", 404);
   }
 
-  async function runExperiment({ pickId, symbol, phase, methods, pairings, strategyIds, window }) {
+  /** Starts every arm session with bounded parallelism, reporting progress as arms finish. */
+  async function runArms(sessions, onProgress) {
+    let next = 0;
+    let done = 0;
+    let failed = 0;
+    const running = new Set();
+    const worker = async () => {
+      while (next < sessions.length) {
+        const session = sessions[next++];
+        running.add(session.experimentArmId ?? session.name);
+        try {
+          await supervisor.start(session.id);
+        } catch {
+          // One arm failing never aborts the rest; the report marks it incomplete.
+          failed += 1;
+        } finally {
+          running.delete(session.experimentArmId ?? session.name);
+          done += 1;
+          await onProgress({ done, failed, total: sessions.length, current: [...running].slice(0, 4) });
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, sessions.length)) }, worker));
+  }
+
+  async function runExperiment({ pickId, symbol, phase, methods, pairings, strategyIds, window, onProgress }) {
     const plan = buildExperimentPlan({
       methods,
       plugins: pairings,
@@ -79,7 +110,11 @@ export function createStrategyPickService({
       selection: { autoPick: pickId, phase }
     });
     const experimentId = created.experiment.id;
-    await experiments.start(experimentId);
+    if (Array.isArray(created.sessions)) {
+      await runArms(created.sessions, (progress) => onProgress?.({ phase, experimentId, ...progress }));
+    } else {
+      await experiments.start(experimentId);
+    }
     const { report } = await experiments.report(experimentId);
     return { experimentId, groups: report.groups };
   }
@@ -97,7 +132,9 @@ export function createStrategyPickService({
   async function processPick(pick, { startNow, includeUploads }) {
     const symbol = pick.symbol;
     const update = (changes) => picks.update(pick.id, changes, clock());
-    await update({ status: "selecting" });
+    const startedAt = clock();
+    const evidenceBase = { progress: { phase: "loading", done: 0, total: 0, failed: 0, current: [], startedAt } };
+    await update({ status: "selecting", evidence: evidenceBase });
 
     const [{ algorithms: methods }, registry] = await Promise.all([algorithms.list(), loadPlugins()]);
     const pairings = indexPairings(registry?.plugins ?? []);
@@ -112,7 +149,17 @@ export function createStrategyPickService({
       ranked: [],
       finalists: [],
       holdout: [],
-      historyBars: history?.bars?.length ?? 0
+      historyBars: history?.bars?.length ?? 0,
+      timings: {},
+      progress: evidenceBase.progress
+    };
+    let lastWrite = 0;
+    const reportProgress = async (progress, status) => {
+      evidence.progress = { ...progress, startedAt, updatedAt: clock() };
+      const finished = progress.done === progress.total;
+      if (!finished && clock() - lastWrite < PROGRESS_INTERVAL_MS) return;
+      lastWrite = clock();
+      await update({ status, evidence });
     };
 
     let decision;
@@ -128,10 +175,13 @@ export function createStrategyPickService({
     } else if (eligible.length === 0) {
       decision = choosePick({ ranked: [], finalists: [] });
     } else {
+      const selectionStarted = clock();
       const selection = await runExperiment({
         pickId: pick.id, symbol, phase: "selection", methods, pairings,
-        strategyIds: eligible.map((method) => method.id), window: window.selection
+        strategyIds: eligible.map((method) => method.id), window: window.selection,
+        onProgress: (progress) => reportProgress(progress, "selecting")
       });
+      evidence.timings.selectionMs = clock() - selectionStarted;
       selectionExperimentId = selection.experimentId;
       const ranked = rankGroups(selection.groups);
       const finalists = finalistsOf(ranked);
@@ -141,10 +191,13 @@ export function createStrategyPickService({
 
       let holdoutGroups = [];
       if (finalists.length > 0) {
+        const holdoutStarted = clock();
         const holdout = await runExperiment({
           pickId: pick.id, symbol, phase: "holdout", methods, pairings,
-          strategyIds: finalists.map((entry) => entry.id), window: window.holdout
+          strategyIds: finalists.map((entry) => entry.id), window: window.holdout,
+          onProgress: (progress) => reportProgress(progress, "confirming")
         });
+        evidence.timings.holdoutMs = clock() - holdoutStarted;
         holdoutExperimentId = holdout.experimentId;
         holdoutGroups = holdout.groups;
         evidence.holdout = rankGroups(holdoutGroups);
@@ -174,6 +227,8 @@ export function createStrategyPickService({
       }
     }
     evidence.startError = startError;
+    evidence.timings.totalMs = clock() - startedAt;
+    evidence.progress = { ...evidence.progress, phase: "done" };
     return update({
       status: "completed",
       outcome: decision.outcome,
@@ -229,6 +284,12 @@ export function createStrategyPickService({
     request,
     getJob,
     list: (options) => picks.list(options),
+    /** Jobs with work still running, newest first, so a page reload can pick the display back up. */
+    async active() {
+      const recent = await picks.list({ limit: 100 });
+      const jobIds = [...new Set(recent.filter((pick) => ["queued", "selecting", "confirming"].includes(pick.status)).map((pick) => pick.jobId))];
+      return Promise.all(jobIds.map((jobId) => getJob(jobId)));
+    },
     getBySession: async (sessionId) => {
       const pick = await picks.getBySession(sessionId);
       if (!pick) throw new AppError("STRATEGY_PICK_NOT_FOUND", `No automatic pick created session ${sessionId}.`, 404);

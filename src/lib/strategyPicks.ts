@@ -30,11 +30,22 @@ export type StrategyPick = {
     finalists?: string[];
     holdout?: RankedEntry[];
     window?: { selection: { bars: number }; holdout: { bars: number } } | null;
+    progress?: PickProgress;
+    timings?: { selectionMs?: number; holdoutMs?: number; totalMs?: number };
   };
   sessionId: string | null;
   error: string | null;
   createdAt: number;
   completedAt: number | null;
+};
+export type PickProgress = {
+  phase: "loading" | "selection" | "holdout" | "done";
+  done: number;
+  total: number;
+  failed: number;
+  current: string[];
+  startedAt: number;
+  updatedAt?: number;
 };
 export type PickJob = { jobId: string; status: "running" | "completed" | "partial" | "failed"; picks: StrategyPick[] };
 
@@ -50,6 +61,11 @@ export const PICK_STATUS_LABEL: Record<PickStatus, string> = {
 
 export function requestStrategyPicks(symbols: string[], { startNow = true }: { startNow?: boolean } = {}) {
   return api.post<PickJob>("/strategy-picks", { symbols, startNow });
+}
+
+/** Jobs still running on the server, so a reloaded page can show them again. */
+export function fetchActivePickJobs() {
+  return api.get<PickJob[]>("/strategy-picks/active");
 }
 
 export function fetchPickJob(jobId: string) {
